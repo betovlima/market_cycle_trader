@@ -1,6 +1,6 @@
 # market_cycle_trader
 
-React + Vite frontend for Market Cycle Trader v1.9.19.
+React + Vite frontend for Market Cycle Trader v1.10.3.
 
 ## Local
 
@@ -8,7 +8,7 @@ React + Vite frontend for Market Cycle Trader v1.9.19.
 .\run_local.ps1
 ```
 
-or:
+Alternative:
 
 ```powershell
 npm install
@@ -19,13 +19,15 @@ During local development Vite proxies `/api` to `http://127.0.0.1:8000`.
 
 ## Structure
 
-- `features/backtest/components`: feature UI sections.
-- `features/backtest/hooks`: stateful workspace orchestration.
-- `features/backtest/model`: constants, defaults and experiment presets.
-- `shared/components`: reusable presentation primitives.
-- `api`: HTTP transport helper.
-- `config`: environment configuration.
-- `App.jsx`: composition root only.
+- `features/backtest/components` — active Compound Capital Rotation UI.
+- `features/backtest/hooks` — workspace orchestration.
+- `features/backtest/model` — current defaults and presets.
+- `shared/components` — reusable presentation components.
+- `api` — HTTP helper.
+- `config` — environment configuration.
+- `App.jsx` — composition root.
+
+Legacy bottom/top/Fibonacci controls and configuration were removed.
 
 ## Railway
 

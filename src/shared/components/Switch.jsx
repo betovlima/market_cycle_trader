@@ -7,3 +7,4 @@ export function Switch({ label, checked, onChange }) {
     </label>
   )
 }
+

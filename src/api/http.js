@@ -27,10 +27,10 @@ export async function apiFetch(url, options) {
       const data = await response.json()
       message = formatApiErrorDetail(data.detail, message)
     } catch {
-      // Keep the fallback message.
     }
     throw new Error(message)
   }
   if (response.status === 204) return null
   return response.json()
 }
+

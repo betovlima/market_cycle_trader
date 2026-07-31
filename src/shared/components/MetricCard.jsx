@@ -7,3 +7,4 @@ export function MetricCard({ label, value, note = null }) {
     </article>
   )
 }
+

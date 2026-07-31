@@ -121,8 +121,15 @@ tbody tr:hover, .selected-row { background: rgba(91,140,255,.075); }
 .full-width { grid-column: 1 / -1; }
 .trades-panel { margin-top: 12px; overflow: hidden; }
 .trade-badge { display: inline-block; min-width: 54px; padding: 4px 7px; text-align: center; border-radius: 999px; font-size: .68rem; font-weight: 750; }
-.trade-badge.buy { color: #77e3b9; background: rgba(53,201,143,.12); }
-.trade-badge.sell, .trade-badge.final_sell { color: #ffafb4; background: rgba(239,107,115,.12); }
+.trade-badge.buy { color: #ffafb4; background: rgba(239,107,115,.12); }
+.trade-badge.sell, .trade-badge.final_sell { color: #77e3b9; background: rgba(53,201,143,.12); }
+.trade-badge.hold { color: #ffd18a; background: rgba(228,180,84,.14); }
+.trade-legend { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 4px 0 10px; color: var(--muted); font-size: .72rem; }
+.trade-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.trade-capital { font-weight: 700; color: var(--text); }
+.trade-capital.buy { color: #ffafb4; }
+.trade-capital.sell, .trade-capital.final_sell { color: #77e3b9; }
+.trade-capital.hold { color: #ffd18a; }
 
 footer { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: .75rem; text-align: center; }
 
@@ -222,7 +229,7 @@ footer { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--border
   }
 }
 
-/* v1.9.19 — compatibility rules for the modular React refactor. */
+
 textarea {
   font: inherit;
   width: 100%;
@@ -240,7 +247,7 @@ textarea:focus {
 }
 textarea::placeholder { color: #66758b; }
 
-/* The modular front introduced these wrappers after the original dark theme. */
+
 .parameter-toolbar {
   background: var(--panel-2);
 }
@@ -283,7 +290,7 @@ textarea::placeholder { color: #66758b; }
   line-height: 1.45;
 }
 
-/* Keep disabled provider/timeframe fields visually consistent with the dark UI. */
+
 input:disabled,
 select:disabled,
 textarea:disabled {
@@ -293,17 +300,82 @@ textarea:disabled {
   cursor: not-allowed;
 }
 
-/* Native checkbox accent, used by the model selector cards. */
+
 .model-options input[type='checkbox'],
 .backend-options input[type='checkbox'] {
   accent-color: var(--accent);
 }
 
-/* Preserve the old compact navigation look after the component split. */
+
 nav.inline-actions {
   margin-bottom: 0;
 }
 
 @media (max-width: 1180px) {
   .backend-options { align-items: center; }
+}
+
+.table-sort-button { appearance: none; border: 0; background: transparent; color: inherit; font: inherit; font-weight: inherit; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; text-transform: inherit; letter-spacing: inherit; }
+.table-sort-button:hover { color: var(--text); }
+.table-sort-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+.sort-indicator { color: var(--accent); font-size: .9em; line-height: 1; }
+
+.json-config-panel {
+  margin: 16px 0 20px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(10, 16, 26, 0.55);
+}
+
+.json-config-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.json-config-heading div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.json-config-heading strong {
+  color: var(--text);
+}
+
+.json-config-heading span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.json-config-editor {
+  width: 100%;
+  min-height: 320px;
+  resize: vertical;
+  box-sizing: border-box;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(4, 10, 18, 0.88);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.json-config-editor:focus {
+  outline: 1px solid var(--accent);
+  border-color: var(--accent);
+}
+
+.json-config-actions {
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.json-config-message {
+  margin-top: 12px;
 }
