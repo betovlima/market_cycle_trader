@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
+import { apiDownloadUrl } from '../../../config/env'
 import { EmptyState } from '../../../shared/components/EmptyState'
 import { MetricCard } from '../../../shared/components/MetricCard'
 import { compactDate, money, number, percent, tradeDate } from '../../../shared/formatters'
@@ -70,11 +71,11 @@ export function ResultsDashboard({ workspace }) {
             <MetricCard label="Completed model runs" value={comparisonData.length} note="Compound Capital Rotation" />
             <MetricCard label="Best excess return" value={bestRun ? percent(bestRun.excess_return) : '—'} note={bestRun?.strategy_label || ''} />
             <MetricCard label="Best strategy capital" value={bestRun ? money(bestRun.strategy_ending_capital) : '—'} note="Out-of-sample capital" />
-            <MetricCard label="Export package" value="ZIP + CSV" note="Predictions, trades, metrics and diagnostics" />
+            <MetricCard label="Export package" value="ZIP + CSV" note="Predictions, trades, metrics and diagnostics" href={apiDownloadUrl(results.downloads.zip)} />
           </section>
 
           <section className="panel chart-panel">
-            <div className="section-heading compact"><div><span className="section-kicker">Model comparison</span><h2>Strategy vs Buy & Hold</h2></div><a className="button ghost" href={results.downloads.comparison}>Export CSV</a></div>
+            <div className="section-heading compact"><div><span className="section-kicker">Model comparison</span><h2>Strategy vs Buy & Hold</h2></div><a className="button ghost" href={apiDownloadUrl(results.downloads.comparison)}>Export CSV</a></div>
             <div className="chart large-chart">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={comparisonData} margin={{ top: 12, right: 18, left: 0, bottom: 44 }}>
