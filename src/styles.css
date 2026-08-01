@@ -1073,7 +1073,7 @@ input[aria-invalid="true"] {
   outline-offset: 3px;
 }
 
-/* v1.12.11 — export actions use fetch + Blob downloads so Railway API errors are visible. */
+/* v1.12.12 — export actions use fetch + Blob downloads so Railway API errors are visible. */
 .metric-card-button {
   width: 100%;
   appearance: none;
