@@ -17,12 +17,6 @@ export function number(value, digits = 2) {
   return Number(value).toFixed(digits)
 }
 
-export function rotationModelLabel(model) {
-  if (model === 'xgboost_utility') return 'XGBoost Utility'
-  if (model === 'qrdqn') return 'QR-DQN'
-  return String(model || 'Unknown model')
-}
-
 function parseDate(value) {
   if (!value) return null
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value

@@ -90,7 +90,7 @@ export function ResultsDashboard({ workspace }) {
                 <select value={selectedKey || selectedRun.key} onChange={(event) => setSelectedKey(event.target.value)}>{results.runs.map((run) => <option key={run.key} value={run.key}>{run.metrics?.strategy_label || run.backend}</option>)}</select>
               </div>
               <section className="metrics-grid compact-metrics">
-                <MetricCard label="Final capital" value={money(selectedMetrics.strategy_ending_capital)} note={`Initial ${money(selectedMetrics.initial_capital || 10000)}`} />
+                <MetricCard label="Final capital" value={money(selectedMetrics.strategy_ending_capital)} note={`Initial ${money(selectedMetrics.initial_capital)}`} />
                 <MetricCard label="CAGR" value={percent(selectedMetrics.strategy_cagr)} note={`Sharpe ${number(selectedMetrics.strategy_sharpe, 3)}`} />
                 <MetricCard label="Max drawdown" value={percent(selectedMetrics.strategy_maximum_drawdown)} note={`Exposure ${percent(selectedMetrics.market_exposure)}`} />
                 <MetricCard label="Rotations" value={number(selectedMetrics.capital_rotations, 0)} note={`${number(selectedMetrics.average_holding_days, 2)} average holding days`} />

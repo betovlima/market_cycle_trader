@@ -1,6 +1,6 @@
 # market_cycle_trader
 
-React + Vite frontend for Market Cycle Trader v1.10.3.
+React + Vite frontend for Market Cycle Trader v1.12.0.
 
 ## Local
 
@@ -21,13 +21,12 @@ During local development Vite proxies `/api` to `http://127.0.0.1:8000`.
 
 - `features/backtest/components` — active Compound Capital Rotation UI.
 - `features/backtest/hooks` — workspace orchestration.
-- `features/backtest/model` — current defaults and presets.
 - `shared/components` — reusable presentation components.
 - `api` — HTTP helper.
 - `config` — environment configuration.
 - `App.jsx` — composition root.
 
-Legacy bottom/top/Fibonacci controls and configuration were removed.
+The public form contains only the start and end dates. Strategy parameters are not bundled into the frontend.
 
 ## Railway
 

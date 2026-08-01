@@ -1,11 +1,15 @@
+import { useEffect, useRef } from 'react'
+
 export function ExecutionStatus({ workspace }) {
-  const {
-    job,
-    jobRotationModels,
-    jobRotationModelText,
-    currentRotationModelText,
-    screenDiffersFromJob,
-  } = workspace
+  const { job } = workspace
+  const logRef = useRef(null)
+  const logs = Array.isArray(job?.logs) ? job.logs : []
+
+  useEffect(() => {
+    const element = logRef.current
+    if (!element) return
+    element.scrollTop = element.scrollHeight
+  }, [job?.id, logs.length])
 
   return (
     <>
@@ -22,22 +26,6 @@ export function ExecutionStatus({ workspace }) {
           <div className="progress-track">
             <span style={{ width: `${Math.max(0, Math.min(100, Number(job.progress ?? 0)))}%` }} />
           </div>
-          {jobRotationModelText && (
-            <div className="job-snapshot-note">
-              <strong>Execution snapshot:</strong>{' '}
-              {jobRotationModelText}
-              {' · '}
-              {job.total_runs ?? jobRotationModels.length} model run
-              {(job.total_runs ?? jobRotationModels.length) === 1 ? '' : 's'}
-            </div>
-          )}
-          {screenDiffersFromJob && (
-            <div className="settings-message" role="status">
-              <strong>The controls above belong to the next run.</strong>{' '}
-              This job was queued with {jobRotationModelText}; the current
-              screen is configured with {currentRotationModelText}.
-            </div>
-          )}
           {job.status === 'interrupted' && (
             <div className="settings-message" role="status">
               <strong>This execution is stopped.</strong>{' '}
@@ -45,15 +33,17 @@ export function ExecutionStatus({ workspace }) {
               data remains available through the export files.
             </div>
           )}
-          {job.logs?.length > 0 && (
-            <details className="logs-panel">
-              <summary>Execution log</summary>
-              <pre>{job.logs.slice(-80).join('\n')}</pre>
-            </details>
+          {logs.length > 0 && (
+            <section className="logs-panel" aria-label="Execution log">
+              <div className="logs-panel-header">
+                <strong>Execution log</strong>
+                <small>Latest {Math.min(logs.length, 120)} messages</small>
+              </div>
+              <pre ref={logRef}>{logs.slice(-120).join('\n')}</pre>
+            </section>
           )}
         </section>
       )}
     </>
   )
 }
-
