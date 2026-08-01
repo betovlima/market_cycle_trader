@@ -1,13 +1,18 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { EmptyState } from '../../../shared/components/EmptyState'
 import { MetricCard } from '../../../shared/components/MetricCard'
 import { compactDate, money, number, percent, tradeDate } from '../../../shared/formatters'
 
+const TRADE_PAGE_SIZE = 10
+const TRADE_ACTIONS = ['buy', 'hold', 'sell']
+
 export function ResultsDashboard({ workspace }) {
   const { results, selectedKey, setSelectedKey, loadingResults, selectedRun, comparisonData, bestRun, selectedMetrics } = workspace
   const [tradeDateSort, setTradeDateSort] = useState('desc')
+  const [tradePage, setTradePage] = useState(1)
+  const [tradeFilters, setTradeFilters] = useState(() => new Set(TRADE_ACTIONS))
 
   const sortedTrades = useMemo(() => {
     const trades = Array.isArray(selectedRun?.trades) ? selectedRun.trades : []
@@ -23,9 +28,37 @@ export function ResultsDashboard({ workspace }) {
         const dateOrder = (leftValue - rightValue) * direction
         return dateOrder !== 0 ? dateOrder : left.index - right.index
       })
-      .slice(0, 250)
       .map(({ trade }) => trade)
   }, [selectedRun?.trades, tradeDateSort])
+
+  useEffect(() => {
+    setTradePage(1)
+  }, [selectedRun?.key, tradeDateSort])
+
+  const filteredTrades = useMemo(() => sortedTrades.filter((trade) => {
+    const action = String(trade.action || '').toLowerCase()
+    return tradeFilters.has(action)
+  }), [sortedTrades, tradeFilters])
+
+  const totalTradePages = Math.max(1, Math.ceil(filteredTrades.length / TRADE_PAGE_SIZE))
+  const safeTradePage = Math.min(tradePage, totalTradePages)
+  const tradePageStart = filteredTrades.length ? ((safeTradePage - 1) * TRADE_PAGE_SIZE) + 1 : 0
+  const tradePageEnd = Math.min(filteredTrades.length, safeTradePage * TRADE_PAGE_SIZE)
+  const visibleTrades = filteredTrades.slice(tradePageStart > 0 ? tradePageStart - 1 : 0, tradePageEnd)
+
+  function toggleTradeFilter(action) {
+    setTradeFilters((current) => {
+      const next = new Set(current)
+      if (next.has(action)) {
+        if (next.size === 1) return current
+        next.delete(action)
+      } else {
+        next.add(action)
+      }
+      return next
+    })
+    setTradePage(1)
+  }
 
   return (
     <>
@@ -85,8 +118,8 @@ export function ResultsDashboard({ workspace }) {
 
           {selectedRun && (
             <section className="panel detail-panel">
-              <div className="section-heading compact">
-                <div><span className="section-kicker">Detailed run</span><h2>{selectedMetrics.strategy_label || selectedRun.backend}</h2></div>
+              <div className="section-heading compact detailed-run-heading">
+                <div className="detailed-run-title"><span className="section-kicker">Detailed run</span><h2>{selectedMetrics.strategy_label || selectedRun.backend}</h2></div>
                 <select value={selectedKey || selectedRun.key} onChange={(event) => setSelectedKey(event.target.value)}>{results.runs.map((run) => <option key={run.key} value={run.key}>{run.metrics?.strategy_label || run.backend}</option>)}</select>
               </div>
               <section className="metrics-grid compact-metrics">
@@ -110,14 +143,40 @@ export function ResultsDashboard({ workspace }) {
                   </ResponsiveContainer>
                 </div>
               )}
-              {selectedRun.trades?.length > 0 && (
-                <>
-                  <div className="trade-legend">
-                    <span><span className="trade-badge buy">BUY</span> Buy</span>
-                    <span><span className="trade-badge hold">HOLD</span> Hold</span>
-                    <span><span className="trade-badge sell">SELL</span> Sell</span>
+
+              <article className="trades-panel">
+                <div className="trade-table-heading">
+                  <div>
+                    <span className="section-kicker">Action history</span>
+                    <h3>Strategy decision log</h3>
+                    <p>This list remains visible for the selected run and updates across every BUY, SELL and HOLD decision.</p>
                   </div>
-                  <div className="table-scroll">
+                  <div className="trade-table-meta">
+                    <span>{filteredTrades.length} of {sortedTrades.length} records</span>
+                    <span>{tradePageStart && tradePageEnd ? `${tradePageStart}-${tradePageEnd} shown` : '0 shown'}</span>
+                  </div>
+                </div>
+
+                <div className="trade-filter-bar" role="group" aria-label="Filter strategy decisions by action">
+                  {TRADE_ACTIONS.map((action) => {
+                    const active = tradeFilters.has(action)
+                    return (
+                      <button
+                        key={action}
+                        type="button"
+                        className={`trade-filter-button ${action} ${active ? 'active' : 'inactive'}`}
+                        aria-pressed={active}
+                        onClick={() => toggleTradeFilter(action)}
+                        title={`${active ? 'Hide' : 'Show'} ${action.toUpperCase()} decisions`}
+                      >
+                        {action.toUpperCase()}
+                      </button>
+                    )
+                  })}
+                  <span className="trade-filter-helper">Combine filters to show any BUY, HOLD and SELL selection.</span>
+                </div>
+
+                <div className="table-scroll">
                   <table>
                     <thead>
                       <tr>
@@ -136,10 +195,10 @@ export function ResultsDashboard({ workspace }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {sortedTrades.map((trade, index) => {
+                      {visibleTrades.length ? visibleTrades.map((trade, index) => {
                         const actionClass = String(trade.action || '').toLowerCase()
                         return (
-                          <tr key={`${trade.timestamp}-${trade.action}-${index}`}>
+                          <tr key={`${trade.timestamp}-${trade.action}-${tradePage}-${index}`}>
                             <td>{tradeDate(trade.timestamp ?? trade.date)}</td>
                             <td><span className={`trade-badge ${actionClass}`}>{trade.action || '—'}</span></td>
                             <td>{trade.asset || '—'}</td>
@@ -149,12 +208,31 @@ export function ResultsDashboard({ workspace }) {
                             <td className={`trade-capital ${actionClass}`}>{money(trade.cash_after_trade ?? trade.capital_after_trade ?? trade.cash_after ?? trade.cash)}</td>
                           </tr>
                         )
-                      })}
+                      }) : <tr><td className="empty-cell" colSpan="7">No decisions match the selected action filters.</td></tr>}
                     </tbody>
                   </table>
-                  </div>
-                </>
-              )}
+                </div>
+
+                <div className="pagination-bar">
+                  <button
+                    type="button"
+                    className="button ghost"
+                    onClick={() => setTradePage((current) => Math.max(1, current - 1))}
+                    disabled={safeTradePage <= 1}
+                  >
+                    Previous
+                  </button>
+                  <span>Page {safeTradePage} of {totalTradePages}</span>
+                  <button
+                    type="button"
+                    className="button ghost"
+                    onClick={() => setTradePage((current) => Math.min(totalTradePages, current + 1))}
+                    disabled={safeTradePage >= totalTradePages}
+                  >
+                    Next
+                  </button>
+                </div>
+              </article>
             </section>
           )}
         </>
@@ -162,4 +240,3 @@ export function ResultsDashboard({ workspace }) {
     </>
   )
 }
-
