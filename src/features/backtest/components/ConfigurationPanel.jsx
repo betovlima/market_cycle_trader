@@ -14,21 +14,21 @@ export function ConfigurationPanel({ workspace }) {
     <>
       <div className="section-heading">
         <div>
-          <span className="section-kicker">Analysis</span>
-          <h2>Evaluation window</h2>
-          <p>Select only the period that should be displayed and evaluated.</p>
+          <span className="section-kicker">Backtest</span>
+          <h2>Historical period</h2>
+          <p>Select the date range for the locked strategy execution.</p>
         </div>
         <button
           className="button primary"
           onClick={runBacktest}
           disabled={running || Boolean(dateValidationError)}
         >
-          {running ? 'Running…' : 'Run analysis'}
+          {running ? 'Running…' : 'Run backtest'}
         </button>
       </div>
 
       <div className="form-grid primary-grid public-date-grid">
-        <Field label="Analysis from">
+        <Field label="Start date">
           <input
             type="date"
             value={form.start_date}
@@ -39,7 +39,7 @@ export function ConfigurationPanel({ workspace }) {
             aria-invalid={!form.start_date || undefined}
           />
         </Field>
-        <Field label="Analysis to" helper="Leave blank to use the latest available session.">
+        <Field label="End date" helper="Leave blank to use the latest available session.">
           <input
             type="date"
             value={form.end_date}

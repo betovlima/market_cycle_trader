@@ -16,10 +16,10 @@ function marketDateIso() {
 }
 
 function validateDateRange(startDate, endDate, maximumEndDate) {
-  if (!startDate) return 'Analysis start is required.'
-  if (startDate > maximumEndDate) return 'Analysis start cannot be later than today.'
-  if (endDate && endDate > maximumEndDate) return 'Analysis end cannot be later than today.'
-  if (endDate && endDate < startDate) return 'Analysis end cannot be earlier than analysis start.'
+  if (!startDate) return 'Start date is required.'
+  if (startDate > maximumEndDate) return 'Start date cannot be later than today.'
+  if (endDate && endDate > maximumEndDate) return 'End date cannot be later than today.'
+  if (endDate && endDate < startDate) return 'End date cannot be earlier than start date.'
   return ''
 }
 
@@ -131,9 +131,10 @@ export function useBacktestWorkspace() {
   const comparisonData = useMemo(
     () => (results?.comparison || []).map((row) => ({
       ...row,
-      label: row.label || 'Result',
-      portfolioPct: Number(row.return) * 100,
-      buyHoldPct: Number(row.benchmark_return) * 100,
+      label: row.strategy_label || row.backend,
+      modelLabel: row.model_family || row.backend,
+      strategyPct: Number(row.strategy_return) * 100,
+      buyHoldPct: Number(row.buy_hold_return) * 100,
       excessPct: Number(row.excess_return) * 100,
     })),
     [results],

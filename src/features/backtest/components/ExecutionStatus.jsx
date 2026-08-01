@@ -19,6 +19,7 @@ export function ExecutionStatus({ workspace }) {
             <div>
               <span className={`status-dot ${job.status}`} />
               <strong>{job.stage}</strong>
+              <small>{job.completed_runs ?? 0} of {job.total_runs ?? 0} model runs</small>
             </div>
             <span>{Number(job.progress ?? 0).toFixed(job.progress % 1 ? 1 : 0)}%</span>
           </div>
@@ -28,16 +29,17 @@ export function ExecutionStatus({ workspace }) {
           {job.status === 'interrupted' && (
             <div className="settings-message" role="status">
               <strong>This execution is stopped.</strong>{' '}
-              The analysis was interrupted before completion.
+              The job was interrupted before completion. Any partial execution
+              data remains available through the export files.
             </div>
           )}
           {logs.length > 0 && (
-            <section className="logs-panel" aria-label="Execution status">
+            <section className="logs-panel" aria-label="Execution log">
               <div className="logs-panel-header">
-                <strong>Execution status</strong>
-                <small>Latest updates</small>
+                <strong>Execution log</strong>
+                <small>Latest {Math.min(logs.length, 120)} messages</small>
               </div>
-              <pre ref={logRef}>{logs.slice(-20).join('\n')}</pre>
+              <pre ref={logRef}>{logs.slice(-120).join('\n')}</pre>
             </section>
           )}
         </section>
