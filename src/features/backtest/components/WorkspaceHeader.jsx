@@ -4,12 +4,7 @@ import { downloadApiFile } from '../../../api/download'
 import { FRONT_VERSION } from '../../../config/env'
 
 export function WorkspaceHeader({ workspace }) {
-  const {
-    results,
-    error,
-    setError,
-    apiVersion,
-  } = workspace
+  const { results, error, setError, apiVersion } = workspace
   const [exporting, setExporting] = useState(false)
 
   async function exportAllResults() {
@@ -32,14 +27,14 @@ export function WorkspaceHeader({ workspace }) {
     <>
       <header className="topbar">
         <div>
-          <div className="eyebrow">HISTORICAL STRATEGY SIMULATION</div>
+          <div className="eyebrow">MARKET ANALYSIS</div>
           <h1>Market Cycle Trader</h1>
-          <p>Run the validated strategy across a selected historical period.</p>
+          <p>Review portfolio performance over a selected analysis window.</p>
         </div>
         <div className="topbar-actions">
           <span className="simulation-badge">API v{apiVersion}</span>
           <span className="simulation-badge">Front v{FRONT_VERSION}</span>
-          <span className="simulation-badge">Simulation only</span>
+          <span className="simulation-badge">Paper environment</span>
           {results && (
             <button
               className="button secondary"
@@ -47,7 +42,7 @@ export function WorkspaceHeader({ workspace }) {
               onClick={exportAllResults}
               disabled={exporting}
             >
-              {exporting ? 'Preparing export…' : 'Export all results'}
+              {exporting ? 'Preparing export…' : 'Export results'}
             </button>
           )}
         </div>

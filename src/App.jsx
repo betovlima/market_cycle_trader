@@ -51,7 +51,7 @@ export default function App() {
       )}
 
       <footer>
-        The Alpaca portfolio tab follows the live paper-trading sleeve. The backtest tab keeps the validated historical XGBoost analysis available.
+        The portfolio tab follows the paper account. The analysis tab shows historical performance for the selected evaluation window.
       </footer>
     </main>
   )

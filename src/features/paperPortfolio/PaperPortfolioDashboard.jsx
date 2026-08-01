@@ -110,7 +110,7 @@ export function PaperPortfolioDashboard() {
         <div>
           <div className="eyebrow">ALPACA PAPER</div>
           <h2>Portfolio evolution</h2>
-          <p>Live strategy sleeve with automatic polling every hour and manual refresh at any time.</p>
+          <p>Live paper portfolio with automatic polling every hour and manual refresh at any time.</p>
         </div>
         <div className="portfolio-connection">
           <input
@@ -136,7 +136,7 @@ export function PaperPortfolioDashboard() {
 
       {!data ? (
         <div className="portfolio-empty panel">
-          Enter the Paper Market API token to follow the isolated US$10,000 strategy portfolio.
+          Enter the Paper Market API token to view the isolated paper portfolio.
         </div>
       ) : (
         <>
@@ -189,7 +189,7 @@ export function PaperPortfolioDashboard() {
           <div className="metrics-grid portfolio-metrics">
             <article className="metric-card"><span>Portfolio value</span><strong>{money(data.portfolio_value)}</strong><small>Initial {money(data.initial_capital)}</small></article>
             <article className="metric-card"><span>Total return</span><strong className={pnlClass}>{percent(data.total_return)}</strong><small className={pnlClass}>{money(data.total_pnl)}</small></article>
-            <article className="metric-card"><span>Strategy cash</span><strong>{money(data.strategy_cash)}</strong><small>Isolated from account buying power</small></article>
+            <article className="metric-card"><span>Available cash</span><strong>{money(data.available_cash)}</strong><small>Isolated from account buying power</small></article>
             <article className="metric-card"><span>Market value</span><strong>{money(data.market_value)}</strong><small>{position ? position.symbol : 'No open position'}</small></article>
             <article className="metric-card"><span>Realized P&amp;L</span><strong className={Number(data.realized_pnl) >= 0 ? 'positive' : 'negative'}>{money(data.realized_pnl)}</strong><small>Closed operations</small></article>
             <article className="metric-card"><span>Unrealized P&amp;L</span><strong className={Number(data.unrealized_pnl) >= 0 ? 'positive' : 'negative'}>{money(data.unrealized_pnl)}</strong><small>{position ? percent(position.unrealized_return) : 'No position'}</small></article>
@@ -207,7 +207,7 @@ export function PaperPortfolioDashboard() {
                   <div><dt>Cost basis</dt><dd>{money(position.cost_basis)}</dd></div>
                   <div><dt>Holding sessions</dt><dd>{position.holding_sessions}</dd></div>
                 </dl>
-              ) : <p className="muted-copy">The strategy is currently in cash.</p>}
+              ) : <p className="muted-copy">The portfolio is currently in cash.</p>}
             </article>
 
             <article className="panel portfolio-card">
