@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
-import { apiDownloadUrl } from '../../../config/env'
+import { downloadApiFile } from '../../../api/download'
 import { EmptyState } from '../../../shared/components/EmptyState'
 import { MetricCard } from '../../../shared/components/MetricCard'
 import { compactDate, money, number, percent, tradeDate } from '../../../shared/formatters'
@@ -10,10 +10,12 @@ const TRADE_PAGE_SIZE = 10
 const TRADE_ACTIONS = ['buy', 'hold', 'sell']
 
 export function ResultsDashboard({ workspace }) {
-  const { results, selectedKey, setSelectedKey, loadingResults, selectedRun, comparisonData, bestRun, selectedMetrics } = workspace
+  const { results, selectedKey, setSelectedKey, loadingResults, selectedRun, comparisonData, bestRun, selectedMetrics, setError } = workspace
   const [tradeDateSort, setTradeDateSort] = useState('desc')
   const [tradePage, setTradePage] = useState(1)
   const [tradeFilters, setTradeFilters] = useState(() => new Set(TRADE_ACTIONS))
+  const [exportingPackage, setExportingPackage] = useState(false)
+  const [exportingComparison, setExportingComparison] = useState(false)
 
   const sortedTrades = useMemo(() => {
     const trades = Array.isArray(selectedRun?.trades) ? selectedRun.trades : []
@@ -47,6 +49,39 @@ export function ResultsDashboard({ workspace }) {
   const tradePageEnd = Math.min(filteredTrades.length, safeTradePage * TRADE_PAGE_SIZE)
   const visibleTrades = filteredTrades.slice(tradePageStart > 0 ? tradePageStart - 1 : 0, tradePageEnd)
 
+
+  async function exportPackage() {
+    if (!results?.downloads?.zip || exportingPackage) return
+    setError('')
+    setExportingPackage(true)
+    try {
+      await downloadApiFile(
+        results.downloads.zip,
+        `market_cycle_trader_${results.jobId || 'results'}.zip`,
+      )
+    } catch (exportError) {
+      setError(exportError.message)
+    } finally {
+      setExportingPackage(false)
+    }
+  }
+
+  async function exportComparison() {
+    if (!results?.downloads?.comparison || exportingComparison) return
+    setError('')
+    setExportingComparison(true)
+    try {
+      await downloadApiFile(
+        results.downloads.comparison,
+        `comparison_${results.jobId || 'results'}.csv`,
+      )
+    } catch (exportError) {
+      setError(exportError.message)
+    } finally {
+      setExportingComparison(false)
+    }
+  }
+
   function toggleTradeFilter(action) {
     setTradeFilters((current) => {
       const next = new Set(current)
@@ -71,11 +106,11 @@ export function ResultsDashboard({ workspace }) {
             <MetricCard label="Completed model runs" value={comparisonData.length} note="Compound Capital Rotation" />
             <MetricCard label="Best excess return" value={bestRun ? percent(bestRun.excess_return) : '—'} note={bestRun?.strategy_label || ''} />
             <MetricCard label="Best strategy capital" value={bestRun ? money(bestRun.strategy_ending_capital) : '—'} note="Out-of-sample capital" />
-            <MetricCard label="Export package" value="ZIP + CSV" note="Predictions, trades, metrics and diagnostics" href={apiDownloadUrl(results.downloads.zip)} />
+            <MetricCard label="Export package" value={exportingPackage ? "Preparing…" : "ZIP + CSV"} note="Predictions, trades, metrics and diagnostics" onClick={exportPackage} disabled={exportingPackage} />
           </section>
 
           <section className="panel chart-panel">
-            <div className="section-heading compact"><div><span className="section-kicker">Model comparison</span><h2>Strategy vs Buy & Hold</h2></div><a className="button ghost" href={apiDownloadUrl(results.downloads.comparison)}>Export CSV</a></div>
+            <div className="section-heading compact"><div><span className="section-kicker">Model comparison</span><h2>Strategy vs Buy & Hold</h2></div><button className="button ghost" type="button" onClick={exportComparison} disabled={exportingComparison}>{exportingComparison ? "Preparing…" : "Export CSV"}</button></div>
             <div className="chart large-chart">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={comparisonData} margin={{ top: 12, right: 18, left: 0, bottom: 44 }}>

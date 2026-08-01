@@ -1,6 +1,6 @@
 # market_cycle_trader
 
-React + Vite frontend for Market Cycle Trader v1.12.0.
+React + Vite frontend for Market Cycle Trader v1.12.11.
 
 ## Local
 

@@ -1,4 +1,7 @@
-import { FRONT_VERSION, apiDownloadUrl } from '../../../config/env'
+import { useState } from 'react'
+
+import { downloadApiFile } from '../../../api/download'
+import { FRONT_VERSION } from '../../../config/env'
 
 export function WorkspaceHeader({ workspace }) {
   const {
@@ -7,6 +10,23 @@ export function WorkspaceHeader({ workspace }) {
     setError,
     apiVersion,
   } = workspace
+  const [exporting, setExporting] = useState(false)
+
+  async function exportAllResults() {
+    if (!results?.downloads?.zip || exporting) return
+    setError('')
+    setExporting(true)
+    try {
+      await downloadApiFile(
+        results.downloads.zip,
+        `market_cycle_trader_${results.jobId || 'results'}.zip`,
+      )
+    } catch (exportError) {
+      setError(exportError.message)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <>
@@ -21,7 +41,14 @@ export function WorkspaceHeader({ workspace }) {
           <span className="simulation-badge">Front v{FRONT_VERSION}</span>
           <span className="simulation-badge">Simulation only</span>
           {results && (
-            <a className="button secondary" href={apiDownloadUrl(results.downloads.zip)}>Export all results</a>
+            <button
+              className="button secondary"
+              type="button"
+              onClick={exportAllResults}
+              disabled={exporting}
+            >
+              {exporting ? 'Preparing export…' : 'Export all results'}
+            </button>
           )}
         </div>
       </header>
