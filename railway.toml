@@ -1,6 +1,6 @@
 [build]
 builder = "RAILPACK"
-buildCommand = "npm install && npm run build"
+buildCommand = "corepack enable && pnpm install --frozen-lockfile && pnpm run build"
 
 [deploy]
 healthcheckPath = "/"
