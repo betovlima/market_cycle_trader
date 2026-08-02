@@ -1,7 +1,7 @@
 {
   "name": "market_cycle_trader",
   "private": true,
-  "version": "1.12.18",
+  "version": "1.12.19",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,7 @@
   "dependencies": {
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "recharts": "3.10.1",
     "serve": "14.2.6"
   },
   "devDependencies": {
