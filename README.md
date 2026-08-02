@@ -1,6 +1,6 @@
 # market_cycle_trader
 
-React + Vite frontend for Market Cycle Trader v1.12.0.
+React + Vite frontend for Market Cycle Trader v1.12.22.
 
 ## Local
 
@@ -37,3 +37,10 @@ Set at build time:
 ```text
 VITE_API_BASE_URL=https://<public-api-domain>
 ```
+
+## v1.12.22
+
+- Fixes the full-results export URL when the API is hosted on a separate Railway domain.
+- Keeps the Portfolio dashboard mounted while switching tabs.
+- Aligns automatic portfolio queries to the next whole hour and preserves that schedule across reloads.
+- Renames the Alpaca portfolio tab to Portfolio.

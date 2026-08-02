@@ -1,4 +1,4 @@
-import { FRONT_VERSION } from '../../../config/env'
+import { FRONT_VERSION, resolveApiResourceUrl } from '../../../config/env'
 
 export function WorkspaceHeader({ workspace }) {
   const {
@@ -21,7 +21,7 @@ export function WorkspaceHeader({ workspace }) {
           <span className="simulation-badge">Front v{FRONT_VERSION}</span>
           <span className="simulation-badge">Simulation only</span>
           {results && (
-            <a className="button secondary" href={results.downloads.zip}>Export all results</a>
+            <a className="button secondary" href={resolveApiResourceUrl(results.downloads.zip)}>Export all results</a>
           )}
         </div>
       </header>

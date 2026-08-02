@@ -1,7 +1,7 @@
 {
   "name": "market_cycle_trader",
   "private": true,
-  "version": "1.12.7",
+  "version": "1.12.22",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -21,5 +21,6 @@
   },
   "engines": {
     "node": ">=22.12.0 <25"
-  }
+  },
+  "packageManager": "pnpm@10.15.1"
 }
