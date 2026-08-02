@@ -1,6 +1,14 @@
-export const FRONT_VERSION = '1.12.7'
+export const FRONT_VERSION = '1.12.22'
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || ''
 export const API_BASE_URL = rawApiBaseUrl.replace(/\/$/, '')
 export const API = `${API_BASE_URL}/api`
 
+
+export function resolveApiResourceUrl(resourceUrl) {
+  if (!resourceUrl) return ''
+  if (/^https?:\/\//i.test(resourceUrl)) return resourceUrl
+  if (resourceUrl.startsWith('/api/')) return `${API_BASE_URL}${resourceUrl}`
+  if (resourceUrl.startsWith('/')) return `${API_BASE_URL}${resourceUrl}`
+  return `${API}/${resourceUrl.replace(/^\/+/, '')}`
+}

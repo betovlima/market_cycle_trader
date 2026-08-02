@@ -26,7 +26,7 @@ export default function App() {
           className={`workspace-tab ${activeTab === TABS.PORTFOLIO ? 'active' : ''}`}
           onClick={() => setActiveTab(TABS.PORTFOLIO)}
         >
-          Alpaca portfolio
+          Portfolio
         </button>
         <button
           type="button"
@@ -37,21 +37,21 @@ export default function App() {
         </button>
       </section>
 
-      {activeTab === TABS.PORTFOLIO ? (
+      <section hidden={activeTab !== TABS.PORTFOLIO} aria-hidden={activeTab !== TABS.PORTFOLIO}>
         <PaperPortfolioDashboard />
-      ) : (
-        <>
-          <section className="control-panel">
-            <ConfigurationPanel workspace={workspace} />
-          </section>
+      </section>
 
-          <ExecutionStatus workspace={workspace} />
-          <ResultsDashboard workspace={workspace} />
-        </>
-      )}
+      <section hidden={activeTab !== TABS.BACKTEST} aria-hidden={activeTab !== TABS.BACKTEST}>
+        <section className="control-panel">
+          <ConfigurationPanel workspace={workspace} />
+        </section>
+
+        <ExecutionStatus workspace={workspace} />
+        <ResultsDashboard workspace={workspace} />
+      </section>
 
       <footer>
-        The Alpaca portfolio tab follows the live paper-trading sleeve. The backtest tab keeps the validated historical XGBoost analysis available.
+        The Portfolio tab follows the live Alpaca paper-trading sleeve. The backtest tab keeps the validated historical XGBoost analysis available.
       </footer>
     </main>
   )

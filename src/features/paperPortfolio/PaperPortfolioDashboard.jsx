@@ -16,6 +16,16 @@ import { compactDate, money, number, percent } from '../../shared/formatters'
 const TOKEN_KEY = 'market-cycle-paper-market-token'
 const POLL_MS = 60 * 60 * 1000
 
+function nextWholeHourTimestamp(now = new Date()) {
+  const next = new Date(now)
+  next.setMinutes(60, 0, 0)
+  return next.getTime()
+}
+
+function secondsUntil(timestamp) {
+  return Math.max(0, Math.ceil((timestamp - Date.now()) / 1000))
+}
+
 function formatCountdown(totalSeconds) {
   const hours = Math.floor(totalSeconds / 3600)
   const minutes = Math.floor((totalSeconds % 3600) / 60)
@@ -37,7 +47,8 @@ export function PaperPortfolioDashboard() {
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(null)
-  const [countdownSeconds, setCountdownSeconds] = useState(Math.ceil(POLL_MS / 1000))
+  const [nextQueryAt, setNextQueryAt] = useState(() => nextWholeHourTimestamp())
+  const [countdownSeconds, setCountdownSeconds] = useState(() => secondsUntil(nextWholeHourTimestamp()))
 
   const loadPortfolio = useCallback(async ({ silent = false } = {}) => {
     const normalized = token.trim()
@@ -58,10 +69,8 @@ export function PaperPortfolioDashboard() {
       setData(response)
       setError('')
       setLastUpdated(new Date())
-      setCountdownSeconds(Math.ceil(POLL_MS / 1000))
     } catch (requestError) {
       setError(requestError.message)
-      setCountdownSeconds(Math.ceil(POLL_MS / 1000))
     } finally {
       if (!silent) setLoading(false)
       setRefreshing(false)
@@ -70,26 +79,52 @@ export function PaperPortfolioDashboard() {
 
   useEffect(() => {
     const normalized = token.trim()
-    if (!normalized) {
-      setCountdownSeconds(Math.ceil(POLL_MS / 1000))
-      return undefined
-    }
+    const scheduledAt = nextWholeHourTimestamp()
+    setNextQueryAt(scheduledAt)
+    setCountdownSeconds(secondsUntil(scheduledAt))
+
+    if (!normalized) return undefined
 
     loadPortfolio()
 
-    const pollTimer = window.setInterval(() => {
+    let hourlyTimer
+    const firstDelay = Math.max(0, scheduledAt - Date.now())
+    const firstHourlyTimer = window.setTimeout(() => {
       loadPortfolio({ silent: true })
-    }, POLL_MS)
+      const followingHour = nextWholeHourTimestamp()
+      setNextQueryAt(followingHour)
+      setCountdownSeconds(secondsUntil(followingHour))
 
-    const countdownTimer = window.setInterval(() => {
-      setCountdownSeconds((current) => (current <= 1 ? Math.ceil(POLL_MS / 1000) : current - 1))
-    }, 1000)
+      hourlyTimer = window.setInterval(() => {
+        loadPortfolio({ silent: true })
+        const nextHour = nextWholeHourTimestamp()
+        setNextQueryAt(nextHour)
+        setCountdownSeconds(secondsUntil(nextHour))
+      }, POLL_MS)
+    }, firstDelay)
 
     return () => {
-      window.clearInterval(pollTimer)
-      window.clearInterval(countdownTimer)
+      window.clearTimeout(firstHourlyTimer)
+      if (hourlyTimer) window.clearInterval(hourlyTimer)
     }
   }, [loadPortfolio, token])
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const remaining = secondsUntil(nextQueryAt)
+      if (remaining <= 0) {
+        const nextHour = nextWholeHourTimestamp()
+        setNextQueryAt(nextHour)
+        setCountdownSeconds(secondsUntil(nextHour))
+        return
+      }
+      setCountdownSeconds(remaining)
+    }
+
+    updateCountdown()
+    const countdownTimer = window.setInterval(updateCountdown, 1000)
+    return () => window.clearInterval(countdownTimer)
+  }, [nextQueryAt])
 
   const history = useMemo(() => (data?.history || []).map((item) => ({
     ...item,
