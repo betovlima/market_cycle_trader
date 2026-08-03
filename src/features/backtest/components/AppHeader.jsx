@@ -1,5 +1,6 @@
 import { FRONT_VERSION } from '../../../config/env'
 import { BacktestIcon, DashboardIcon, PortfolioIcon } from '../../../shared/components/Icons'
+import appLogoUrl from '../../../assets/market-cycle-trader-logo.png'
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', Icon: DashboardIcon },
@@ -12,7 +13,7 @@ export function AppHeader({ workspace, activeTab, onTabChange }) {
     <header className="app-header">
       <div className="brand-area">
         <div className="brand-logo-frame" aria-hidden="true">
-          <img className="app-logo" src="/icons/app-icon-192.png" alt="" width="64" height="64" decoding="async" fetchPriority="high" />
+          <img className="app-logo" src={appLogoUrl} alt="" width="64" height="64" decoding="async" fetchPriority="high" />
         </div>
         <div className="brand-divider" />
         <div className="brand-copy">

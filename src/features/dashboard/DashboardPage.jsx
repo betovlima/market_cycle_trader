@@ -1,5 +1,66 @@
+import { useEffect, useState } from 'react'
+
 import { ActivityIcon, CalendarIcon, PlayIcon, RocketIcon, ShieldIcon, TrophyIcon } from '../../shared/components/Icons'
 import { durationLabel, money, percent, relativeTime, shortDateTime } from '../../shared/formatters'
+
+function nextWholeHourTimestamp(now = new Date()) {
+  const next = new Date(now)
+  next.setMinutes(60, 0, 0)
+  return next.getTime()
+}
+
+function secondsUntil(timestamp) {
+  return Math.max(0, Math.ceil((timestamp - Date.now()) / 1000))
+}
+
+function countdownLabel(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return [minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':')
+}
+
+function nextUpdateLabel(timestamp) {
+  return new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(new Date(timestamp))
+}
+
+function MarketUpdateClock() {
+  const [nextUpdateAt, setNextUpdateAt] = useState(() => nextWholeHourTimestamp())
+  const [remaining, setRemaining] = useState(() => secondsUntil(nextWholeHourTimestamp()))
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const seconds = secondsUntil(nextUpdateAt)
+      if (seconds <= 0) {
+        const next = nextWholeHourTimestamp()
+        setNextUpdateAt(next)
+        setRemaining(secondsUntil(next))
+        return
+      }
+      setRemaining(seconds)
+    }, 1000)
+
+    return () => window.clearInterval(timer)
+  }, [nextUpdateAt])
+
+  const progress = Math.max(0, Math.min(1, remaining / 3600))
+
+  return (
+    <article className="summary-card market-update-card" aria-label={`Next market update in ${countdownLabel(remaining)}`}>
+      <div
+        className="market-update-dial"
+        style={{ '--clock-progress': `${progress * 360}deg` }}
+        aria-hidden="true"
+      >
+        <span>{countdownLabel(remaining)}</span>
+      </div>
+      <div>
+        <span>Next Market Update</span>
+        <strong>{countdownLabel(remaining)}</strong>
+        <small>Scheduled for {nextUpdateLabel(nextUpdateAt)}</small>
+      </div>
+    </article>
+  )
+}
 
 function SummaryCard({ icon, label, value, note, tone = 'blue' }) {
   return (
@@ -74,6 +135,7 @@ export function DashboardPage({ workspace, onOpenBacktest }) {
           note={last?.created_at ? shortDateTime(last.created_at) : 'No execution yet'}
           tone="blue"
         />
+        <MarketUpdateClock />
       </section>
 
       <section className="data-panel">
