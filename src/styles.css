@@ -218,7 +218,7 @@ a { color: inherit; }
 .progress-track { height: 7px; margin-top: 13px; overflow: hidden; border-radius: 999px; background: rgba(86, 118, 157, .17); }
 .progress-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--positive)); }
 .execution-log { margin-top: 14px; color: var(--muted); font-size: .78rem; }
-.execution-log summary { cursor: pointer; }
+.execution-log-title { margin-bottom: 8px; color: var(--text); font-weight: 700; }
 .execution-log pre { max-height: 220px; overflow: auto; padding: 12px; border-radius: 10px; background: #020813; white-space: pre-wrap; color: #9fb1c7; font: .72rem/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .loading-state { text-align: center; color: var(--muted); padding: 40px; }
 

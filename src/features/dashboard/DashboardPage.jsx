@@ -1,4 +1,4 @@
-import { ActivityIcon, CalendarIcon, EyeIcon, PlayIcon, RocketIcon, ShieldIcon, TrophyIcon } from '../../shared/components/Icons'
+import { ActivityIcon, CalendarIcon, PlayIcon, RocketIcon, ShieldIcon, TrophyIcon } from '../../shared/components/Icons'
 import { durationLabel, money, percent, relativeTime, shortDateTime } from '../../shared/formatters'
 
 function SummaryCard({ icon, label, value, note, tone = 'blue' }) {
@@ -19,7 +19,7 @@ function StatusBadge({ status }) {
 }
 
 export function DashboardPage({ workspace, onOpenBacktest }) {
-  const { dashboard, loadingDashboard, running, runBacktest } = workspace
+  const { dashboard, loadingDashboard, running, restoringExecution, startingBacktest, startDisabled, runBacktest } = workspace
   const best = dashboard?.best_performance
   const last = dashboard?.last_backtest
 
@@ -44,9 +44,9 @@ export function DashboardPage({ workspace, onOpenBacktest }) {
           <div className="hero-launch-copy">
             <h2>Start New Backtest</h2>
             <p>Execute a new historical simulation using the active protected configuration.</p>
-            <button className="primary-action" type="button" disabled={running} onClick={startBacktest}>
+            <button className="primary-action" type="button" disabled={startDisabled} onClick={startBacktest}>
               <PlayIcon size={15} />
-              {running ? 'Simulation Running' : 'Start Backtest'}
+              {restoringExecution ? 'Checking Execution' : startingBacktest ? 'Starting…' : running ? 'Simulation Running' : 'Start Backtest'}
             </button>
           </div>
         </div>
@@ -87,7 +87,7 @@ export function DashboardPage({ workspace, onOpenBacktest }) {
         <div className="table-wrap">
           <table className="dashboard-table">
             <thead>
-              <tr><th>Date</th><th>Status</th><th>Total Return</th><th>Sharpe Ratio</th><th>Max Drawdown</th><th>Duration</th><th>Action</th></tr>
+              <tr><th>Date</th><th>Status</th><th>Total Return</th><th>Sharpe Ratio</th><th>Max Drawdown</th><th>Duration</th></tr>
             </thead>
             <tbody>
               {dashboard?.recent_backtests?.length ? dashboard.recent_backtests.map((item) => (
@@ -98,14 +98,9 @@ export function DashboardPage({ workspace, onOpenBacktest }) {
                   <td>{item.metrics?.sharpe == null ? '—' : Number(item.metrics.sharpe).toFixed(3)}</td>
                   <td className="negative">{percent(item.metrics?.maximum_drawdown)}</td>
                   <td>{durationLabel(item.duration_seconds)}</td>
-                  <td>
-                    <button type="button" className="table-action" disabled={item.status !== 'completed'} onClick={() => onOpenBacktest(item.id)}>
-                      <EyeIcon /> View
-                    </button>
-                  </td>
                 </tr>
               )) : (
-                <tr><td colSpan="7" className="empty-cell">No backtests have been executed yet.</td></tr>
+                <tr><td colSpan="6" className="empty-cell">No backtests have been executed yet.</td></tr>
               )}
             </tbody>
           </table>

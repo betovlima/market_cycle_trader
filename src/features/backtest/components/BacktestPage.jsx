@@ -1,6 +1,6 @@
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
-import { BacktestIcon, EyeIcon, PlayIcon } from '../../../shared/components/Icons'
+import { BacktestIcon, PlayIcon } from '../../../shared/components/Icons'
 import { durationLabel, money, percent, shortDate, shortDateTime } from '../../../shared/formatters'
 import { ExecutionStatus } from './ExecutionStatus'
 
@@ -19,7 +19,7 @@ function StatusBadge({ status }) {
 }
 
 export function BacktestPage({ workspace }) {
-  const { dashboard, detail, loadingDetail, running, runBacktest, selectBacktest } = workspace
+  const { dashboard, detail, loadingDetail, running, restoringExecution, startingBacktest, startDisabled, runBacktest } = workspace
   const metrics = detail?.metrics || {}
   const chartRows = (detail?.series || []).map((row) => ({
     ...row,
@@ -33,8 +33,8 @@ export function BacktestPage({ workspace }) {
           <div className="page-title-icon"><BacktestIcon size={20} /></div>
           <div><h2>Backtest</h2><p>Execute and analyze protected historical simulations.</p></div>
         </div>
-        <button type="button" className="primary-action compact" onClick={runBacktest} disabled={running}>
-          <PlayIcon /> {running ? 'Simulation Running' : 'Start New Backtest'}
+        <button type="button" className="primary-action compact" onClick={runBacktest} disabled={startDisabled}>
+          <PlayIcon /> {restoringExecution ? 'Checking Execution' : startingBacktest ? 'Starting…' : running ? 'Simulation Running' : 'Start New Backtest'}
         </button>
       </div>
 
@@ -97,7 +97,7 @@ export function BacktestPage({ workspace }) {
         <div className="panel-heading"><div><span className="panel-kicker">History</span><h2>Backtest History</h2></div></div>
         <div className="table-wrap">
           <table className="dashboard-table">
-            <thead><tr><th>Date</th><th>Status</th><th>Total Return</th><th>Sharpe Ratio</th><th>Max Drawdown</th><th>Duration</th><th>Action</th></tr></thead>
+            <thead><tr><th>Date</th><th>Status</th><th>Total Return</th><th>Sharpe Ratio</th><th>Max Drawdown</th><th>Duration</th></tr></thead>
             <tbody>
               {dashboard?.recent_backtests?.length ? dashboard.recent_backtests.map((item) => (
                 <tr key={item.id} className={detail?.id === item.id ? 'selected-row' : ''}>
@@ -107,9 +107,8 @@ export function BacktestPage({ workspace }) {
                   <td>{item.metrics?.sharpe == null ? '—' : Number(item.metrics.sharpe).toFixed(3)}</td>
                   <td className="negative">{percent(item.metrics?.maximum_drawdown)}</td>
                   <td>{durationLabel(item.duration_seconds)}</td>
-                  <td><button type="button" className="table-action" disabled={item.status !== 'completed'} onClick={() => selectBacktest(item.id)}><EyeIcon /> View</button></td>
                 </tr>
-              )) : <tr><td colSpan="7" className="empty-cell">No backtest history is available.</td></tr>}
+              )) : <tr><td colSpan="6" className="empty-cell">No backtest history is available.</td></tr>}
             </tbody>
           </table>
         </div>

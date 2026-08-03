@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { AppHeader } from './features/backtest/components/AppHeader'
 import { BacktestPage } from './features/backtest/components/BacktestPage'
@@ -10,10 +10,13 @@ export default function App() {
   const workspace = useBacktestWorkspace()
   const [activeTab, setActiveTab] = useState('dashboard')
 
-  async function openBacktest(jobId) {
+  function openBacktest() {
     setActiveTab('backtest')
-    if (jobId) await workspace.selectBacktest(jobId)
   }
+
+  useEffect(() => {
+    if (workspace.running) setActiveTab('backtest')
+  }, [workspace.running])
 
   return (
     <div className="app-frame">
