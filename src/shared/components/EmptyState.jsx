@@ -3,8 +3,7 @@ export function EmptyState() {
     <section className="empty-state">
       <div className="empty-icon">◎</div>
       <h2>No completed backtest yet</h2>
-      <p>Choose the assets and model implementations, then run the local simulation.</p>
+      <p>Run the protected simulation to generate the first result.</p>
     </section>
   )
 }
-

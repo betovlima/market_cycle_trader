@@ -1,58 +1,38 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
-import { ConfigurationPanel } from './features/backtest/components/ConfigurationPanel'
-import { ExecutionStatus } from './features/backtest/components/ExecutionStatus'
-import { ResultsDashboard } from './features/backtest/components/ResultsDashboard'
-import { WorkspaceHeader } from './features/backtest/components/WorkspaceHeader'
+import { AppHeader } from './features/backtest/components/AppHeader'
+import { BacktestPage } from './features/backtest/components/BacktestPage'
 import { useBacktestWorkspace } from './features/backtest/hooks/useBacktestWorkspace'
+import { DashboardPage } from './features/dashboard/DashboardPage'
 import { PaperPortfolioDashboard } from './features/paperPortfolio/PaperPortfolioDashboard'
-
-const TABS = {
-  PORTFOLIO: 'portfolio',
-  BACKTEST: 'backtest',
-}
 
 export default function App() {
   const workspace = useBacktestWorkspace()
-  const [activeTab, setActiveTab] = useState(TABS.PORTFOLIO)
+  const [activeTab, setActiveTab] = useState('dashboard')
+
+  function openBacktest() {
+    setActiveTab('backtest')
+  }
+
+  useEffect(() => {
+    if (workspace.running) setActiveTab('backtest')
+  }, [workspace.running])
 
   return (
-    <main className="app-shell">
-      <WorkspaceHeader workspace={workspace} />
+    <div className="app-frame">
+      <AppHeader workspace={workspace} activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <section className="workspace-tabs" aria-label="Main workspace sections">
-        <button
-          type="button"
-          className={`workspace-tab ${activeTab === TABS.PORTFOLIO ? 'active' : ''}`}
-          onClick={() => setActiveTab(TABS.PORTFOLIO)}
-        >
-          Portfolio
-        </button>
-        <button
-          type="button"
-          className={`workspace-tab ${activeTab === TABS.BACKTEST ? 'active' : ''}`}
-          onClick={() => setActiveTab(TABS.BACKTEST)}
-        >
-          Backtest
-        </button>
-      </section>
+      {workspace.error ? (
+        <div className="global-error"><strong>Unable to load data</strong><span>{workspace.error}</span><button type="button" onClick={() => workspace.setError('')}>×</button></div>
+      ) : null}
 
-      <section hidden={activeTab !== TABS.PORTFOLIO} aria-hidden={activeTab !== TABS.PORTFOLIO}>
-        <PaperPortfolioDashboard />
-      </section>
+      <main className="workspace-main">
+        {activeTab === 'dashboard' ? <DashboardPage workspace={workspace} onOpenBacktest={openBacktest} /> : null}
+        {activeTab === 'backtest' ? <BacktestPage workspace={workspace} /> : null}
+        {activeTab === 'portfolio' ? <PaperPortfolioDashboard /> : null}
+      </main>
 
-      <section hidden={activeTab !== TABS.BACKTEST} aria-hidden={activeTab !== TABS.BACKTEST}>
-        <section className="control-panel">
-          <ConfigurationPanel workspace={workspace} />
-        </section>
-
-        <ExecutionStatus workspace={workspace} />
-        <ResultsDashboard workspace={workspace} />
-      </section>
-
-      <footer>
-        The Portfolio tab follows the live Alpaca paper-trading sleeve. The backtest tab keeps the validated historical XGBoost analysis available.
-      </footer>
-    </main>
+      <footer className="app-footer">All activity is simulated. Private configuration remains server-side.</footer>
+    </div>
   )
 }
