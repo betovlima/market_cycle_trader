@@ -1,62 +1,48 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { apiFetch } from '../../../api/http'
 import { API } from '../../../config/env'
 
-function marketDateIso() {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date())
-
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-  return `${values.year}-${values.month}-${values.day}`
-}
-
-function validateDateRange(startDate, endDate, maximumEndDate) {
-  if (!startDate) return 'Start date is required.'
-  if (startDate > maximumEndDate) return 'Start date cannot be later than today.'
-  if (endDate && endDate > maximumEndDate) return 'End date cannot be later than today.'
-  if (endDate && endDate < startDate) return 'End date cannot be earlier than start date.'
-  return ''
-}
-
 export function useBacktestWorkspace() {
-  const [form, setForm] = useState({ start_date: '', end_date: '' })
   const [job, setJob] = useState(null)
-  const [results, setResults] = useState(null)
-  const [selectedKey, setSelectedKey] = useState('')
+  const [detail, setDetail] = useState(null)
+  const [dashboard, setDashboard] = useState(null)
   const [error, setError] = useState('')
-  const [loadingResults, setLoadingResults] = useState(false)
+  const [loadingDetail, setLoadingDetail] = useState(false)
+  const [loadingDashboard, setLoadingDashboard] = useState(true)
   const [apiVersion, setApiVersion] = useState('…')
 
-  const maximumEndDate = useMemo(() => marketDateIso(), [])
-  const dateValidationError = useMemo(
-    () => validateDateRange(form.start_date, form.end_date, maximumEndDate),
-    [form.start_date, form.end_date, maximumEndDate],
-  )
-
   const running = Boolean(job && ['queued', 'running'].includes(job.status))
-  const selectedRun = useMemo(
-    () => results?.runs?.find((run) => run.key === selectedKey) || results?.runs?.[0] || null,
-    [results, selectedKey],
-  )
 
-
-  async function loadResults(jobId) {
-    setLoadingResults(true)
+  const refreshDashboard = useCallback(async () => {
+    setLoadingDashboard(true)
     try {
-      const payload = await apiFetch(`${API}/jobs/${jobId}/results`)
-      setResults(payload)
-      setSelectedKey((current) => current || payload.runs?.[0]?.key || '')
+      const payload = await apiFetch(`${API}/dashboard/summary?limit=12`)
+      setDashboard(payload)
+      return payload
     } catch (requestError) {
       setError(requestError.message)
+      return null
     } finally {
-      setLoadingResults(false)
+      setLoadingDashboard(false)
     }
-  }
+  }, [])
+
+  const loadDetail = useCallback(async (jobId) => {
+    if (!jobId) return null
+    setLoadingDetail(true)
+    try {
+      const payload = await apiFetch(`${API}/dashboard/jobs/${jobId}`)
+      setDetail(payload)
+      setJob((current) => current?.id === jobId ? { ...current, ...payload } : payload)
+      return payload
+    } catch (requestError) {
+      setError(requestError.message)
+      return null
+    } finally {
+      setLoadingDetail(false)
+    }
+  }, [])
 
   useEffect(() => {
     async function bootstrap() {
@@ -67,18 +53,16 @@ export function useBacktestWorkspace() {
         setApiVersion('unavailable')
       }
 
-      try {
-        const latest = await apiFetch(`${API}/jobs/latest`)
-        if (latest) {
-          setJob(latest)
-          if (latest.status === 'completed') await loadResults(latest.id)
-        }
-      } catch (requestError) {
-        setError(requestError.message)
+      const summary = await refreshDashboard()
+      const latest = summary?.recent_backtests?.[0]
+      if (latest) {
+        setJob(latest)
+        const completed = summary.recent_backtests.find((item) => item.status === 'completed')
+        if (completed) await loadDetail(completed.id)
       }
     }
     bootstrap()
-  }, [])
+  }, [loadDetail, refreshDashboard])
 
   useEffect(() => {
     if (!running || !job?.id) return undefined
@@ -88,83 +72,51 @@ export function useBacktestWorkspace() {
         setJob(updated)
         if (updated.status === 'completed') {
           window.clearInterval(timer)
-          await loadResults(updated.id)
+          await loadDetail(updated.id)
+          await refreshDashboard()
         } else if (['failed', 'interrupted'].includes(updated.status)) {
           window.clearInterval(timer)
+          await refreshDashboard()
         }
       } catch (requestError) {
         setError(requestError.message)
       }
     }, 5000)
     return () => window.clearInterval(timer)
-  }, [running, job?.id])
-
-  function updateDate(field, value) {
-    if (!['start_date', 'end_date'].includes(field)) return
-    setError('')
-    setForm((current) => ({ ...current, [field]: value }))
-  }
+  }, [job?.id, loadDetail, refreshDashboard, running])
 
   async function runBacktest() {
     setError('')
-    if (dateValidationError) {
-      setError(dateValidationError)
-      return
-    }
-
-    setResults(null)
+    setDetail(null)
     try {
-      const created = await apiFetch(`${API}/jobs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          start_date: form.start_date,
-          end_date: form.end_date || null,
-        }),
-      })
+      const created = await apiFetch(`${API}/jobs`, { method: 'POST' })
       setJob(created)
+      return created
     } catch (requestError) {
       setError(requestError.message)
+      return null
     }
   }
 
-  const comparisonData = useMemo(
-    () => (results?.comparison || []).map((row) => ({
-      ...row,
-      label: row.strategy_label || row.backend,
-      modelLabel: row.model_family || row.backend,
-      strategyPct: Number(row.strategy_return) * 100,
-      buyHoldPct: Number(row.buy_hold_return) * 100,
-      excessPct: Number(row.excess_return) * 100,
-    })),
-    [results],
-  )
-
-  const bestRun = useMemo(() => {
-    if (!comparisonData.length) return null
-    return [...comparisonData].sort((a, b) => b.excessPct - a.excessPct)[0]
-  }, [comparisonData])
-
-  const selectedMetrics = selectedRun?.metrics || {}
+  async function selectBacktest(jobId) {
+    setError('')
+    const summaryItem = dashboard?.recent_backtests?.find((item) => item.id === jobId)
+    if (summaryItem) setJob(summaryItem)
+    return loadDetail(jobId)
+  }
 
   return {
-    form,
     job,
-    results,
-    selectedKey,
-    setSelectedKey,
+    detail,
+    dashboard,
     error,
     setError,
-    loadingResults,
     apiVersion,
     running,
-    selectedRun,
+    loadingDetail,
+    loadingDashboard,
     runBacktest,
-    updateDate,
-    maximumEndDate,
-    dateValidationError,
-    comparisonData,
-    bestRun,
-    selectedMetrics,
+    selectBacktest,
+    refreshDashboard,
   }
 }

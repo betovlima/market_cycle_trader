@@ -1,46 +1,29 @@
-# market_cycle_trader
+# Market Cycle Trader Frontend v1.12.27
 
-React + Vite frontend for Market Cycle Trader v1.12.22.
+React + Vite frontend with a compact three-area workspace aligned with the original frontend scale:
 
-## Local
+- Dashboard
+- Backtest
+- Portfolio
 
-```powershell
-.\run_local.ps1
+The frontend consumes only sanitized dashboard payloads for historical summaries. Private configuration and implementation details remain exclusively on the server.
+
+## API contracts
+
+```http
+GET  /api/health
+GET  /api/dashboard/summary?limit=12
+GET  /api/dashboard/jobs/{job_id}
+POST /api/jobs
+GET  /api/jobs/{job_id}
+GET  /api/paper-market/portfolio
 ```
 
-Alternative:
+## Local execution
 
-```powershell
-npm install
-npm run dev
+Set `VITE_API_BASE_URL` in the environment and run:
+
+```bash
+pnpm install
+pnpm dev
 ```
-
-During local development Vite proxies `/api` to `http://127.0.0.1:8000`.
-
-## Structure
-
-- `features/backtest/components` — active Compound Capital Rotation UI.
-- `features/backtest/hooks` — workspace orchestration.
-- `shared/components` — reusable presentation components.
-- `api` — HTTP helper.
-- `config` — environment configuration.
-- `App.jsx` — composition root.
-
-The public form contains only the start and end dates. Strategy parameters are not bundled into the frontend.
-
-## Railway
-
-Use root directory `/market_cycle_trader` and config path `/market_cycle_trader/railway.toml`.
-
-Set at build time:
-
-```text
-VITE_API_BASE_URL=https://<public-api-domain>
-```
-
-## v1.12.22
-
-- Fixes the full-results export URL when the API is hosted on a separate Railway domain.
-- Keeps the Portfolio dashboard mounted while switching tabs.
-- Aligns automatic portfolio queries to the next whole hour and preserves that schedule across reloads.
-- Renames the Alpaca portfolio tab to Portfolio.

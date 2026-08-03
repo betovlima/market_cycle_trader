@@ -41,3 +41,40 @@ export function tradeDate(value) {
   return date ? date.toISOString().slice(0, 10) : '—'
 }
 
+
+export function shortDateTime(value) {
+  const date = parseDate(value)
+  if (!date) return '—'
+  return date.toLocaleString('en-US', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  })
+}
+
+export function shortDate(value) {
+  const date = parseDate(value)
+  if (!date) return '—'
+  return date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', timeZone: 'UTC' })
+}
+
+export function durationLabel(seconds) {
+  const value = Number(seconds)
+  if (!Number.isFinite(value) || value < 0) return '—'
+  if (value < 60) return `${Math.round(value)} sec`
+  if (value < 3600) return `${Math.floor(value / 60)}m ${Math.round(value % 60)}s`
+  const hours = Math.floor(value / 3600)
+  const minutes = Math.round((value % 3600) / 60)
+  return `${hours}h ${minutes}m`
+}
+
+export function relativeTime(value) {
+  const date = parseDate(value)
+  if (!date) return '—'
+  const seconds = Math.round((Date.now() - date.getTime()) / 1000)
+  const absolute = Math.abs(seconds)
+  if (absolute < 60) return 'just now'
+  if (absolute < 3600) return `${Math.round(absolute / 60)} minutes ago`
+  if (absolute < 86400) return `${Math.round(absolute / 3600)} hours ago`
+  const days = Math.round(absolute / 86400)
+  return `${days} day${days === 1 ? '' : 's'} ago`
+}

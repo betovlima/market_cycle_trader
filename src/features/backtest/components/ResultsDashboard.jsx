@@ -3,6 +3,7 @@ import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContai
 
 import { EmptyState } from '../../../shared/components/EmptyState'
 import { MetricCard } from '../../../shared/components/MetricCard'
+import { resolveApiResourceUrl } from '../../../config/env'
 import { compactDate, money, number, percent, tradeDate } from '../../../shared/formatters'
 
 const TRADE_PAGE_SIZE = 10
@@ -67,14 +68,14 @@ export function ResultsDashboard({ workspace }) {
       {results && (
         <>
           <section className="metrics-grid">
-            <MetricCard label="Completed model runs" value={comparisonData.length} note="Compound Capital Rotation" />
-            <MetricCard label="Best excess return" value={bestRun ? percent(bestRun.excess_return) : '—'} note={bestRun?.strategy_label || ''} />
-            <MetricCard label="Best strategy capital" value={bestRun ? money(bestRun.strategy_ending_capital) : '—'} note="Out-of-sample capital" />
+            <MetricCard label="Completed runs" value={comparisonData.length} note="Protected historical simulation" />
+            <MetricCard label="Best excess return" value={bestRun ? percent(bestRun.excess_return) : '—'} note="Compared with the reference portfolio" />
+            <MetricCard label="Best simulated capital" value={bestRun ? money(bestRun.strategy_ending_capital) : '—'} note="Out-of-sample capital" />
             <MetricCard label="Export package" value="ZIP + CSV" note="Predictions, trades, metrics and diagnostics" />
           </section>
 
           <section className="panel chart-panel">
-            <div className="section-heading compact"><div><span className="section-kicker">Model comparison</span><h2>Strategy vs Buy & Hold</h2></div><a className="button ghost" href={results.downloads.comparison}>Export CSV</a></div>
+            <div className="section-heading compact"><div><span className="section-kicker">Performance comparison</span><h2>Simulation vs Buy & Hold</h2></div><a className="button ghost" href={resolveApiResourceUrl(results.downloads.comparison)}>Export CSV</a></div>
             <div className="chart large-chart">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={comparisonData} margin={{ top: 12, right: 18, left: 0, bottom: 44 }}>
@@ -83,7 +84,7 @@ export function ResultsDashboard({ workspace }) {
                   <YAxis tickFormatter={(value) => `${value}%`} />
                   <Tooltip formatter={(value) => [`${Number(value).toFixed(2)}%`]} />
                   <Legend />
-                  <Bar dataKey="strategyPct" name="Strategy" fill="var(--series-1)" radius={[5, 5, 0, 0]} />
+                  <Bar dataKey="strategyPct" name="Simulation" fill="var(--series-1)" radius={[5, 5, 0, 0]} />
                   <Bar dataKey="buyHoldPct" name="Buy and hold" fill="var(--series-2)" radius={[5, 5, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -91,14 +92,14 @@ export function ResultsDashboard({ workspace }) {
           </section>
 
           <section className="panel comparison-table-panel">
-            <div className="section-heading compact"><div><span className="section-kicker">Walk-forward comparison</span><h2>Capital rotation metrics</h2></div></div>
+            <div className="section-heading compact"><div><span className="section-kicker">Performance summary</span><h2>Simulation metrics</h2></div></div>
             <div className="table-scroll">
               <table>
-                <thead><tr><th>Strategy</th><th>Folds</th><th>Capital</th><th>Return</th><th>Buy & Hold</th><th>Excess</th><th>CAGR</th><th>Sharpe</th><th>Max DD</th><th>Rotations</th><th>Avg hold</th></tr></thead>
+                <thead><tr><th>Run</th><th>Folds</th><th>Capital</th><th>Return</th><th>Buy & Hold</th><th>Excess</th><th>CAGR</th><th>Sharpe</th><th>Max DD</th><th>Rotations</th><th>Avg hold</th></tr></thead>
                 <tbody>
                   {comparisonData.map((row) => (
                     <tr key={`${row.backend}-${row.random_seed}-${row.repetition_index}`}>
-                      <td><strong>{row.strategy_label || row.backend}</strong></td>
+                      <td><strong>{row.label}</strong></td>
                       <td>{number(row.walk_forward_fold_count, 0)}</td>
                       <td>{money(row.strategy_ending_capital)}</td>
                       <td>{percent(row.strategy_return)}</td>
@@ -119,8 +120,8 @@ export function ResultsDashboard({ workspace }) {
           {selectedRun && (
             <section className="panel detail-panel">
               <div className="section-heading compact detailed-run-heading">
-                <div className="detailed-run-title"><span className="section-kicker">Detailed run</span><h2>{selectedMetrics.strategy_label || selectedRun.backend}</h2></div>
-                <select value={selectedKey || selectedRun.key} onChange={(event) => setSelectedKey(event.target.value)}>{results.runs.map((run) => <option key={run.key} value={run.key}>{run.metrics?.strategy_label || run.backend}</option>)}</select>
+                <div className="detailed-run-title"><span className="section-kicker">Detailed run</span><h2>Validated simulation</h2></div>
+                <select value={selectedKey || selectedRun.key} onChange={(event) => setSelectedKey(event.target.value)}>{results.runs.map((run) => <option key={run.key} value={run.key}>Validated simulation</option>)}</select>
               </div>
               <section className="metrics-grid compact-metrics">
                 <MetricCard label="Final capital" value={money(selectedMetrics.strategy_ending_capital)} note={`Initial ${money(selectedMetrics.initial_capital)}`} />
@@ -137,7 +138,7 @@ export function ResultsDashboard({ workspace }) {
                       <YAxis />
                       <Tooltip labelFormatter={compactDate} formatter={(value) => money(value)} />
                       <Legend />
-                      <Line dataKey="strategyEquity" name="Strategy" dot={false} stroke="var(--series-1)" strokeWidth={2} />
+                      <Line dataKey="strategyEquity" name="Simulation" dot={false} stroke="var(--series-1)" strokeWidth={2} />
                       <Line dataKey="buyHoldEquity" name="Buy & Hold" dot={false} stroke="var(--series-2)" strokeWidth={2} />
                     </LineChart>
                   </ResponsiveContainer>
@@ -148,7 +149,7 @@ export function ResultsDashboard({ workspace }) {
                 <div className="trade-table-heading">
                   <div>
                     <span className="section-kicker">Action history</span>
-                    <h3>Strategy decision log</h3>
+                    <h3>Decision log</h3>
                     <p>This list remains visible for the selected run and updates across every BUY, SELL and HOLD decision.</p>
                   </div>
                   <div className="trade-table-meta">
@@ -157,7 +158,7 @@ export function ResultsDashboard({ workspace }) {
                   </div>
                 </div>
 
-                <div className="trade-filter-bar" role="group" aria-label="Filter strategy decisions by action">
+                <div className="trade-filter-bar" role="group" aria-label="Filter decisions by action">
                   {TRADE_ACTIONS.map((action) => {
                     const active = tradeFilters.has(action)
                     return (
