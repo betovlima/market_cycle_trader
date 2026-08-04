@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { apiFetch } from '../../api/http'
@@ -8,6 +8,45 @@ import { compactDate, money, number, percent, shortDateTime } from '../../shared
 
 const POLL_MS = 60 * 60 * 1000
 const ROBOT_POLL_MS = 30 * 1000
+
+
+function countdownLabel(totalSeconds) {
+  const safeSeconds = Math.max(0, Number(totalSeconds) || 0)
+  const hours = Math.floor(safeSeconds / 3600)
+  const minutes = Math.floor((safeSeconds % 3600) / 60)
+  const seconds = safeSeconds % 60
+  return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':')
+}
+
+function PortfolioRefreshClock({ refreshing, nextRefreshAt, now }) {
+  const remaining = nextRefreshAt
+    ? Math.max(0, Math.ceil((nextRefreshAt - now) / 1000))
+    : 0
+  const progress = nextRefreshAt
+    ? Math.max(0, Math.min(1, remaining / (POLL_MS / 1000)))
+    : 0
+  const label = nextRefreshAt ? countdownLabel(remaining) : '00:00:00'
+  const scheduledLabel = nextRefreshAt
+    ? new Date(nextRefreshAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : ''
+
+  return (
+    <div className={`portfolio-refresh-clock ${refreshing ? 'refreshing' : ''}`} aria-live="polite">
+      <div
+        className="portfolio-refresh-dial"
+        style={{ '--portfolio-refresh-progress': `${progress * 360}deg` }}
+        aria-hidden="true"
+      >
+        {refreshing ? <span className="portfolio-refresh-spinner" /> : <span>{label}</span>}
+      </div>
+      <div className="portfolio-refresh-copy">
+        <span>Portfolio update</span>
+        <strong>{refreshing ? 'Updating now' : label}</strong>
+        <small>{refreshing ? 'Requesting the latest snapshot' : scheduledLabel ? `Automatic at ${scheduledLabel}` : 'Scheduling next update'}</small>
+      </div>
+    </div>
+  )
+}
 
 function PaperMarketStatus({ connection, marketClock, refreshing }) {
   const firstCheckPending = refreshing && !connection.checkedAt
@@ -141,43 +180,79 @@ export function PaperPortfolioDashboard() {
   const [lastUpdated, setLastUpdated] = useState(null)
   const [connection, setConnection] = useState({ status: 'checking', checkedAt: null })
   const [robot, setRobot] = useState(null)
+  const [nextRefreshAt, setNextRefreshAt] = useState(null)
+  const [clockNow, setClockNow] = useState(() => Date.now())
+  const mountedRef = useRef(false)
+  const portfolioTimerRef = useRef(null)
+  const portfolioRequestRef = useRef(false)
 
   const loadRobotStatus = useCallback(async ({ silent = false } = {}) => {
     try {
       const response = await apiFetch(`${API}/paper-market/public-robot-status`)
-      setRobot(response)
+      if (mountedRef.current) setRobot(response)
     } catch {
-      setRobot((current) => current ? { ...current, scheduler_alive: false, status: 'unavailable' } : { enabled: false, scheduler_alive: false, status: 'unavailable' })
+      if (mountedRef.current) {
+        setRobot((current) => current ? { ...current, scheduler_alive: false, status: 'unavailable' } : { enabled: false, scheduler_alive: false, status: 'unavailable' })
+      }
     }
   }, [])
 
   const loadPortfolio = useCallback(async ({ silent = false } = {}) => {
-    setRefreshing(true)
+    if (portfolioRequestRef.current) return
+    portfolioRequestRef.current = true
+    if (mountedRef.current) setRefreshing(true)
     try {
       const response = await apiFetch(`${API}/paper-market/public-portfolio`)
+      if (!mountedRef.current) return
       const checkedAt = new Date()
       setData(response)
       setError('')
       setLastUpdated(checkedAt)
       setConnection({ status: response?.status === 'ready' ? 'ready' : 'unavailable', checkedAt })
     } catch (requestError) {
+      if (!mountedRef.current) return
       setConnection({ status: 'unavailable', checkedAt: new Date() })
       if (!silent) setError(requestError.message)
     } finally {
-      setRefreshing(false)
+      portfolioRequestRef.current = false
+      if (mountedRef.current) setRefreshing(false)
     }
   }, [])
 
+  const scheduleNextPortfolioRefresh = useCallback(function scheduleNextPortfolioRefresh() {
+    if (!mountedRef.current) return
+    if (portfolioTimerRef.current) window.clearTimeout(portfolioTimerRef.current)
+    const nextAt = Date.now() + POLL_MS
+    setNextRefreshAt(nextAt)
+    portfolioTimerRef.current = window.setTimeout(async () => {
+      if (!mountedRef.current) return
+      setNextRefreshAt(null)
+      await loadPortfolio({ silent: true })
+      if (mountedRef.current) scheduleNextPortfolioRefresh()
+    }, POLL_MS)
+  }, [loadPortfolio])
+
+  const refreshPortfolio = useCallback(async ({ silent = false, includeRobot = false } = {}) => {
+    if (portfolioTimerRef.current) window.clearTimeout(portfolioTimerRef.current)
+    if (mountedRef.current) setNextRefreshAt(null)
+    const tasks = [loadPortfolio({ silent })]
+    if (includeRobot) tasks.push(loadRobotStatus({ silent: true }))
+    await Promise.all(tasks)
+    if (mountedRef.current) scheduleNextPortfolioRefresh()
+  }, [loadPortfolio, loadRobotStatus, scheduleNextPortfolioRefresh])
+
   useEffect(() => {
-    loadPortfolio()
-    loadRobotStatus()
-    const portfolioTimer = window.setInterval(() => loadPortfolio({ silent: true }), POLL_MS)
+    mountedRef.current = true
+    refreshPortfolio({ includeRobot: true })
     const robotTimer = window.setInterval(() => loadRobotStatus({ silent: true }), ROBOT_POLL_MS)
+    const clockTimer = window.setInterval(() => setClockNow(Date.now()), 1000)
     return () => {
-      window.clearInterval(portfolioTimer)
+      mountedRef.current = false
+      if (portfolioTimerRef.current) window.clearTimeout(portfolioTimerRef.current)
       window.clearInterval(robotTimer)
+      window.clearInterval(clockTimer)
     }
-  }, [loadPortfolio, loadRobotStatus])
+  }, [loadRobotStatus, refreshPortfolio])
 
   const history = useMemo(() => (data?.history || []).map((item) => ({
     ...item,
@@ -188,15 +263,19 @@ export function PaperPortfolioDashboard() {
   const activePositions = position ? 1 : 0
 
   return (
-    <section className="page-stack portfolio-page">
+    <section className="page-stack portfolio-page" aria-busy={refreshing}>
       <div className="page-heading-row">
         <div className="page-heading">
           <div className="page-title-icon"><PortfolioIcon size={20} /></div>
           <div><h2>Portfolio</h2><p>View the simulated account value, current position and recent orders.</p></div>
         </div>
-        <button type="button" className="secondary-action" disabled={refreshing} onClick={() => { loadPortfolio(); loadRobotStatus() }}>
-          {refreshing ? 'Refreshing…' : 'Refresh'}
-        </button>
+        <div className="portfolio-heading-actions">
+          <PortfolioRefreshClock refreshing={refreshing} nextRefreshAt={nextRefreshAt} now={clockNow} />
+          <button type="button" className="secondary-action portfolio-refresh-button" disabled={refreshing} onClick={() => refreshPortfolio({ includeRobot: true })}>
+            {refreshing ? <span className="portfolio-button-spinner" aria-hidden="true" /> : null}
+            {refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
+        </div>
       </div>
 
       <PaperMarketStatus connection={connection} marketClock={data?.market_clock} refreshing={refreshing} />
@@ -205,7 +284,11 @@ export function PaperPortfolioDashboard() {
       {error ? <div className="inline-error"><strong>Portfolio unavailable</strong><span>{error}</span><button type="button" onClick={() => setError('')}>×</button></div> : null}
 
       {!data ? (
-        <section className="data-panel portfolio-locked"><PortfolioIcon size={32} /><h2>Loading simulated portfolio</h2><p>The read-only portfolio snapshot is being requested from the API.</p></section>
+        <section className="data-panel portfolio-locked portfolio-tab-loader" role="status" aria-live="polite">
+          <div className="portfolio-tab-loader-visual"><span className="loading-ring" aria-hidden="true" /></div>
+          <h2>Loading simulated portfolio</h2>
+          <p>Connecting to Alpaca Paper and requesting the latest read-only portfolio snapshot.</p>
+        </section>
       ) : (
         <>
           <section className="portfolio-metrics-grid">

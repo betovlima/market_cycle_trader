@@ -1,4 +1,4 @@
-# Market Cycle Trader Frontend v1.12.49
+# Market Cycle Trader Frontend v1.12.50
 
 React + Vite frontend for protected historical simulations and Paper portfolio monitoring.
 
@@ -116,4 +116,12 @@ pnpm dev
 - Shows the next regular open while closed and the next close while open.
 - Reuses the sanitized Alpaca market clock already returned by the Portfolio endpoint.
 - Keeps all strategy configuration and protected execution details server-side.
+
+## v1.12.50 — Portfolio refresh clock and loading feedback
+
+- Adds a live countdown to the next automatic Portfolio refresh while the Portfolio tab is open.
+- Resets the countdown after manual and automatic refreshes.
+- Displays an explicit loader when the Portfolio tab first requests its data.
+- Shows compact loading feedback in the refresh control during manual and scheduled updates.
+- Keeps API contracts, Paper automation, protected configuration and strategy data unchanged.
 
