@@ -1,4 +1,4 @@
-# Market Cycle Trader Frontend v1.12.48
+# Market Cycle Trader Frontend v1.12.49
 
 React + Vite frontend for protected historical simulations and Paper portfolio monitoring.
 
@@ -108,3 +108,12 @@ pnpm dev
 - It shows active/stopped/degraded/review-required state, current phase, next regular market open and scheduler heartbeat.
 - Starting and stopping remain protected administrator operations performed through the API documentation.
 - Requires Market Cycle Trader API v1.13.11 or newer.
+
+## v1.12.49 — Portfolio market status card
+
+- Adds Market Status as the first Portfolio metric card.
+- Shows Open, Closed or Checking with a dedicated icon and status color.
+- Shows the next regular open while closed and the next close while open.
+- Reuses the sanitized Alpaca market clock already returned by the Portfolio endpoint.
+- Keeps all strategy configuration and protected execution details server-side.
+
