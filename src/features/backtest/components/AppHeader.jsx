@@ -2,13 +2,19 @@ import { FRONT_VERSION } from '../../../config/env'
 import { BacktestIcon, DashboardIcon, PortfolioIcon } from '../../../shared/components/Icons'
 import appLogoUrl from '../../../assets/market-cycle-trader-logo.png'
 
-const NAV_ITEMS = [
+const VIEWER_NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', Icon: DashboardIcon },
   { id: 'backtest', label: 'Backtest', Icon: BacktestIcon },
-  { id: 'portfolio', label: 'Portfolio', Icon: PortfolioIcon },
 ]
 
-export function AppHeader({ workspace, activeTab, onTabChange }) {
+const ADMIN_NAV_ITEMS = [
+  ...VIEWER_NAV_ITEMS,
+  { id: 'portfolio', label: 'Portfolio', Icon: PortfolioIcon },
+  { id: 'administration', label: 'Administration', Icon: DashboardIcon },
+]
+
+export function AppHeader({ workspace, activeTab, onTabChange, session, onLogout }) {
+  const navItems = session?.role === 'admin' ? ADMIN_NAV_ITEMS : VIEWER_NAV_ITEMS
   return (
     <header className="app-header">
       <div className="brand-area">
@@ -30,13 +36,14 @@ export function AppHeader({ workspace, activeTab, onTabChange }) {
           <span>Simulation only</span>
         </div>
         <nav className="main-nav" aria-label="Main navigation">
-          {NAV_ITEMS.map(({ id, label, Icon }) => (
+          {navItems.map(({ id, label, Icon }) => (
             <button key={id} type="button" className={activeTab === id ? 'active' : ''} onClick={() => onTabChange(id)}>
               <Icon size={16} />
               <span>{label}</span>
             </button>
           ))}
         </nav>
+        <div className="session-controls"><span>{session?.display_name || session?.role}</span><button type="button" onClick={onLogout}>Sign out</button></div>
       </div>
     </header>
   )
