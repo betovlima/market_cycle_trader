@@ -18,36 +18,6 @@ function countdownLabel(totalSeconds) {
   return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':')
 }
 
-function PortfolioRefreshClock({ refreshing, nextRefreshAt, now }) {
-  const remaining = nextRefreshAt
-    ? Math.max(0, Math.ceil((nextRefreshAt - now) / 1000))
-    : 0
-  const progress = nextRefreshAt
-    ? Math.max(0, Math.min(1, remaining / (POLL_MS / 1000)))
-    : 0
-  const label = nextRefreshAt ? countdownLabel(remaining) : '00:00:00'
-  const scheduledLabel = nextRefreshAt
-    ? new Date(nextRefreshAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : ''
-
-  return (
-    <div className={`portfolio-refresh-clock ${refreshing ? 'refreshing' : ''}`} aria-live="polite">
-      <div
-        className="portfolio-refresh-dial"
-        style={{ '--portfolio-refresh-progress': `${progress * 360}deg` }}
-        aria-hidden="true"
-      >
-        {refreshing ? <span className="portfolio-refresh-spinner" /> : <span>{label}</span>}
-      </div>
-      <div className="portfolio-refresh-copy">
-        <span>Portfolio update</span>
-        <strong>{refreshing ? 'Updating now' : label}</strong>
-        <small>{refreshing ? 'Requesting the latest snapshot' : scheduledLabel ? `Automatic at ${scheduledLabel}` : 'Scheduling next update'}</small>
-      </div>
-    </div>
-  )
-}
-
 function PaperMarketStatus({ connection, marketClock, refreshing }) {
   const firstCheckPending = refreshing && !connection.checkedAt
   const status = firstCheckPending ? 'checking' : connection.status
@@ -102,15 +72,10 @@ function TradingRobotStatus({ robot }) {
         ? 'Paper robot enabled, scheduler unavailable'
         : 'Paper robot stopped'
   const detail = enabled
-    ? 'The continuous controller will prepare and evaluate every regular Alpaca market session until an administrator stops it.'
+    ? 'The continuous controller refreshes completed daily data and prepares the next session during the mandatory pre-market window.'
     : 'No recurring Paper automation is enabled. Use the protected API documentation to start it.'
   const phase = String(robot?.active_run?.phase || robot?.phase || 'stopped').replaceAll('_', ' ')
-  const nextOpen = robot?.next_market_open
-    ? new Date(robot.next_market_open).toLocaleString()
-    : 'No session scheduled'
-  const lastTick = robot?.last_scheduler_tick_at
-    ? new Date(robot.last_scheduler_tick_at).toLocaleTimeString()
-    : 'No heartbeat'
+  const session = robot?.next_execution_session || 'No session scheduled'
 
   return (
     <section className={`paper-market-status robot-status ${visual}`} aria-live="polite">
@@ -126,7 +91,123 @@ function TradingRobotStatus({ robot }) {
           {blocked ? 'Review required' : enabled && schedulerAlive ? 'Active' : enabled ? 'Degraded' : 'Stopped'}
         </span>
         <span className="paper-market-clock"><ClockIcon size={15} />{phase}</span>
-        <small>Next open: {nextOpen} · Heartbeat: {lastTick}</small>
+        <small>Next execution session: {session}</small>
+      </div>
+    </section>
+  )
+}
+
+function timestampValue(value) {
+  if (!value) return null
+  const parsed = new Date(value).getTime()
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function StrategyScheduleClock({ label, targetAt, now, description, tone = 'blue', running = false, cycleSeconds = null }) {
+  const target = timestampValue(targetAt)
+  const remaining = target === null ? null : Math.max(0, Math.ceil((target - now) / 1000))
+  const progress = remaining === null
+    ? 0
+    : cycleSeconds
+      ? Math.max(0, Math.min(1, remaining / cycleSeconds))
+      : remaining > 0 && remaining % 60 === 0
+        ? 1
+        : (remaining % 60) / 60
+  const value = running
+    ? 'Running now'
+    : remaining === null
+      ? 'Pending'
+      : remaining === 0
+        ? 'Due now'
+        : countdownLabel(remaining)
+  const scheduledAt = target === null ? '' : new Date(target).toLocaleString()
+  const accessibilityLabel = [label, value, description, scheduledAt ? `Expected at ${scheduledAt}` : '']
+    .filter(Boolean)
+    .join('. ')
+
+  return (
+    <article
+      className={`strategy-schedule-clock ${tone} ${running ? 'running' : ''}`}
+      aria-label={accessibilityLabel}
+      aria-live="polite"
+      title={scheduledAt ? `${label}: ${scheduledAt}` : undefined}
+    >
+      <div
+        className="strategy-schedule-dial"
+        style={{ '--strategy-clock-progress': `${progress * 360}deg` }}
+        aria-hidden="true"
+      >
+        {running ? <span className="strategy-schedule-spinner" /> : <span>{value}</span>}
+      </div>
+      <div className="strategy-schedule-copy">
+        <span>{label}</span>
+        <strong>{value}</strong>
+        <small>{description}</small>
+      </div>
+    </article>
+  )
+}
+
+function AutomationScheduleClocks({ robot, marketClock, now, refreshing, nextRefreshAt }) {
+  const phase = String(robot?.active_run?.phase || robot?.phase || '').toLowerCase()
+  const enabled = Boolean(robot?.enabled)
+  const schedulerAlive = Boolean(robot?.scheduler_alive)
+  const blocked = robot?.status === 'blocked'
+  const unavailable = robot?.status === 'unavailable'
+  const statusLoaded = Boolean(robot)
+  const analysisRunning = phase.includes('training') || phase.includes('refreshing_market_data') || phase.includes('preparing_premarket_plan')
+  const executionRunning = phase.includes('submitting_alpaca_paper_orders') || phase === 'executing'
+  const analysisAt = robot?.next_premarket_analysis_at || robot?.active_run?.premarket_analysis_at
+  const nextOpenAt = robot?.next_market_open || robot?.active_run?.expected_market_open
+  const nextCloseAt = marketClock?.next_close
+  const visual = !statusLoaded
+    ? 'checking'
+    : blocked || unavailable || (enabled && !schedulerAlive)
+      ? 'unavailable'
+      : enabled
+        ? 'ready'
+        : 'checking'
+
+  return (
+    <section className={`paper-market-status live-schedule-status ${visual}`} aria-label="Live automation schedule">
+      <div className="paper-market-status-icon"><ClockIcon size={24} /></div>
+      <div className="paper-market-status-copy live-schedule-copy">
+        <span className="panel-kicker">Live schedule</span>
+        <strong>Upcoming events</strong>
+      </div>
+      <div className="strategy-schedule-grid">
+        <StrategyScheduleClock
+          label="Analysis"
+          targetAt={analysisAt}
+          now={now}
+          description={analysisRunning ? 'Updating data and preparing the decision.' : 'Updates data and prepares the decision.'}
+          tone={analysisRunning ? 'green' : 'blue'}
+          running={analysisRunning}
+        />
+        <StrategyScheduleClock
+          label="Execution"
+          targetAt={nextOpenAt}
+          now={now}
+          description={executionRunning ? 'Applying the prepared decision.' : 'Applies the decision at market open.'}
+          tone={executionRunning ? 'green' : 'purple'}
+          running={executionRunning}
+        />
+        <StrategyScheduleClock
+          label="Daily close"
+          targetAt={nextCloseAt}
+          now={now}
+          description="Completes data for the next analysis."
+          tone="gold"
+        />
+        <StrategyScheduleClock
+          label="Portfolio update"
+          targetAt={nextRefreshAt}
+          now={now}
+          description={refreshing ? 'Requesting the latest account snapshot.' : 'Refreshes the latest account snapshot.'}
+          tone={refreshing ? 'green' : 'cyan'}
+          running={refreshing}
+          cycleSeconds={POLL_MS / 1000}
+        />
       </div>
     </section>
   )
@@ -270,7 +351,6 @@ export function PaperPortfolioDashboard() {
           <div><h2>Portfolio</h2><p>View the simulated account value, current position and recent orders.</p></div>
         </div>
         <div className="portfolio-heading-actions">
-          <PortfolioRefreshClock refreshing={refreshing} nextRefreshAt={nextRefreshAt} now={clockNow} />
           <button type="button" className="secondary-action portfolio-refresh-button" disabled={refreshing} onClick={() => refreshPortfolio({ includeRobot: true })}>
             {refreshing ? <span className="portfolio-button-spinner" aria-hidden="true" /> : null}
             {refreshing ? 'Refreshing…' : 'Refresh'}
@@ -278,6 +358,13 @@ export function PaperPortfolioDashboard() {
         </div>
       </div>
 
+      <AutomationScheduleClocks
+        robot={robot}
+        marketClock={data?.market_clock}
+        now={clockNow}
+        refreshing={refreshing}
+        nextRefreshAt={nextRefreshAt}
+      />
       <PaperMarketStatus connection={connection} marketClock={data?.market_clock} refreshing={refreshing} />
       <TradingRobotStatus robot={robot} />
 

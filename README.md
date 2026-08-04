@@ -1,4 +1,4 @@
-# Market Cycle Trader Frontend v1.12.50
+# Market Cycle Trader Frontend v1.12.56
 
 React + Vite frontend for protected historical simulations and Paper portfolio monitoring.
 
@@ -37,7 +37,7 @@ Temporary access links can be created as `viewer` or `trader`. Existing links wi
 - current position and recent Paper executions;
 - controlled connection status when Alpaca is unavailable.
 
-The frontend receives execution results and analytical aggregates only. Model scores, seeds, rules, protected configuration and strategy parameters remain server-side.
+Viewer sessions receive sanitized results only. Trader and Administrator sessions may receive authorized strategy details from protected API responses. Strategic values remain server-owned and are never hard-coded, inferred or duplicated in the frontend source.
 
 ## API contracts
 
@@ -125,3 +125,58 @@ pnpm dev
 - Shows compact loading feedback in the refresh control during manual and scheduled updates.
 - Keeps API contracts, Paper automation, protected configuration and strategy data unchanged.
 
+
+
+## v1.12.51 — pre-market robot schedule
+
+- Shows the mandatory pre-market analysis timestamp returned by API v1.13.12.
+- Clarifies that completed daily data is refreshed and the next session is prepared during the pre-market window.
+- Keeps the Portfolio refresh countdown and loading feedback from v1.12.50.
+
+
+## v1.12.52 — live Paper automation clocks
+
+- Adds second-by-second clocks for the mandatory pre-market analysis, the next market open or close, and scheduler heartbeat age.
+- Shows a live spinner while the API reports that training or plan preparation is running.
+- Keeps the existing one-hour Portfolio refresh clock in the page header.
+- Updates clocks only while the Portfolio tab is mounted.
+- Uses only sanitized operational timestamps returned by API v1.13.12 and does not expose model configuration or strategy rules.
+
+
+## v1.12.53 — standardized strategy schedule
+
+- Moves Live schedule above Paper Market status.
+- Uses the same outer visual language as the Paper Market status block.
+- Replaces generic automation indicators with strategy-cycle countdowns only.
+- Standardizes all schedule counters with the circular timer layout.
+- Keeps Portfolio refresh timing and loading behavior unchanged.
+
+
+## v1.12.54 — unified operational schedule
+
+- Removes the long explanatory sentence from Live schedule.
+- Uses the generic title `Operational timers`.
+- Keeps Analysis, Execution and Daily close inside one schedule section.
+- Adds a short purpose description beside each circular countdown.
+- Keeps exact timestamps available through the timer tooltip and accessibility label.
+- Does not change API behavior or expose strategy parameters.
+
+
+## v1.12.55 — unified Live schedule row
+
+- Moves Portfolio update from the page header into the Live schedule row.
+- Displays Analysis, Execution, Daily close and Portfolio update with the same circular timer component.
+- Renames `Operational timers` to `Next automated events`.
+- Replaces the ambiguous `Scheduled` label with explicit controller states: Trading automation active, Trading activity in progress, Scheduler unavailable, Needs review or Trading automation stopped.
+- Keeps the manual Refresh action in the Portfolio header.
+- Keeps Viewer payloads sanitized while allowing Trader and Administrator sessions to display authorized strategy details returned by the API.
+- Does not hard-code strategic values in the frontend and does not change API v1.13.12.
+
+
+## v1.12.56 — simplified Live schedule heading
+
+- Removes the redundant automation-status pill from Live schedule.
+- Keeps robot health and controller state exclusively in the dedicated Trading robot status box.
+- Renames `Next automated events` to the shorter `Upcoming events`.
+- Keeps Analysis, Execution, Daily close and Portfolio update in the same row.
+- Does not change API v1.13.12, timer calculations, permissions or strategy data exposure.
