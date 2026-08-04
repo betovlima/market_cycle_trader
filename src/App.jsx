@@ -6,6 +6,7 @@ import { AppHeader } from './features/backtest/components/AppHeader'
 import { BacktestPage } from './features/backtest/components/BacktestPage'
 import { useBacktestWorkspace } from './features/backtest/hooks/useBacktestWorkspace'
 import { AdministrationPage } from './features/AdministrationPage'
+import { AnalyticsPage } from './features/analytics/AnalyticsPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { LoginPage } from './features/LoginPage'
 import { PaperPortfolioDashboard } from './features/paperPortfolio/PaperPortfolioDashboard'
@@ -19,18 +20,22 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired }) {
   }, [workspace.running])
 
   useEffect(() => {
-    if (session.role !== 'admin' && !['dashboard', 'backtest'].includes(activeTab)) {
-      setActiveTab('dashboard')
-    }
+    const allowed = session.role === 'admin'
+      ? ['dashboard', 'backtest', 'analytics', 'portfolio', 'administration']
+      : session.role === 'trader'
+        ? ['dashboard', 'backtest', 'analytics', 'portfolio']
+        : ['dashboard', 'backtest', 'analytics']
+    if (!allowed.includes(activeTab)) setActiveTab('dashboard')
   }, [activeTab, session.role])
 
   return <div className="app-frame">
     <AppHeader workspace={workspace} activeTab={activeTab} onTabChange={setActiveTab} session={session} onLogout={onLogout} />
     {workspace.error ? <div className="global-error"><strong>Unable to load data</strong><span>{workspace.error}</span><button type="button" onClick={() => workspace.setError('')}>×</button></div> : null}
     <main className="workspace-main">
-      {activeTab === 'dashboard' ? <DashboardPage workspace={workspace} onOpenBacktest={() => setActiveTab('backtest')} canRunBacktest isAdmin={session.role === 'admin'} /> : null}
-      {activeTab === 'backtest' ? <BacktestPage workspace={workspace} isAdmin={session.role === 'admin'} /> : null}
-      {activeTab === 'portfolio' && session.role === 'admin' ? <PaperPortfolioDashboard /> : null}
+      {activeTab === 'dashboard' ? <DashboardPage workspace={workspace} onOpenBacktest={() => setActiveTab('backtest')} canRunBacktest /> : null}
+      {activeTab === 'backtest' ? <BacktestPage workspace={workspace} /> : null}
+      {activeTab === 'analytics' ? <AnalyticsPage session={session} dashboard={workspace.dashboard} /> : null}
+      {activeTab === 'portfolio' && ['admin', 'trader'].includes(session.role) ? <PaperPortfolioDashboard /> : null}
       {activeTab === 'administration' && session.role === 'admin' ? <AdministrationPage onSessionExpired={onSessionExpired} /> : null}
     </main>
     <footer className="app-footer">All activity is simulated. Private configuration remains server-side.</footer>

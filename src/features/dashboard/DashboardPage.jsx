@@ -79,7 +79,7 @@ function StatusBadge({ status }) {
   return <span className={`table-status ${status || 'unknown'}`}>{String(status || 'unknown').replace('_', ' ')}</span>
 }
 
-export function DashboardPage({ workspace, onOpenBacktest, canRunBacktest = false, isAdmin = false }) {
+export function DashboardPage({ workspace, onOpenBacktest, canRunBacktest = false }) {
   const { dashboard, loadingDashboard, running, restoringExecution, startingBacktest, startDisabled, runBacktest } = workspace
   const best = dashboard?.best_performance
   const last = dashboard?.last_backtest
@@ -149,7 +149,7 @@ export function DashboardPage({ workspace, onOpenBacktest, canRunBacktest = fals
         <div className="table-wrap">
           <table className="dashboard-table">
             <thead>
-              <tr><th>Date</th><th>Status</th><th>Total Return</th><th>Sharpe Ratio</th><th>Max Drawdown</th>{isAdmin ? <th>Rotations</th> : null}<th>Duration</th></tr>
+              <tr><th>Date</th><th>Status</th><th>Total Return</th><th>Sharpe Ratio</th><th>Max Drawdown</th><th>Rotations</th><th>Duration</th></tr>
             </thead>
             <tbody>
               {dashboard?.recent_backtests?.length ? dashboard.recent_backtests.map((item) => (
@@ -159,11 +159,11 @@ export function DashboardPage({ workspace, onOpenBacktest, canRunBacktest = fals
                   <td className={item.metrics?.simulation_return == null ? '' : Number(item.metrics.simulation_return) >= 0 ? 'positive' : 'negative'}>{percent(item.metrics?.simulation_return)}</td>
                   <td>{item.metrics?.sharpe == null ? '—' : Number(item.metrics.sharpe).toFixed(3)}</td>
                   <td className="negative">{percent(item.metrics?.maximum_drawdown)}</td>
-                  {isAdmin ? <td>{item.metrics?.position_changes == null ? '—' : Math.round(item.metrics.position_changes)}</td> : null}
+                  <td>{item.metrics?.position_changes == null ? '—' : Math.round(item.metrics.position_changes)}</td>
                   <td>{durationLabel(item.duration_seconds)}</td>
                 </tr>
               )) : (
-                <tr><td colSpan={isAdmin ? 7 : 6} className="empty-cell">No backtests have been executed yet.</td></tr>
+                <tr><td colSpan="7" className="empty-cell">No backtests have been executed yet.</td></tr>
               )}
             </tbody>
           </table>
