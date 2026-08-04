@@ -674,3 +674,124 @@ a { color: inherit; }
 @media (max-width: 650px) {
   .market-status-metric-icon { width: 42px; height: 42px; }
 }
+
+/* v1.12.50 Portfolio refresh clock and tab loader */
+.portfolio-heading-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.portfolio-refresh-clock {
+  min-width: 270px;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 7px 10px;
+  border: 1px solid rgba(91, 140, 255, .28);
+  border-radius: 13px;
+  background: linear-gradient(145deg, rgba(13, 34, 58, .94), rgba(8, 23, 41, .97));
+}
+.portfolio-refresh-clock.refreshing { border-color: rgba(91, 140, 255, .48); }
+.portfolio-refresh-dial {
+  --portfolio-refresh-progress: 0deg;
+  position: relative;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(var(--accent) var(--portfolio-refresh-progress), rgba(47, 140, 255, .14) 0);
+  box-shadow: inset 0 0 0 1px rgba(47, 140, 255, .18);
+}
+.portfolio-refresh-dial::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: inherit;
+  background: #081b31;
+  box-shadow: inset 0 0 0 1px rgba(80, 139, 206, .14);
+}
+.portfolio-refresh-dial > span {
+  position: relative;
+  z-index: 1;
+  color: #f4f8ff;
+  font-size: .56rem;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .01em;
+}
+.portfolio-refresh-spinner,
+.portfolio-button-spinner {
+  display: inline-block;
+  border-radius: 50%;
+  border-style: solid;
+  animation: spin .85s linear infinite;
+}
+.portfolio-refresh-spinner {
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+  border-color: rgba(91, 140, 255, .22);
+  border-top-color: var(--accent-soft);
+}
+.portfolio-button-spinner {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+  border-color: rgba(207, 228, 250, .22);
+  border-top-color: #cfe4fa;
+}
+.portfolio-refresh-copy { min-width: 0; }
+.portfolio-refresh-copy span { display: block; color: var(--muted); font-size: .64rem; }
+.portfolio-refresh-copy strong {
+  display: block;
+  margin-top: 2px;
+  color: #dcecff;
+  font-size: .82rem;
+  font-variant-numeric: tabular-nums;
+}
+.portfolio-refresh-copy small {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: #8195ad;
+  font-size: .6rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.portfolio-refresh-button { min-width: 104px; }
+.portfolio-tab-loader {
+  min-height: 280px;
+  gap: 0;
+  color: var(--accent);
+}
+.portfolio-tab-loader-visual {
+  width: 66px;
+  height: 66px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(91, 140, 255, .24);
+  border-radius: 50%;
+  background: rgba(47, 140, 255, .08);
+  box-shadow: 0 0 0 10px rgba(47, 140, 255, .025);
+}
+.portfolio-tab-loader .loading-ring {
+  width: 34px;
+  height: 34px;
+  border-width: 4px;
+}
+.portfolio-tab-loader h2 { margin-top: 18px; }
+.portfolio-tab-loader p { max-width: 560px; line-height: 1.5; }
+
+@media (max-width: 900px) {
+  .portfolio-heading-actions { width: 100%; justify-content: space-between; }
+}
+
+@media (max-width: 650px) {
+  .portfolio-heading-actions { align-items: stretch; flex-direction: column; }
+  .portfolio-refresh-clock { width: 100%; min-width: 0; }
+  .portfolio-refresh-button { width: 100%; }
+}
