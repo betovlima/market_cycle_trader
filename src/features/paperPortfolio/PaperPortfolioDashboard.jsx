@@ -3,10 +3,95 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 
 import { apiFetch } from '../../api/http'
 import { API } from '../../config/env'
-import { PortfolioIcon } from '../../shared/components/Icons'
+import { ActivityIcon, ClockIcon, PortfolioIcon } from '../../shared/components/Icons'
 import { compactDate, money, number, percent, shortDateTime } from '../../shared/formatters'
 
 const POLL_MS = 60 * 60 * 1000
+const ROBOT_POLL_MS = 30 * 1000
+
+function PaperMarketStatus({ connection, marketClock, refreshing }) {
+  const firstCheckPending = refreshing && !connection.checkedAt
+  const status = firstCheckPending ? 'checking' : connection.status
+  const isReady = status === 'ready'
+  const marketLabel = marketClock ? (marketClock.is_open ? 'Market open' : 'Market closed') : 'Market status pending'
+  const checkedLabel = connection.checkedAt
+    ? `Checked ${connection.checkedAt.toLocaleTimeString()}`
+    : 'Waiting for the first successful check'
+
+  const title = isReady
+    ? 'Alpaca Paper connected'
+    : status === 'checking'
+      ? 'Checking Alpaca Paper'
+      : 'Alpaca Paper unavailable'
+
+  const detail = isReady
+    ? 'The Paper account responded successfully and the Portfolio data is available.'
+    : status === 'checking'
+      ? 'Validating the Paper account and requesting the latest portfolio snapshot.'
+      : 'The last connection attempt failed. Use Refresh after checking the API or Alpaca credentials.'
+
+  return (
+    <section className={`paper-market-status ${status}`} aria-live="polite">
+      <div className="paper-market-status-icon"><ActivityIcon size={24} /></div>
+      <div className="paper-market-status-copy">
+        <span className="panel-kicker">Paper Market status</span>
+        <strong>{title}</strong>
+        <p>{detail}</p>
+      </div>
+      <div className="paper-market-status-meta">
+        <span className={`connection-pill ${isReady ? 'ready' : status === 'checking' ? 'checking' : 'unavailable'}`}>
+          <span className="connection-dot" />
+          {isReady ? 'Connected' : status === 'checking' ? 'Checking' : 'Unavailable'}
+        </span>
+        <span className="paper-market-clock"><ClockIcon size={15} />{marketLabel}</span>
+        <small>{checkedLabel}</small>
+      </div>
+    </section>
+  )
+}
+
+function TradingRobotStatus({ robot }) {
+  const enabled = Boolean(robot?.enabled)
+  const schedulerAlive = Boolean(robot?.scheduler_alive)
+  const blocked = robot?.status === 'blocked'
+  const visual = blocked || (enabled && !schedulerAlive) ? 'unavailable' : enabled ? 'ready' : 'checking'
+  const title = blocked
+    ? 'Paper robot requires review'
+    : enabled && schedulerAlive
+      ? 'Paper robot active for every session'
+      : enabled
+        ? 'Paper robot enabled, scheduler unavailable'
+        : 'Paper robot stopped'
+  const detail = enabled
+    ? 'The continuous controller will prepare and evaluate every regular Alpaca market session until an administrator stops it.'
+    : 'No recurring Paper automation is enabled. Use the protected API documentation to start it.'
+  const phase = String(robot?.active_run?.phase || robot?.phase || 'stopped').replaceAll('_', ' ')
+  const nextOpen = robot?.next_market_open
+    ? new Date(robot.next_market_open).toLocaleString()
+    : 'No session scheduled'
+  const lastTick = robot?.last_scheduler_tick_at
+    ? new Date(robot.last_scheduler_tick_at).toLocaleTimeString()
+    : 'No heartbeat'
+
+  return (
+    <section className={`paper-market-status robot-status ${visual}`} aria-live="polite">
+      <div className="paper-market-status-icon"><ActivityIcon size={24} /></div>
+      <div className="paper-market-status-copy">
+        <span className="panel-kicker">Trading robot</span>
+        <strong>{title}</strong>
+        <p>{detail}</p>
+      </div>
+      <div className="paper-market-status-meta">
+        <span className={`connection-pill ${enabled && schedulerAlive && !blocked ? 'ready' : blocked || (enabled && !schedulerAlive) ? 'unavailable' : 'checking'}`}>
+          <span className="connection-dot" />
+          {blocked ? 'Review required' : enabled && schedulerAlive ? 'Active' : enabled ? 'Degraded' : 'Stopped'}
+        </span>
+        <span className="paper-market-clock"><ClockIcon size={15} />{phase}</span>
+        <small>Next open: {nextOpen} · Heartbeat: {lastTick}</small>
+      </div>
+    </section>
+  )
+}
 
 function PortfolioMetric({ label, value, note, tone = '' }) {
   return <article className={`portfolio-metric ${tone}`}><span>{label}</span><strong>{value}</strong><small>{note}</small></article>
@@ -17,15 +102,29 @@ export function PaperPortfolioDashboard() {
   const [error, setError] = useState('')
   const [refreshing, setRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(null)
+  const [connection, setConnection] = useState({ status: 'checking', checkedAt: null })
+  const [robot, setRobot] = useState(null)
+
+  const loadRobotStatus = useCallback(async ({ silent = false } = {}) => {
+    try {
+      const response = await apiFetch(`${API}/paper-market/public-robot-status`)
+      setRobot(response)
+    } catch {
+      setRobot((current) => current ? { ...current, scheduler_alive: false, status: 'unavailable' } : { enabled: false, scheduler_alive: false, status: 'unavailable' })
+    }
+  }, [])
 
   const loadPortfolio = useCallback(async ({ silent = false } = {}) => {
     setRefreshing(true)
     try {
       const response = await apiFetch(`${API}/paper-market/public-portfolio`)
+      const checkedAt = new Date()
       setData(response)
       setError('')
-      setLastUpdated(new Date())
+      setLastUpdated(checkedAt)
+      setConnection({ status: response?.status === 'ready' ? 'ready' : 'unavailable', checkedAt })
     } catch (requestError) {
+      setConnection({ status: 'unavailable', checkedAt: new Date() })
       if (!silent) setError(requestError.message)
     } finally {
       setRefreshing(false)
@@ -34,9 +133,14 @@ export function PaperPortfolioDashboard() {
 
   useEffect(() => {
     loadPortfolio()
-    const timer = window.setInterval(() => loadPortfolio({ silent: true }), POLL_MS)
-    return () => window.clearInterval(timer)
-  }, [loadPortfolio])
+    loadRobotStatus()
+    const portfolioTimer = window.setInterval(() => loadPortfolio({ silent: true }), POLL_MS)
+    const robotTimer = window.setInterval(() => loadRobotStatus({ silent: true }), ROBOT_POLL_MS)
+    return () => {
+      window.clearInterval(portfolioTimer)
+      window.clearInterval(robotTimer)
+    }
+  }, [loadPortfolio, loadRobotStatus])
 
   const history = useMemo(() => (data?.history || []).map((item) => ({
     ...item,
@@ -53,10 +157,13 @@ export function PaperPortfolioDashboard() {
           <div className="page-title-icon"><PortfolioIcon size={20} /></div>
           <div><h2>Portfolio</h2><p>View the simulated account value, current position and recent orders.</p></div>
         </div>
-        <button type="button" className="secondary-action" disabled={refreshing} onClick={() => loadPortfolio()}>
+        <button type="button" className="secondary-action" disabled={refreshing} onClick={() => { loadPortfolio(); loadRobotStatus() }}>
           {refreshing ? 'Refreshing…' : 'Refresh'}
         </button>
       </div>
+
+      <PaperMarketStatus connection={connection} marketClock={data?.market_clock} refreshing={refreshing} />
+      <TradingRobotStatus robot={robot} />
 
       {error ? <div className="inline-error"><strong>Portfolio unavailable</strong><span>{error}</span><button type="button" onClick={() => setError('')}>×</button></div> : null}
 

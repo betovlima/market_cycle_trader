@@ -37,7 +37,7 @@ function RotationPanel({ jobId }) {
     setLoading(true)
     setPayload(null)
     setError('')
-    apiFetch(`${API}/admin/jobs/${encodeURIComponent(jobId)}/rotations`)
+    apiFetch(`${API}/analytics/backtests/${encodeURIComponent(jobId)}`)
       .then((value) => {
         if (active) setPayload(value)
       })
@@ -62,7 +62,7 @@ function RotationPanel({ jobId }) {
     return <section className="data-panel rotation-error"><strong>Unable to load capital rotations</strong><span>{error}</span></section>
   }
 
-  const summary = payload?.summary || {}
+  const summary = payload?.rotation_summary || {}
   const rotations = payload?.rotations || []
 
   return (
@@ -76,7 +76,7 @@ function RotationPanel({ jobId }) {
 
       <article className="data-panel">
         <div className="panel-heading">
-          <div><span className="panel-kicker">Administrator view</span><h2>Capital Rotations</h2></div>
+          <div><span className="panel-kicker">Backtest analytics</span><h2>Capital Rotations</h2></div>
           <span className="panel-count">{rotations.length} records</span>
         </div>
         <p className="rotation-note">Execution results only. Private model parameters, scores and decision rules remain server-side.</p>
@@ -105,14 +105,14 @@ function RotationPanel({ jobId }) {
   )
 }
 
-export function BacktestPage({ workspace, isAdmin = false }) {
+export function BacktestPage({ workspace }) {
   const { dashboard, detail, loadingDetail, running, restoringExecution, startingBacktest, startDisabled, runBacktest } = workspace
   const metrics = detail?.metrics || {}
   const chartRows = (detail?.series || []).map((row) => ({
     ...row,
     label: shortDate(row.timestamp),
   }))
-  const historyColumnCount = isAdmin ? 7 : 6
+  const historyColumnCount = 7
 
   return (
     <section className="page-stack">
@@ -173,7 +173,7 @@ export function BacktestPage({ workspace, isAdmin = false }) {
             </article>
           </section>
 
-          {isAdmin ? <RotationPanel jobId={detail.id} /> : null}
+          <RotationPanel jobId={detail.id} />
         </>
       ) : (
         <section className="data-panel empty-result">
@@ -187,7 +187,7 @@ export function BacktestPage({ workspace, isAdmin = false }) {
         <div className="panel-heading"><div><span className="panel-kicker">History</span><h2>Backtest History</h2></div></div>
         <div className="table-wrap">
           <table className="dashboard-table">
-            <thead><tr><th>Date</th><th>Status</th><th>Total Return</th><th>Sharpe Ratio</th><th>Max Drawdown</th>{isAdmin ? <th>Rotations</th> : null}<th>Duration</th></tr></thead>
+            <thead><tr><th>Date</th><th>Status</th><th>Total Return</th><th>Sharpe Ratio</th><th>Max Drawdown</th><th>Rotations</th><th>Duration</th></tr></thead>
             <tbody>
               {dashboard?.recent_backtests?.length ? dashboard.recent_backtests.map((item) => (
                 <tr key={item.id} className={detail?.id === item.id ? 'selected-row' : ''}>
@@ -196,7 +196,7 @@ export function BacktestPage({ workspace, isAdmin = false }) {
                   <td className={item.metrics?.simulation_return == null ? '' : Number(item.metrics.simulation_return) >= 0 ? 'positive' : 'negative'}>{percent(item.metrics?.simulation_return)}</td>
                   <td>{item.metrics?.sharpe == null ? '—' : Number(item.metrics.sharpe).toFixed(3)}</td>
                   <td className="negative">{percent(item.metrics?.maximum_drawdown)}</td>
-                  {isAdmin ? <td>{item.metrics?.position_changes == null ? '—' : Math.round(item.metrics.position_changes)}</td> : null}
+                  <td>{item.metrics?.position_changes == null ? '—' : Math.round(item.metrics.position_changes)}</td>
                   <td>{durationLabel(item.duration_seconds)}</td>
                 </tr>
               )) : <tr><td colSpan={historyColumnCount} className="empty-cell">No backtest history is available.</td></tr>}

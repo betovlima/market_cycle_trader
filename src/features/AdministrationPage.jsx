@@ -63,6 +63,7 @@ export function AdministrationPage({ onSessionExpired }) {
   const [notice, setNotice] = useState('')
   const [form, setForm] = useState({
     guest_name: '',
+    role: 'viewer',
     duration_seconds: DEFAULT_DURATION_SECONDS,
   })
   const [extendDurations, setExtendDurations] = useState({})
@@ -112,10 +113,11 @@ export function AdministrationPage({ onSessionExpired }) {
         method: 'POST',
         body: {
           guest_name: form.guest_name.trim(),
+          role: form.role,
           duration_seconds: Number(form.duration_seconds),
         },
       })
-      setForm({ guest_name: '', duration_seconds: DEFAULT_DURATION_SECONDS })
+      setForm({ guest_name: '', role: 'viewer', duration_seconds: DEFAULT_DURATION_SECONDS })
       setGeneratedAccess(created)
       setNotice(`Access link generated for ${created.guest_name}.`)
       await loadData()
@@ -224,7 +226,7 @@ export function AdministrationPage({ onSessionExpired }) {
         <div className="page-title-icon"><ShieldIcon size={22} /></div>
         <div>
           <h2>Administration</h2>
-          <p>Generate temporary Viewer links and review access activity.</p>
+          <p>Generate temporary Viewer or Trader links and review access activity.</p>
         </div>
       </div>
 
@@ -241,10 +243,10 @@ export function AdministrationPage({ onSessionExpired }) {
       <section className="panel admin-create-panel">
         <div className="panel-heading">
           <div>
-            <span className="panel-kicker">VIEWER ACCESS</span>
+            <span className="panel-kicker">TEMPORARY ACCESS</span>
             <h2>Generate access link</h2>
           </div>
-          <span className="admin-readonly-badge"><EyeIcon size={14} /> Viewer · read only</span>
+          <span className="admin-readonly-badge"><EyeIcon size={14} /> Viewer or Trader · read only</span>
         </div>
 
         <form className="admin-invite-form" onSubmit={createInvitation}>
@@ -256,6 +258,17 @@ export function AdministrationPage({ onSessionExpired }) {
               maxLength={120}
               required
             />
+          </label>
+          <label>
+            <span>Role</span>
+            <select
+              value={form.role}
+              onChange={(event) => setForm({ ...form, role: event.target.value })}
+              required
+            >
+              <option value="viewer">Viewer · Backtest only</option>
+              <option value="trader">Trader · Backtest and Portfolio</option>
+            </select>
           </label>
           <label>
             <span>Access duration</span>
@@ -352,7 +365,7 @@ export function AdministrationPage({ onSessionExpired }) {
                           onClick={() => runAction(
                             item.id,
                             'terminate-sessions',
-                            `Viewer sessions terminated for ${item.guest_name}.`,
+                            `Guest sessions terminated for ${item.guest_name}.`,
                           )}
                           disabled={Boolean(busyId)}
                         >

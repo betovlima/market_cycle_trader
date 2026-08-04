@@ -1,12 +1,43 @@
-# Market Cycle Trader Frontend v1.12.44
+# Market Cycle Trader Frontend v1.12.48
 
-React + Vite frontend with a compact three-area workspace aligned with the original frontend scale:
+React + Vite frontend for protected historical simulations and Paper portfolio monitoring.
 
-- Dashboard
-- Backtest
-- Portfolio
+## Navigation and roles
 
-The frontend consumes only sanitized dashboard payloads for historical summaries. Private configuration and implementation details remain exclusively on the server.
+| Area | Viewer | Trader | Administrator |
+|---|---:|---:|---:|
+| Dashboard | Yes | Yes | Yes |
+| Backtest and Run Backtest | Yes | Yes | Yes |
+| Backtest Analytics | Yes | Yes | Yes |
+| Portfolio | No | Yes | Yes |
+| Portfolio Analytics | No | Yes | Yes |
+| Administration | No | No | Yes |
+
+Temporary access links can be created as `viewer` or `trader`. Existing links without a stored role remain `viewer`.
+
+## Analytical dashboards
+
+### Backtest Analytics
+
+- capital curve against the reference;
+- drawdown through time and largest drawdown episodes;
+- monthly consistency;
+- attribution of realized result by asset;
+- origin-to-destination rotation matrix;
+- performance by holding-period range;
+- dependence on the best closed positions;
+- sanitized rotation history.
+
+### Portfolio Analytics
+
+- Paper portfolio value and drawdown history;
+- current value, cash, exposure, realized and unrealized P/L;
+- 1-day, 7-day and 30-day returns from stored snapshots;
+- order fill and rejection statistics;
+- current position and recent Paper executions;
+- controlled connection status when Alpaca is unavailable.
+
+The frontend receives execution results and analytical aggregates only. Model scores, seeds, rules, protected configuration and strategy parameters remain server-side.
 
 ## API contracts
 
@@ -16,78 +47,64 @@ GET  /api/dashboard/summary?limit=12
 GET  /api/dashboard/jobs/{job_id}
 POST /api/jobs
 GET  /api/jobs/{job_id}
-GET  /api/paper-market/public-portfolio  # Administrator only
-GET  /api/admin/jobs/{job_id}/rotations  # Administrator only
+GET  /api/analytics/backtests?limit=200
+GET  /api/analytics/backtests/{job_id}
+GET  /api/analytics/portfolio               # Trader or Administrator
+GET  /api/paper-market/public-portfolio     # Trader or Administrator
+GET  /api/paper-market/public-robot-status  # Trader or Administrator
+GET  /api/admin/invitations                 # Administrator only
 ```
 
 ## Local execution
 
-Set `VITE_API_BASE_URL` in the environment and run:
+Set `VITE_API_BASE_URL` in the process environment and run:
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
+## v1.12.47
 
-## v1.12.34
+- Adds a visible Paper Market connection indicator at the top of Portfolio.
+- Shows connected, checking and unavailable states independently from market open or closed.
+- Confirms the last successful connection check and keeps the market clock visible.
+- Marks the connection unavailable when a refresh fails, including silent background checks.
+- Uses the existing sanitized Portfolio response.
+- Requires Market Cycle Trader API v1.13.10 or newer.
 
-- Restores an active queued or running backtest after a browser refresh.
-- Keeps every Start Backtest button disabled while the server reports an active execution.
-- Rechecks the latest server job immediately before creating a new backtest.
-- Automatically returns to the Backtest area when an active execution is recovered.
-- Restores polling, progress, stage, counters and the public execution log.
-- Loads the sanitized results and performance chart automatically when execution completes.
-- Keeps the compact dashboard layout and removes no existing behavior.
+## v1.12.46
 
+- Places Realized Result by Asset above Rotation Quality as two full-width horizontal tables.
+- Adds compact icon filters for all, profitable and losing results.
+- Adds asset and transition search fields without changing the API contract.
+- Adds ascending and descending realized P/L sorting.
+- Adds client-side pagination to Rotation Quality with eight transitions per page.
+- Preserves Viewer access to Backtest Analytics and the existing role protections.
+- Requires Market Cycle Trader API v1.13.10 or newer.
 
-## v1.12.34 Railway logo asset fix
+## v1.12.45
 
-The application header logo is imported from `src/assets` so Vite fingerprints and bundles it during production builds. This removes the runtime dependency on the absolute `/icons/...` path used by the header.
+- Adds a dedicated Analytics area with Backtest and Portfolio dashboards.
+- Adds the temporary `Trader` role.
+- Makes all sanitized Backtest analytics and capital rotations available to Viewer, Trader and Administrator sessions.
+- Keeps Portfolio and Portfolio Analytics restricted to Trader and Administrator sessions.
+- Keeps Administration restricted to the Administrator.
+- Adds role selection when generating a temporary access link.
+- Requires Market Cycle Trader API v1.13.10 or newer.
 
+### v1.12.46 final — Holding-period table fit
 
-## v1.12.40
-
-- Replaces the animated spinner with a circular countdown clock.
-- Places the market update clock as the third summary card, between Best Performance and Last Backtest.
-- Preserves the existing Dashboard, Backtest and Portfolio layout and behavior.
-- Keeps protected credentials out of the frontend.
-
-
-## v1.12.40
-
-Restores the complete read-only Portfolio page without placing the protected Paper Market token in the browser.
-
-## v1.12.41 — private sessions and manual Viewer links
-
-- Adds administrator and temporary Viewer login.
-- Adds an administrator-only access-control page.
-- Generates one-time-display access links that can be copied and shared manually.
-- Hides simulation execution controls from Viewer sessions.
-- Uses HttpOnly cookies and stores no password or access token in browser storage.
-
-## v1.12.42
-
-- Rebuilds the Administration page with the same structured layout used by Market Cycle Monitor.
-- Adds access summary cards, consistent panels, responsive forms, styled tables, status colors and a one-time access-link dialog.
-- Preserves the manual temporary-link authentication flow and all API contracts from frontend v1.12.41.
-- Requires Market Cycle Trader API v1.13.7 or newer.
+- Removes the unnecessary horizontal scrollbar from the Holding Period table.
+- Uses a dedicated fixed-layout table that fits the available analytical panel width.
+- Preserves the responsive layout and all v1.12.46 filters and pagination.
 
 
 
-## v1.12.44 — Administrator capital rotations
+## v1.12.48 — continuous Paper robot status
 
-- Adds an administrator-only capital-rotation summary and detailed execution table to completed Backtest results.
-- Shows rotation counts in Dashboard and Backtest history for administrators.
-- Keeps Viewer access limited to Dashboard and Backtest without the detailed rotation panel.
-- Displays only sanitized execution outputs: date, asset transition, holding period, return, realized P/L and fees.
-- Keeps model scores, seeds, decision rules and every strategy parameter server-side.
-- Requires Market Cycle Trader API v1.13.9 or newer.
-
-## v1.12.43 — Viewer Dashboard and Backtest access
-
-- Allows temporary Viewer sessions to open Dashboard and Backtest.
-- Shows the Start Backtest controls to both Administrator and Viewer sessions.
-- Keeps Portfolio and Administration visible only to the Administrator.
-- Adds a defensive content guard so a Viewer cannot render restricted tabs through stale client state.
-- Requires Market Cycle Trader API v1.13.8 or newer.
+- Portfolio now displays the Paper-account connection and the continuous trading robot as separate health indicators.
+- The robot indicator polls the sanitized status every 30 seconds.
+- It shows active/stopped/degraded/review-required state, current phase, next regular market open and scheduler heartbeat.
+- Starting and stopping remain protected administrator operations performed through the API documentation.
+- Requires Market Cycle Trader API v1.13.11 or newer.
