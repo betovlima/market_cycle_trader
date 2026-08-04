@@ -37,3 +37,19 @@ export function EyeIcon({ size = 18 }) {
 export function PlayIcon({ size = 18 }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m8 5 11 7-11 7V5Z" fill="currentColor"/></svg>
 }
+
+export function AccessUsersIcon({ size = 20 }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M16 20v-1.5A3.5 3.5 0 0 0 12.5 15h-5A3.5 3.5 0 0 0 4 18.5V20M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M17 11a3 3 0 0 0 0-6M19.5 20v-1.2a3.2 3.2 0 0 0-2.4-3.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+}
+
+export function AccessLinkIcon({ size = 20 }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9.5 14.5 5-5M7.2 16.8l-1.1 1.1a3.4 3.4 0 0 1-4.8-4.8l3.2-3.2a3.4 3.4 0 0 1 4.8 0M16.8 7.2l1.1-1.1a3.4 3.4 0 1 1 4.8 4.8l-3.2 3.2a3.4 3.4 0 0 1-4.8 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+}
+
+export function ClockIcon({ size = 20 }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/><path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+}
+
+export function AccessLockIcon({ size = 20 }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+}

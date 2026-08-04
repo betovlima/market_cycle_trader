@@ -6,51 +6,22 @@ import { API } from '../../config/env'
 import { PortfolioIcon } from '../../shared/components/Icons'
 import { compactDate, money, number, percent, shortDateTime } from '../../shared/formatters'
 
-const TOKEN_KEY = 'market-cycle-paper-market-token'
 const POLL_MS = 60 * 60 * 1000
-
-function nextWholeHourTimestamp(now = new Date()) {
-  const next = new Date(now)
-  next.setMinutes(60, 0, 0)
-  return next.getTime()
-}
-
-function secondsUntil(timestamp) {
-  return Math.max(0, Math.ceil((timestamp - Date.now()) / 1000))
-}
-
-function countdownLabel(totalSeconds) {
-  const hours = Math.floor(totalSeconds / 3600)
-  const minutes = Math.floor((totalSeconds % 3600) / 60)
-  const seconds = totalSeconds % 60
-  return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':')
-}
 
 function PortfolioMetric({ label, value, note, tone = '' }) {
   return <article className={`portfolio-metric ${tone}`}><span>{label}</span><strong>{value}</strong><small>{note}</small></article>
 }
 
 export function PaperPortfolioDashboard() {
-  const [token, setToken] = useState(() => sessionStorage.getItem(TOKEN_KEY) || '')
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [refreshing, setRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(null)
-  const [nextQueryAt, setNextQueryAt] = useState(() => nextWholeHourTimestamp())
-  const [countdownSeconds, setCountdownSeconds] = useState(() => secondsUntil(nextWholeHourTimestamp()))
 
   const loadPortfolio = useCallback(async ({ silent = false } = {}) => {
-    const normalized = token.trim()
-    if (!normalized) {
-      setData(null)
-      return
-    }
     setRefreshing(true)
     try {
-      const response = await apiFetch(`${API}/paper-market/portfolio`, {
-        headers: { 'X-Paper-Market-Token': normalized },
-      })
-      sessionStorage.setItem(TOKEN_KEY, normalized)
+      const response = await apiFetch(`${API}/paper-market/public-portfolio`)
       setData(response)
       setError('')
       setLastUpdated(new Date())
@@ -59,41 +30,13 @@ export function PaperPortfolioDashboard() {
     } finally {
       setRefreshing(false)
     }
-  }, [token])
+  }, [])
 
   useEffect(() => {
-    const normalized = token.trim()
-    const scheduledAt = nextWholeHourTimestamp()
-    setNextQueryAt(scheduledAt)
-    setCountdownSeconds(secondsUntil(scheduledAt))
-    if (!normalized) return undefined
-
     loadPortfolio()
-    let hourlyTimer
-    const firstTimer = window.setTimeout(() => {
-      loadPortfolio({ silent: true })
-      hourlyTimer = window.setInterval(() => loadPortfolio({ silent: true }), POLL_MS)
-    }, Math.max(0, scheduledAt - Date.now()))
-
-    return () => {
-      window.clearTimeout(firstTimer)
-      if (hourlyTimer) window.clearInterval(hourlyTimer)
-    }
-  }, [loadPortfolio, token])
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      const remaining = secondsUntil(nextQueryAt)
-      if (remaining <= 0) {
-        const next = nextWholeHourTimestamp()
-        setNextQueryAt(next)
-        setCountdownSeconds(secondsUntil(next))
-      } else {
-        setCountdownSeconds(remaining)
-      }
-    }, 1000)
+    const timer = window.setInterval(() => loadPortfolio({ silent: true }), POLL_MS)
     return () => window.clearInterval(timer)
-  }, [nextQueryAt])
+  }, [loadPortfolio])
 
   const history = useMemo(() => (data?.history || []).map((item) => ({
     ...item,
@@ -110,16 +53,15 @@ export function PaperPortfolioDashboard() {
           <div className="page-title-icon"><PortfolioIcon size={20} /></div>
           <div><h2>Portfolio</h2><p>View the simulated account value, current position and recent orders.</p></div>
         </div>
-        <div className="portfolio-connect">
-          <input type="password" value={token} onChange={(event) => setToken(event.target.value)} placeholder="Paper Market API token" aria-label="Paper Market API token" />
-          <button type="button" className="secondary-action" disabled={!token.trim() || refreshing} onClick={() => loadPortfolio()}>{refreshing ? 'Refreshing…' : data ? 'Refresh' : 'Connect'}</button>
-        </div>
+        <button type="button" className="secondary-action" disabled={refreshing} onClick={() => loadPortfolio()}>
+          {refreshing ? 'Refreshing…' : 'Refresh'}
+        </button>
       </div>
 
       {error ? <div className="inline-error"><strong>Portfolio unavailable</strong><span>{error}</span><button type="button" onClick={() => setError('')}>×</button></div> : null}
 
       {!data ? (
-        <section className="data-panel portfolio-locked"><PortfolioIcon size={32} /><h2>Connect the simulated portfolio</h2><p>Enter the server token to load the isolated paper account.</p></section>
+        <section className="data-panel portfolio-locked"><PortfolioIcon size={32} /><h2>Loading simulated portfolio</h2><p>The read-only portfolio snapshot is being requested from the API.</p></section>
       ) : (
         <>
           <section className="portfolio-metrics-grid">
@@ -134,7 +76,7 @@ export function PaperPortfolioDashboard() {
             <article className="data-panel chart-card">
               <div className="panel-heading">
                 <div><span className="panel-kicker">Performance</span><h2>Portfolio Value</h2></div>
-                <div className="portfolio-monitor"><span>{data.market_clock?.is_open ? 'Market open' : 'Market closed'}</span><small>Next query {countdownLabel(countdownSeconds)}</small></div>
+                <div className="portfolio-monitor"><span>{data.market_clock?.is_open ? 'Market open' : 'Market closed'}</span><small>{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Read-only snapshot'}</small></div>
               </div>
               <div className="performance-chart portfolio-chart">
                 <ResponsiveContainer width="100%" height="100%">
@@ -170,8 +112,8 @@ export function PaperPortfolioDashboard() {
               <table className="dashboard-table">
                 <thead><tr><th>Created</th><th>Asset</th><th>Side</th><th>Status</th><th>Quantity</th><th>Average Fill</th></tr></thead>
                 <tbody>
-                  {data.recent_orders?.length ? data.recent_orders.map((order) => (
-                    <tr key={order.client_order_id}>
+                  {data.recent_orders?.length ? data.recent_orders.map((order, index) => (
+                    <tr key={`${order.created_at || 'order'}-${order.symbol || 'asset'}-${index}`}>
                       <td>{shortDateTime(order.created_at)}</td><td>{order.symbol || '—'}</td>
                       <td><span className={`order-side ${order.side}`}>{String(order.side || '—').toUpperCase()}</span></td>
                       <td>{order.status || '—'}</td><td>{order.filled_quantity ?? order.quantity ?? '—'}</td><td>{order.filled_average_price ? money(order.filled_average_price) : '—'}</td>
