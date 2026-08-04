@@ -3,7 +3,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 
 import { apiFetch } from '../../api/http'
 import { API } from '../../config/env'
-import { ActivityIcon, ClockIcon, PortfolioIcon } from '../../shared/components/Icons'
+import { AccessLockIcon, ActivityIcon, ClockIcon, MarketOpenIcon, PortfolioIcon } from '../../shared/components/Icons'
 import { compactDate, money, number, percent, shortDateTime } from '../../shared/formatters'
 
 const POLL_MS = 60 * 60 * 1000
@@ -93,6 +93,43 @@ function TradingRobotStatus({ robot }) {
   )
 }
 
+function marketTimeLabel(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleString([], {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function MarketStatusMetric({ marketClock }) {
+  const hasClock = Boolean(marketClock)
+  const isOpen = hasClock && Boolean(marketClock.is_open)
+  const state = !hasClock ? 'pending' : isOpen ? 'open' : 'closed'
+  const value = state === 'open' ? 'Open' : state === 'closed' ? 'Closed' : 'Checking'
+  const sessionLabel = state === 'open' ? 'Market Open' : state === 'closed' ? 'Market Closed' : 'Market status pending'
+  const scheduleValue = state === 'open' ? marketClock?.next_close : marketClock?.next_open
+  const scheduleLabel = state === 'open' ? 'Closes' : 'Next open'
+  const schedule = marketTimeLabel(scheduleValue)
+
+  return (
+    <article className={`portfolio-metric market-status-metric ${state}`} aria-live="polite">
+      <div className="market-status-metric-icon">
+        {state === 'open' ? <MarketOpenIcon size={25} /> : state === 'closed' ? <AccessLockIcon size={25} /> : <ClockIcon size={25} />}
+      </div>
+      <div className="market-status-metric-copy">
+        <span>Market Status</span>
+        <strong>{value}</strong>
+        <small>{sessionLabel}{schedule ? <em>{scheduleLabel}: {schedule}</em> : null}</small>
+      </div>
+    </article>
+  )
+}
+
 function PortfolioMetric({ label, value, note, tone = '' }) {
   return <article className={`portfolio-metric ${tone}`}><span>{label}</span><strong>{value}</strong><small>{note}</small></article>
 }
@@ -172,6 +209,7 @@ export function PaperPortfolioDashboard() {
       ) : (
         <>
           <section className="portfolio-metrics-grid">
+            <MarketStatusMetric marketClock={data.market_clock} />
             <PortfolioMetric label="Total Capital" value={money(data.initial_capital)} note="Simulated starting capital" tone="blue" />
             <PortfolioMetric label="Total Return" value={percent(data.total_return)} note={money(data.total_pnl)} tone={Number(data.total_return) >= 0 ? 'green' : 'red'} />
             <PortfolioMetric label="Current Value" value={money(data.portfolio_value)} note={lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Current valuation'} tone="blue" />

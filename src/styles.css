@@ -257,7 +257,7 @@ a { color: inherit; }
 .portfolio-locked { min-height: 270px; display: grid; place-items: center; align-content: center; text-align: center; color: var(--accent); }
 .portfolio-locked h2 { color: var(--text); margin: 14px 0 6px; }
 .portfolio-locked p { margin: 0; color: var(--muted); }
-.portfolio-metrics-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.portfolio-metrics-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
 .portfolio-content-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(350px, .85fr); gap: 18px; }
 .portfolio-monitor { text-align: right; }
 .portfolio-monitor span { display: block; color: var(--positive); font-size: .78rem; font-weight: 700; }
@@ -621,4 +621,56 @@ a { color: inherit; }
 @media (max-width: 760px) {
   .robot-status .paper-market-status-meta { min-width: 0; }
   .robot-status .paper-market-status-meta small { max-width: none; text-align: left; }
+}
+
+/* v1.12.49 Portfolio market-status metric */
+.market-status-metric {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+.market-status-metric.open { border-color: rgba(53, 201, 143, .34); }
+.market-status-metric.closed { border-color: rgba(239, 107, 115, .34); }
+.market-status-metric.pending { border-color: rgba(91, 140, 255, .34); }
+.market-status-metric-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(91, 140, 255, .26);
+  border-radius: 12px;
+  color: var(--accent);
+  background: rgba(47, 140, 255, .09);
+}
+.market-status-metric.open .market-status-metric-icon {
+  color: var(--positive);
+  border-color: rgba(53, 201, 143, .3);
+  background: rgba(53, 201, 143, .09);
+}
+.market-status-metric.closed .market-status-metric-icon {
+  color: var(--negative);
+  border-color: rgba(239, 107, 115, .3);
+  background: rgba(239, 107, 115, .09);
+}
+.market-status-metric-copy { min-width: 0; }
+.market-status-metric-copy strong { margin-top: 4px; font-size: 1.12rem; line-height: 1.05; }
+.market-status-metric.open strong { color: var(--positive); }
+.market-status-metric.closed strong { color: var(--negative); }
+.market-status-metric.pending strong { color: #87c3ff; }
+.market-status-metric-copy small { line-height: 1.35; }
+.market-status-metric-copy small em {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: #8195ad;
+  font-size: .62rem;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 650px) {
+  .market-status-metric-icon { width: 42px; height: 42px; }
 }
