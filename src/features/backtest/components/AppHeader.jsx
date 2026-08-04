@@ -1,20 +1,25 @@
 import { FRONT_VERSION } from '../../../config/env'
-import { BacktestIcon, DashboardIcon, PortfolioIcon } from '../../../shared/components/Icons'
+import { AnalyticsIcon, BacktestIcon, DashboardIcon, PortfolioIcon } from '../../../shared/components/Icons'
 import appLogoUrl from '../../../assets/market-cycle-trader-logo.png'
 
 const VIEWER_NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', Icon: DashboardIcon },
   { id: 'backtest', label: 'Backtest', Icon: BacktestIcon },
+  { id: 'analytics', label: 'Analytics', Icon: AnalyticsIcon },
+]
+
+const TRADER_NAV_ITEMS = [
+  ...VIEWER_NAV_ITEMS,
+  { id: 'portfolio', label: 'Portfolio', Icon: PortfolioIcon },
 ]
 
 const ADMIN_NAV_ITEMS = [
-  ...VIEWER_NAV_ITEMS,
-  { id: 'portfolio', label: 'Portfolio', Icon: PortfolioIcon },
+  ...TRADER_NAV_ITEMS,
   { id: 'administration', label: 'Administration', Icon: DashboardIcon },
 ]
 
 export function AppHeader({ workspace, activeTab, onTabChange, session, onLogout }) {
-  const navItems = session?.role === 'admin' ? ADMIN_NAV_ITEMS : VIEWER_NAV_ITEMS
+  const navItems = session?.role === 'admin' ? ADMIN_NAV_ITEMS : session?.role === 'trader' ? TRADER_NAV_ITEMS : VIEWER_NAV_ITEMS
   return (
     <header className="app-header">
       <div className="brand-area">

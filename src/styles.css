@@ -480,3 +480,40 @@ a { color: inherit; }
 @media (max-width: 650px) {
   .rotation-metrics-grid { grid-template-columns: 1fr; }
 }
+
+/* v1.12.45 analytical dashboards */
+.analytics-page { min-width: 0; }
+.analytics-tabs { display: flex; gap: 8px; padding: 6px; border: 1px solid var(--border); border-radius: 12px; background: rgba(7, 19, 34, .82); }
+.analytics-tabs button { min-height: 38px; padding: 0 14px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid transparent; border-radius: 8px; color: var(--muted); background: transparent; cursor: pointer; font-size: .74rem; font-weight: 800; }
+.analytics-tabs button.active { color: #e8f2ff; border-color: rgba(91, 140, 255, .5); background: rgba(47, 140, 255, .14); }
+.analytics-stack { display: grid; gap: 14px; min-width: 0; }
+.analytics-toolbar { min-height: 54px; padding: 10px 12px; display: flex; align-items: end; justify-content: space-between; gap: 14px; border: 1px solid var(--border); border-radius: 12px; background: rgba(8, 22, 39, .86); }
+.analytics-toolbar label { display: grid; gap: 5px; min-width: min(520px, 100%); }
+.analytics-toolbar label span { color: var(--muted); font-size: .66rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.analytics-toolbar select { height: 36px; padding: 0 10px; border: 1px solid var(--border-strong); border-radius: 8px; color: var(--text); background: #09192b; }
+.analytics-scope-badge, .connection-pill { padding: 6px 10px; border-radius: 999px; font-size: .65rem; font-weight: 800; white-space: nowrap; }
+.analytics-scope-badge { color: #7de8bc; border: 1px solid rgba(53, 201, 143, .3); background: rgba(53, 201, 143, .08); }
+.connection-pill.ready { color: #7de8bc; border: 1px solid rgba(53, 201, 143, .3); background: rgba(53, 201, 143, .08); }
+.connection-pill.unavailable { color: #ffd0a1; border: 1px solid rgba(228, 180, 84, .34); background: rgba(228, 180, 84, .09); }
+.analytics-loading { min-height: 150px; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); }
+.analytics-metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.analytics-metric { min-height: 94px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: linear-gradient(145deg, rgba(13, 31, 53, .98), rgba(8, 21, 37, .98)); }
+.analytics-metric span { display: block; color: var(--muted); font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; }
+.analytics-metric strong { display: block; margin-top: 7px; font-size: 1.22rem; }
+.analytics-metric small { display: block; margin-top: 5px; color: var(--muted); font-size: .68rem; }
+.analytics-two-column { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; min-width: 0; }
+.analytics-panel { min-width: 0; }
+.analytics-chart { width: 100%; height: 290px; }
+.analytics-chart-wide { height: 320px; }
+.analytics-empty { min-height: 220px; display: grid; place-items: center; color: var(--muted); font-size: .75rem; border: 1px dashed rgba(91, 130, 176, .22); border-radius: 10px; }
+.analytics-table { min-width: 720px; }
+.analytics-definition-list { margin: 0; display: grid; }
+.analytics-definition-list > div { min-height: 42px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 16px; padding: 8px 2px; border-top: 1px solid rgba(83, 120, 165, .15); }
+.analytics-definition-list > div:first-child { border-top: 0; }
+.analytics-definition-list dt { color: var(--muted); font-size: .73rem; }
+.analytics-definition-list dd { margin: 0; font-size: .82rem; font-weight: 800; }
+@media (max-width: 1120px) { .analytics-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .analytics-two-column { grid-template-columns: 1fr; } }
+@media (max-width: 680px) { .analytics-metric-grid { grid-template-columns: 1fr; } .analytics-toolbar { align-items: stretch; flex-direction: column; } .analytics-tabs { flex-direction: column; } .analytics-tabs button { justify-content: center; } }
+.admin-invite-form { grid-template-columns: minmax(240px, 1fr) minmax(180px, .52fr) minmax(170px, .48fr) auto; }
+@media (max-width: 1180px) { .admin-invite-form { grid-template-columns: 1fr 1fr; } .admin-primary-button { grid-column: 1 / -1; } }
+@media (max-width: 760px) { .admin-invite-form { grid-template-columns: 1fr; } .admin-primary-button { grid-column: auto; } }
