@@ -1,4 +1,4 @@
-# Market Cycle Trader Frontend v1.12.40
+# Market Cycle Trader Frontend v1.12.44
 
 React + Vite frontend with a compact three-area workspace aligned with the original frontend scale:
 
@@ -16,7 +16,8 @@ GET  /api/dashboard/summary?limit=12
 GET  /api/dashboard/jobs/{job_id}
 POST /api/jobs
 GET  /api/jobs/{job_id}
-GET  /api/paper-market/portfolio
+GET  /api/paper-market/public-portfolio  # Administrator only
+GET  /api/admin/jobs/{job_id}/rotations  # Administrator only
 ```
 
 ## Local execution
@@ -56,3 +57,37 @@ The application header logo is imported from `src/assets` so Vite fingerprints a
 ## v1.12.40
 
 Restores the complete read-only Portfolio page without placing the protected Paper Market token in the browser.
+
+## v1.12.41 — private sessions and manual Viewer links
+
+- Adds administrator and temporary Viewer login.
+- Adds an administrator-only access-control page.
+- Generates one-time-display access links that can be copied and shared manually.
+- Hides simulation execution controls from Viewer sessions.
+- Uses HttpOnly cookies and stores no password or access token in browser storage.
+
+## v1.12.42
+
+- Rebuilds the Administration page with the same structured layout used by Market Cycle Monitor.
+- Adds access summary cards, consistent panels, responsive forms, styled tables, status colors and a one-time access-link dialog.
+- Preserves the manual temporary-link authentication flow and all API contracts from frontend v1.12.41.
+- Requires Market Cycle Trader API v1.13.7 or newer.
+
+
+
+## v1.12.44 — Administrator capital rotations
+
+- Adds an administrator-only capital-rotation summary and detailed execution table to completed Backtest results.
+- Shows rotation counts in Dashboard and Backtest history for administrators.
+- Keeps Viewer access limited to Dashboard and Backtest without the detailed rotation panel.
+- Displays only sanitized execution outputs: date, asset transition, holding period, return, realized P/L and fees.
+- Keeps model scores, seeds, decision rules and every strategy parameter server-side.
+- Requires Market Cycle Trader API v1.13.9 or newer.
+
+## v1.12.43 — Viewer Dashboard and Backtest access
+
+- Allows temporary Viewer sessions to open Dashboard and Backtest.
+- Shows the Start Backtest controls to both Administrator and Viewer sessions.
+- Keeps Portfolio and Administration visible only to the Administrator.
+- Adds a defensive content guard so a Viewer cannot render restricted tabs through stale client state.
+- Requires Market Cycle Trader API v1.13.8 or newer.
