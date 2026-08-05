@@ -14,21 +14,6 @@ function accessFromLocation() {
   }
 }
 
-function accessFromInput(value) {
-  const text = String(value || '').trim()
-  if (!text) return { invitation_id: '', token: '' }
-  try {
-    const url = new URL(text)
-    const hash = new URLSearchParams(url.hash.replace(/^#/, ''))
-    return {
-      invitation_id: hash.get('invitation') || url.searchParams.get('invitation') || '',
-      token: hash.get('token') || '',
-    }
-  } catch {
-    return { invitation_id: '', token: '' }
-  }
-}
-
 function keepInvitationAndRemoveToken(invitationId) {
   if (typeof window === 'undefined') return
   const url = new URL(window.location.href)
@@ -39,7 +24,12 @@ function keepInvitationAndRemoveToken(invitationId) {
 }
 
 function roleLabel(role) {
-  return role === 'trader' ? 'Trader' : 'Viewer'
+  const labels = {
+    admin: 'Administrator',
+    trader: 'Trader',
+    viewer: 'Viewer',
+  }
+  return labels[role] || 'Authorized'
 }
 
 function GoogleIdentityButton({ disabled, onCredential, onError }) {
@@ -114,29 +104,29 @@ function GoogleIdentityButton({ disabled, onCredential, onError }) {
 }
 
 export function LoginPage({ onAuthenticated }) {
-  const passwordRef = useRef(null)
   const initialAccess = useRef(accessFromLocation())
-  const [mode, setMode] = useState(initialAccess.current.invitation_id || initialAccess.current.token ? 'guest' : 'guest')
   const [locator, setLocator] = useState(initialAccess.current)
-  const [manualLink, setManualLink] = useState('')
   const [preview, setPreview] = useState(null)
+  const [checkingInvitation, setCheckingInvitation] = useState(Boolean(initialAccess.current.invitation_id || initialAccess.current.token))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
   async function loadPreview(nextLocator) {
-    const body = {}
-    if (nextLocator.invitation_id) body.invitation_id = nextLocator.invitation_id
-    if (nextLocator.token) body.token = nextLocator.token
-    if (!body.invitation_id) {
+    if (!nextLocator.invitation_id) {
       setPreview(null)
-      setError('This legacy token-only link is no longer valid. Ask the administrator for a new Google-verified invitation.')
+      setCheckingInvitation(false)
+      if (nextLocator.token) {
+        setError('This invitation link is incomplete. Ask the administrator for a new link.')
+      }
       keepInvitationAndRemoveToken('')
       return
     }
 
-    setBusy(true)
+    setCheckingInvitation(true)
     setError('')
     try {
+      const body = { invitation_id: nextLocator.invitation_id }
+      if (nextLocator.token) body.token = nextLocator.token
       const value = await apiFetch(`${API}/auth/access/preview`, { method: 'POST', body })
       const normalized = {
         invitation_id: value.invitation_id,
@@ -150,7 +140,7 @@ export function LoginPage({ onAuthenticated }) {
       setError(requestError.message || 'Unable to open this invitation.')
       keepInvitationAndRemoveToken(nextLocator.invitation_id || '')
     } finally {
-      setBusy(false)
+      setCheckingInvitation(false)
     }
   }
 
@@ -161,47 +151,17 @@ export function LoginPage({ onAuthenticated }) {
     }
   }, [])
 
-  async function submitAdmin(event) {
-    event.preventDefault()
-    setBusy(true)
-    setError('')
-    try {
-      const session = await apiFetch(`${API}/auth/admin/login`, {
-        method: 'POST',
-        body: { password: passwordRef.current?.value || '' },
-      })
-      if (passwordRef.current) passwordRef.current.value = ''
-      onAuthenticated(session)
-    } catch (requestError) {
-      setError(requestError.message || 'Unable to open the administrator session.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function submitInvitationLink(event) {
-    event.preventDefault()
-    const parsed = accessFromInput(manualLink)
-    if (!parsed.invitation_id || !parsed.token) {
-      setError('Paste the complete invitation link generated in Administration.')
-      return
-    }
-    setManualLink('')
-    keepInvitationAndRemoveToken(parsed.invitation_id)
-    await loadPreview(parsed)
-  }
-
   async function authenticateGoogle(credential) {
     setBusy(true)
     setError('')
     try {
-      const body = {
-        invitation_id: preview?.invitation_id || locator.invitation_id || undefined,
-        token: locator.token || undefined,
-        credential,
-      }
+      const body = { credential }
+      if (locator.invitation_id) body.invitation_id = locator.invitation_id
+      if (locator.token) body.token = locator.token
       const session = await apiFetch(`${API}/auth/access`, { method: 'POST', body })
-      setLocator({ invitation_id: body.invitation_id || '', token: '' })
+      setLocator({ invitation_id: '', token: '' })
+      setPreview(null)
+      keepInvitationAndRemoveToken('')
       onAuthenticated(session)
     } catch (requestError) {
       setError(requestError.message || 'Unable to verify the Google account.')
@@ -210,36 +170,21 @@ export function LoginPage({ onAuthenticated }) {
     }
   }
 
-  function chooseMode(nextMode) {
-    setMode(nextMode)
-    setError('')
-  }
+  const disabled = busy || checkingInvitation
 
   return (
     <main className="auth-page">
-      <section className="auth-card">
+      <section className="auth-card unified-auth-card">
         <div className="auth-brand">
           <img src={appLogoUrl} alt="" />
           <div>
             <span>PRIVATE SIMULATION</span>
             <h1>Market Cycle Trader</h1>
-            <p>Use an identity-verified Viewer or Trader invitation, or sign in as administrator.</p>
+            <p>Sign in with an authorized Google account.</p>
           </div>
         </div>
 
-        <div className="auth-tabs">
-          <button className={mode === 'guest' ? 'active' : ''} onClick={() => chooseMode('guest')} type="button">Verified access</button>
-          <button className={mode === 'admin' ? 'active' : ''} onClick={() => chooseMode('admin')} type="button">Administrator</button>
-        </div>
-
-        {mode === 'admin' ? (
-          <form onSubmit={submitAdmin} className="auth-form">
-            <label>Administrator password</label>
-            <input ref={passwordRef} type="password" required disabled={busy} autoComplete="current-password" />
-            {error ? <div className="auth-error">{error}</div> : null}
-            <button className="primary-action" disabled={busy}>{busy ? 'Opening session…' : 'Open administrator session'}</button>
-          </form>
-        ) : preview ? (
+        {preview ? (
           <div className="verified-access-panel">
             <div className="verified-access-heading">
               <span>{roleLabel(preview.role)} invitation</span>
@@ -247,34 +192,30 @@ export function LoginPage({ onAuthenticated }) {
             </div>
             <dl className="verified-access-details">
               <div><dt>Authorized Google email</dt><dd>{preview.masked_email}</dd></div>
+              <div><dt>Access profile</dt><dd>{roleLabel(preview.role)}</dd></div>
               <div><dt>Invitation status</dt><dd>{preview.status.replaceAll('_', ' ')}</dd></div>
               <div><dt>Expires</dt><dd>{new Date(preview.expires_at).toLocaleString()}</dd></div>
             </dl>
             <p className="verified-access-note">
               Continue with the Google account that owns the authorized email. A different account will be rejected.
             </p>
-            {error ? <div className="auth-error">{error}</div> : null}
-            <GoogleIdentityButton disabled={busy} onCredential={authenticateGoogle} onError={setError} />
-            {busy ? <div className="google-verification-progress"><span className="loading-ring" />Verifying identity…</div> : null}
-            <button type="button" className="auth-secondary-action" onClick={() => { setPreview(null); setLocator({ invitation_id: '', token: '' }); keepInvitationAndRemoveToken('') }} disabled={busy}>Use another invitation</button>
           </div>
         ) : (
-          <form onSubmit={submitInvitationLink} className="auth-form">
-            <label>Complete invitation link</label>
-            <input
-              value={manualLink}
-              onChange={(event) => setManualLink(event.target.value)}
-              placeholder="https://…/access#invitation=…&token=…"
-              required
-              disabled={busy}
-              autoComplete="off"
-            />
-            {error ? <div className="auth-error">{error}</div> : null}
-            <button className="primary-action" disabled={busy}>{busy ? 'Checking invitation…' : 'Continue to Google verification'}</button>
-          </form>
+          <div className="unified-auth-intro">
+            <span>GOOGLE IDENTITY</span>
+            <strong>Secure account verification</strong>
+            <p>
+              Viewer, Trader and Administrator profiles use the same login. New access must begin from the invitation link generated in Administration.
+            </p>
+          </div>
         )}
 
-        <small>Google credentials are verified by the API and exchanged for a secure HttpOnly session cookie. Raw invitation tokens are never stored in browser storage.</small>
+        {error ? <div className="auth-error">{error}</div> : null}
+        <GoogleIdentityButton disabled={disabled} onCredential={authenticateGoogle} onError={setError} />
+        {checkingInvitation ? <div className="google-verification-progress"><span className="loading-ring" />Checking invitation…</div> : null}
+        {busy ? <div className="google-verification-progress"><span className="loading-ring" />Verifying identity…</div> : null}
+
+        <small>Google credentials are verified by the API and exchanged for a secure HttpOnly session cookie. Invitation tokens are never stored in browser storage.</small>
       </section>
     </main>
   )

@@ -1,4 +1,4 @@
-# Market Cycle Trader Frontend v1.12.57
+# Market Cycle Trader Frontend v1.12.59
 
 React + Vite frontend for protected historical simulations and Paper portfolio monitoring.
 
@@ -192,3 +192,22 @@ pnpm dev
 - Displays pending, claimed, active, expired, revoked and legacy-unverified access states.
 - Shows claimed identity, active session count and session-limit controls in Administration.
 - Requires Market Cycle Trader API v1.13.13 and `VITE_GOOGLE_CLIENT_ID`.
+
+
+## v1.12.58 — simplified verified-access login
+
+- Removes the `Use another invitation` button from the claimed invitation panel.
+- Keeps the verified Google identity flow and invitation details unchanged.
+- Keeps the Administrator tab and password login unchanged for the next migration step.
+- Requires Market Cycle Trader API v1.13.13.
+
+
+## v1.12.59 — unified Google authentication
+
+- Replaces the separate Verified access and Administrator tabs with one Google authentication screen.
+- Removes the manual complete-invitation-link field. Invitation identifiers and first-claim tokens are read only from the generated URL.
+- Supports Viewer, Trader and Administrator identity-bound profiles through the same Google button.
+- Allows previously claimed accounts to sign in directly without reopening the original invitation link.
+- Adds Administrator as an access profile in Administration.
+- Keeps the Administration area inside Market Cycle Trader and leaves the standalone authentication projects on hold.
+- Requires Market Cycle Trader API v1.13.14, `VITE_GOOGLE_CLIENT_ID`, and the API variable `TRADER_ADMIN_GOOGLE_EMAIL`.
