@@ -1,8 +1,9 @@
-export const FRONT_VERSION = '1.12.56'
+export const FRONT_VERSION = '1.12.57'
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || ''
 export const API_BASE_URL = rawApiBaseUrl.replace(/\/$/, '')
 export const API = `${API_BASE_URL}/api`
+export const GOOGLE_CLIENT_ID = String(import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim()
 
 
 export function resolveApiResourceUrl(resourceUrl) {

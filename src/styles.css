@@ -865,3 +865,37 @@ a { color: inherit; }
   border-radius: 50%;
   animation: spin .85s linear infinite;
 }
+
+/* v1.12.57 — identity-bound temporary access */
+.verified-access-panel { display: grid; gap: 14px; }
+.verified-access-heading { padding: 14px; border: 1px solid rgba(47,140,255,.28); border-radius: 12px; background: rgba(47,140,255,.08); }
+.verified-access-heading span { display: block; color: var(--accent); font-size: .68rem; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
+.verified-access-heading strong { display: block; margin-top: 5px; font-size: 1.05rem; }
+.verified-access-details { display: grid; gap: 8px; margin: 0; }
+.verified-access-details div { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 9px; background: rgba(6,20,38,.72); }
+.verified-access-details dt { color: var(--muted); font-size: .69rem; }
+.verified-access-details dd { margin: 0; color: #dcecff; font-size: .72rem; font-weight: 750; text-transform: capitalize; }
+.verified-access-note { margin: 0; color: #adbed1; font-size: .74rem; line-height: 1.55; }
+.google-identity-button { min-height: 44px; width: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.google-identity-button.disabled { opacity: .48; pointer-events: none; }
+.google-verification-progress { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-size: .72rem; }
+.auth-secondary-action { min-height: 38px; border: 1px solid var(--border-strong); border-radius: 9px; color: #bed0e5; background: rgba(13,31,53,.78); cursor: pointer; font-size: .72rem; font-weight: 750; }
+.auth-secondary-action:disabled { opacity: .5; cursor: wait; }
+.identity-invite-form { grid-template-columns: minmax(180px,.8fr) minmax(245px,1fr) minmax(180px,.68fr) minmax(140px,.48fr) minmax(140px,.48fr) auto; }
+.identity-admin-table { min-width: 1500px; }
+.admin-identity-email { display: block; margin-top: 4px; color: var(--muted); font-size: .64rem; font-weight: 500; text-transform: none; }
+.admin-status.pending { color: #8ec5ff; }
+.admin-status.warning { color: #ffcf6a; }
+.claimed-identity { display: block; color: #d8e8fb; font-size: .68rem; }
+.claimed-identity + small { display: block; margin-top: 3px; color: var(--muted); font-size: .61rem; }
+.session-limit-control { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.session-limit-control strong { color: var(--text); }
+.session-limit-control span { color: var(--muted); font-size: .63rem; }
+.session-limit-control select { width: 48px; height: 29px; padding: 0 4px; border: 1px solid var(--border-strong); border-radius: 7px; color: var(--text); background: #09192b; }
+.session-limit-control button { height: 29px; padding: 0 7px; border: 1px solid var(--border-strong); border-radius: 7px; color: #bed0e5; background: rgba(13,31,53,.9); cursor: pointer; font-size: .61rem; font-weight: 750; }
+.session-limit-control button:disabled, .session-limit-control select:disabled { opacity: .4; cursor: not-allowed; }
+.identity-row-actions { min-width: 650px; }
+.access-link-dialog p strong { color: #dcecff; }
+@media (max-width: 1380px) { .identity-invite-form { grid-template-columns: repeat(3, minmax(0,1fr)); } .identity-invite-form .admin-primary-button { grid-column: 1 / -1; } }
+@media (max-width: 860px) { .identity-invite-form { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 620px) { .identity-invite-form { grid-template-columns: 1fr; } .verified-access-details div { align-items: flex-start; flex-direction: column; gap: 4px; } }

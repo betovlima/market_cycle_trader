@@ -20,6 +20,7 @@ const DURATION_OPTIONS = [
   [2592000, '30 days'],
 ]
 
+const SESSION_OPTIONS = [1, 2, 3, 4, 5]
 const DEFAULT_DURATION_SECONDS = String(DURATION_OPTIONS[0][0])
 
 function dateTime(value) {
@@ -28,12 +29,32 @@ function dateTime(value) {
 }
 
 function statusClass(status) {
-  return status === 'active' ? 'positive' : 'negative'
+  if (status === 'active' || status === 'claimed') return 'positive'
+  if (status === 'pending_verification') return 'pending'
+  if (status === 'legacy_unverified') return 'warning'
+  return 'negative'
+}
+
+function statusLabel(status) {
+  const labels = {
+    pending_verification: 'Pending verification',
+    claimed: 'Claimed',
+    active: 'Active',
+    legacy_unverified: 'Legacy unverified',
+    expired: 'Expired',
+    revoked: 'Revoked',
+    blocked: 'Blocked',
+  }
+  return labels[status] || String(status || 'Unknown').replaceAll('_', ' ')
 }
 
 function roleLabel(value) {
   if (!value) return 'Viewer'
   return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+function defaultSessions(role) {
+  return role === 'trader' ? '1' : '2'
 }
 
 async function copyText(value) {
@@ -63,10 +84,13 @@ export function AdministrationPage({ onSessionExpired }) {
   const [notice, setNotice] = useState('')
   const [form, setForm] = useState({
     guest_name: '',
+    authorized_email: '',
     role: 'viewer',
     duration_seconds: DEFAULT_DURATION_SECONDS,
+    max_active_sessions: defaultSessions('viewer'),
   })
   const [extendDurations, setExtendDurations] = useState({})
+  const [sessionLimits, setSessionLimits] = useState({})
   const [generatedAccess, setGeneratedAccess] = useState(null)
 
   const handleError = useCallback((requestError) => {
@@ -84,7 +108,15 @@ export function AdministrationPage({ onSessionExpired }) {
         apiFetch(`${API}/admin/invitations`),
         apiFetch(`${API}/admin/access-logs?limit=100`),
       ])
-      setInvitations(invitationResponse.items || [])
+      const items = invitationResponse.items || []
+      setInvitations(items)
+      setSessionLimits((current) => {
+        const next = { ...current }
+        items.forEach((item) => {
+          if (!next[item.id]) next[item.id] = String(item.max_active_sessions || defaultSessions(item.role))
+        })
+        return next
+      })
       setLogs(logResponse.items || [])
       setError('')
     } catch (requestError) {
@@ -113,13 +145,21 @@ export function AdministrationPage({ onSessionExpired }) {
         method: 'POST',
         body: {
           guest_name: form.guest_name.trim(),
+          authorized_email: form.authorized_email.trim().toLowerCase(),
           role: form.role,
           duration_seconds: Number(form.duration_seconds),
+          max_active_sessions: Number(form.max_active_sessions),
         },
       })
-      setForm({ guest_name: '', role: 'viewer', duration_seconds: DEFAULT_DURATION_SECONDS })
+      setForm({
+        guest_name: '',
+        authorized_email: '',
+        role: 'viewer',
+        duration_seconds: DEFAULT_DURATION_SECONDS,
+        max_active_sessions: defaultSessions('viewer'),
+      })
       setGeneratedAccess(created)
-      setNotice(`Access link generated for ${created.guest_name}.`)
+      setNotice(`Identity-verified access link generated for ${created.guest_name}.`)
       await loadData()
     } catch (requestError) {
       handleError(requestError)
@@ -159,7 +199,7 @@ export function AdministrationPage({ onSessionExpired }) {
         },
       )
       setGeneratedAccess(generated)
-      setNotice(`A new access link was generated for ${invitation.guest_name}.`)
+      setNotice(`A new identity claim link was generated for ${invitation.guest_name}. Existing sessions were ended.`)
       setExtendDurations((current) => ({
         ...current,
         [invitation.id]: DEFAULT_DURATION_SECONDS,
@@ -172,27 +212,43 @@ export function AdministrationPage({ onSessionExpired }) {
     }
   }
 
-  async function extendInvitation(invitation) {
-    const selectedDuration = extendDurations[invitation.id] ?? DEFAULT_DURATION_SECONDS
-    setBusyId(`${invitation.id}:extend`)
+  async function updateInvitation(invitation, body, message, actionName) {
+    setBusyId(`${invitation.id}:${actionName}`)
     setError('')
     setNotice('')
     try {
       await apiFetch(`${API}/admin/invitations/${encodeURIComponent(invitation.id)}`, {
         method: 'PATCH',
-        body: { duration_seconds: Number(selectedDuration) },
+        body,
       })
-      setNotice(`Access extended for ${invitation.guest_name}.`)
-      setExtendDurations((current) => ({
-        ...current,
-        [invitation.id]: DEFAULT_DURATION_SECONDS,
-      }))
+      setNotice(message)
       await loadData()
     } catch (requestError) {
       handleError(requestError)
     } finally {
       setBusyId('')
     }
+  }
+
+  async function extendInvitation(invitation) {
+    const selectedDuration = extendDurations[invitation.id] ?? DEFAULT_DURATION_SECONDS
+    await updateInvitation(
+      invitation,
+      { duration_seconds: Number(selectedDuration) },
+      `Access extended for ${invitation.guest_name}.`,
+      'extend',
+    )
+    setExtendDurations((current) => ({ ...current, [invitation.id]: DEFAULT_DURATION_SECONDS }))
+  }
+
+  async function saveSessionLimit(invitation) {
+    const limit = Number(sessionLimits[invitation.id] || invitation.max_active_sessions || 1)
+    await updateInvitation(
+      invitation,
+      { max_active_sessions: limit },
+      `Session limit updated for ${invitation.guest_name}.`,
+      'session-limit',
+    )
   }
 
   async function deleteInvitation(invitation) {
@@ -215,9 +271,10 @@ export function AdministrationPage({ onSessionExpired }) {
   }
 
   const counts = useMemo(() => ({
-    active: invitations.filter((item) => item.status === 'active').length,
+    pending: invitations.filter((item) => item.status === 'pending_verification').length,
+    active: invitations.filter((item) => ['active', 'claimed'].includes(item.status)).length,
     expired: invitations.filter((item) => item.status === 'expired').length,
-    revoked: invitations.filter((item) => item.status === 'revoked').length,
+    restricted: invitations.filter((item) => ['revoked', 'legacy_unverified', 'blocked'].includes(item.status)).length,
   }), [invitations])
 
   return (
@@ -226,7 +283,7 @@ export function AdministrationPage({ onSessionExpired }) {
         <div className="page-title-icon"><ShieldIcon size={22} /></div>
         <div>
           <h2>Administration</h2>
-          <p>Generate temporary Viewer or Trader links and review access activity.</p>
+          <p>Generate Google-verified Viewer or Trader invitations and review access activity.</p>
         </div>
       </div>
 
@@ -235,21 +292,21 @@ export function AdministrationPage({ onSessionExpired }) {
 
       <section className="admin-summary-grid">
         <AdminSummary icon={<AccessUsersIcon size={20} />} label="Access records" value={invitations.length} />
-        <AdminSummary icon={<AccessLinkIcon size={20} />} label="Active" value={counts.active} tone="positive" />
-        <AdminSummary icon={<ClockIcon size={20} />} label="Expired" value={counts.expired} />
-        <AdminSummary icon={<AccessLockIcon size={20} />} label="Revoked" value={counts.revoked} tone="negative" />
+        <AdminSummary icon={<AccessLinkIcon size={20} />} label="Pending" value={counts.pending} />
+        <AdminSummary icon={<ClockIcon size={20} />} label="Claimed / Active" value={counts.active} tone="positive" />
+        <AdminSummary icon={<AccessLockIcon size={20} />} label="Expired / Restricted" value={counts.expired + counts.restricted} tone="negative" />
       </section>
 
       <section className="panel admin-create-panel">
         <div className="panel-heading">
           <div>
-            <span className="panel-kicker">TEMPORARY ACCESS</span>
-            <h2>Generate access link</h2>
+            <span className="panel-kicker">IDENTITY-VERIFIED ACCESS</span>
+            <h2>Generate access invitation</h2>
           </div>
-          <span className="admin-readonly-badge"><EyeIcon size={14} /> Viewer or Trader · read only</span>
+          <span className="admin-readonly-badge"><EyeIcon size={14} /> Google account required</span>
         </div>
 
-        <form className="admin-invite-form" onSubmit={createInvitation}>
+        <form className="admin-invite-form identity-invite-form" onSubmit={createInvitation}>
           <label>
             <span>Guest name</span>
             <input
@@ -260,10 +317,24 @@ export function AdministrationPage({ onSessionExpired }) {
             />
           </label>
           <label>
+            <span>Authorized Google email</span>
+            <input
+              type="email"
+              value={form.authorized_email}
+              onChange={(event) => setForm({ ...form, authorized_email: event.target.value })}
+              maxLength={254}
+              autoComplete="off"
+              required
+            />
+          </label>
+          <label>
             <span>Role</span>
             <select
               value={form.role}
-              onChange={(event) => setForm({ ...form, role: event.target.value })}
+              onChange={(event) => {
+                const role = event.target.value
+                setForm({ ...form, role, max_active_sessions: defaultSessions(role) })
+              }}
               required
             >
               <option value="viewer">Viewer · Backtest only</option>
@@ -282,13 +353,23 @@ export function AdministrationPage({ onSessionExpired }) {
               ))}
             </select>
           </label>
+          <label>
+            <span>Maximum active sessions</span>
+            <select
+              value={form.max_active_sessions}
+              onChange={(event) => setForm({ ...form, max_active_sessions: event.target.value })}
+              required
+            >
+              {SESSION_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
+            </select>
+          </label>
           <button
             type="submit"
             className="admin-primary-button"
             disabled={busyId === 'create' || !form.duration_seconds}
           >
             <AccessLinkIcon size={17} />
-            {busyId === 'create' ? 'Generating…' : 'Generate access link'}
+            {busyId === 'create' ? 'Generating…' : 'Generate verified link'}
           </button>
         </form>
       </section>
@@ -297,7 +378,7 @@ export function AdministrationPage({ onSessionExpired }) {
         <div className="panel-heading">
           <div>
             <span className="panel-kicker">ACCESS CONTROL</span>
-            <h2>Temporary access</h2>
+            <h2>Identity-bound invitations</h2>
           </div>
         </div>
 
@@ -305,12 +386,14 @@ export function AdministrationPage({ onSessionExpired }) {
           <div className="admin-loading"><span className="loading-ring" />Loading administration…</div>
         ) : (
           <div className="table-scroll">
-            <table className="market-table admin-table">
+            <table className="market-table admin-table identity-admin-table">
               <thead>
                 <tr>
                   <th>Guest</th>
                   <th>Role</th>
                   <th>Status</th>
+                  <th>Sessions</th>
+                  <th>Claimed identity</th>
                   <th>Expires</th>
                   <th>Last access</th>
                   <th>Actions</th>
@@ -318,83 +401,87 @@ export function AdministrationPage({ onSessionExpired }) {
               </thead>
               <tbody>
                 {invitations.length === 0 ? (
-                  <tr><td colSpan="6" className="empty-table-cell">No access links generated.</td></tr>
-                ) : invitations.map((item) => (
-                  <tr key={item.id}>
-                    <td><strong>{item.guest_name}</strong></td>
-                    <td>{roleLabel(item.role)}</td>
-                    <td>
-                      <span className={`admin-status ${statusClass(item.status)}`}>
-                        {item.status.replaceAll('_', ' ')}
-                      </span>
-                    </td>
-                    <td>{dateTime(item.expires_at)}</td>
-                    <td>{dateTime(item.last_access_at)}</td>
-                    <td>
-                      <div className="admin-row-actions">
-                        <button
-                          type="button"
-                          title="Rotate the token, set a new duration and show a new one-time access link."
-                          onClick={() => regenerateAccessLink(item)}
-                          disabled={Boolean(busyId) || item.status === 'revoked'}
-                        >
-                          Generate new link
-                        </button>
-                        <select
-                          value={extendDurations[item.id] ?? DEFAULT_DURATION_SECONDS}
-                          onChange={(event) => setExtendDurations({
-                            ...extendDurations,
-                            [item.id]: event.target.value,
-                          })}
-                          disabled={item.status === 'revoked'}
-                          aria-label={`Duration for ${item.guest_name}`}
-                        >
-                          {DURATION_OPTIONS.map(([value, label]) => (
-                            <option key={value} value={value}>+{label}</option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          onClick={() => extendInvitation(item)}
-                          disabled={Boolean(busyId) || item.status === 'revoked'}
-                        >
-                          Extend
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => runAction(
-                            item.id,
-                            'terminate-sessions',
-                            `Guest sessions terminated for ${item.guest_name}.`,
-                          )}
-                          disabled={Boolean(busyId)}
-                        >
-                          End sessions
-                        </button>
-                        <button
-                          type="button"
-                          className="danger"
-                          onClick={() => runAction(
-                            item.id,
-                            'revoke',
-                            `Access revoked for ${item.guest_name}.`,
-                          )}
-                          disabled={Boolean(busyId) || item.status === 'revoked'}
-                        >
-                          Revoke
-                        </button>
-                        <button
-                          type="button"
-                          className="danger ghost"
-                          onClick={() => deleteInvitation(item)}
-                          disabled={Boolean(busyId) || item.status === 'active'}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                  <tr><td colSpan="8" className="empty-table-cell">No access invitations generated.</td></tr>
+                ) : invitations.map((item) => {
+                  const legacy = item.status === 'legacy_unverified'
+                  const locked = ['revoked', 'legacy_unverified'].includes(item.status)
+                  const cannotDelete = ['pending_verification', 'claimed', 'active'].includes(item.status)
+                  return (
+                    <tr key={item.id}>
+                      <td>
+                        <strong>{item.guest_name}</strong>
+                        <small className="admin-identity-email">{item.authorized_email || 'No verified email'}</small>
+                      </td>
+                      <td>{roleLabel(item.role)}</td>
+                      <td><span className={`admin-status ${statusClass(item.status)}`}>{statusLabel(item.status)}</span></td>
+                      <td>
+                        <div className="session-limit-control">
+                          <strong>{item.active_sessions || 0}</strong>
+                          <span>of</span>
+                          <select
+                            value={sessionLimits[item.id] ?? String(item.max_active_sessions || 1)}
+                            onChange={(event) => setSessionLimits({ ...sessionLimits, [item.id]: event.target.value })}
+                            disabled={locked}
+                            aria-label={`Maximum sessions for ${item.guest_name}`}
+                          >
+                            {SESSION_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
+                          </select>
+                          <button type="button" onClick={() => saveSessionLimit(item)} disabled={Boolean(busyId) || locked}>Save</button>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="claimed-identity">{item.claimed_email || (legacy ? 'New invitation required' : 'Not claimed')}</span>
+                        {item.claimed_at ? <small>{dateTime(item.claimed_at)}</small> : null}
+                      </td>
+                      <td>{dateTime(item.expires_at)}</td>
+                      <td>{dateTime(item.last_access_at)}</td>
+                      <td>
+                        <div className="admin-row-actions identity-row-actions">
+                          <button
+                            type="button"
+                            title="End sessions, rotate the token and require a fresh Google identity claim."
+                            onClick={() => regenerateAccessLink(item)}
+                            disabled={Boolean(busyId) || locked}
+                          >
+                            Generate new claim link
+                          </button>
+                          <select
+                            value={extendDurations[item.id] ?? DEFAULT_DURATION_SECONDS}
+                            onChange={(event) => setExtendDurations({ ...extendDurations, [item.id]: event.target.value })}
+                            disabled={locked}
+                            aria-label={`Duration for ${item.guest_name}`}
+                          >
+                            {DURATION_OPTIONS.map(([value, label]) => <option key={value} value={value}>+{label}</option>)}
+                          </select>
+                          <button type="button" onClick={() => extendInvitation(item)} disabled={Boolean(busyId) || locked}>Extend</button>
+                          <button
+                            type="button"
+                            onClick={() => runAction(item.id, 'terminate-sessions', `Guest sessions terminated for ${item.guest_name}.`)}
+                            disabled={Boolean(busyId) || legacy}
+                          >
+                            End sessions
+                          </button>
+                          <button
+                            type="button"
+                            className="danger"
+                            onClick={() => runAction(item.id, 'revoke', `Access revoked for ${item.guest_name}.`)}
+                            disabled={Boolean(busyId) || item.status === 'revoked' || legacy}
+                          >
+                            Revoke
+                          </button>
+                          <button
+                            type="button"
+                            className="danger ghost"
+                            onClick={() => deleteInvitation(item)}
+                            disabled={Boolean(busyId) || cannotDelete}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -415,6 +502,7 @@ export function AdministrationPage({ onSessionExpired }) {
                 <th>Time</th>
                 <th>Event</th>
                 <th>Guest</th>
+                <th>Google identity</th>
                 <th>Role</th>
                 <th>Result</th>
                 <th>Client</th>
@@ -422,16 +510,15 @@ export function AdministrationPage({ onSessionExpired }) {
             </thead>
             <tbody>
               {logs.length === 0 ? (
-                <tr><td colSpan="6" className="empty-table-cell">No access events recorded.</td></tr>
+                <tr><td colSpan="7" className="empty-table-cell">No access events recorded.</td></tr>
               ) : logs.map((item) => (
                 <tr key={item.id}>
                   <td>{dateTime(item.created_at)}</td>
                   <td>{item.event.replaceAll('_', ' ')}</td>
                   <td>{item.guest_name || '—'}</td>
+                  <td>{item.identity_email || '—'}</td>
                   <td>{item.role ? roleLabel(item.role) : '—'}</td>
-                  <td className={item.success ? 'positive' : 'negative'}>
-                    {item.success ? 'Success' : 'Denied'}
-                  </td>
+                  <td className={item.success ? 'positive' : 'negative'}>{item.success ? 'Success' : 'Denied'}</td>
                   <td>{item.client_ip}</td>
                 </tr>
               ))}
@@ -441,11 +528,7 @@ export function AdministrationPage({ onSessionExpired }) {
       </section>
 
       {generatedAccess ? (
-        <AccessLinkDialog
-          access={generatedAccess}
-          onClose={() => setGeneratedAccess(null)}
-          onError={(message) => setError(message)}
-        />
+        <AccessLinkDialog access={generatedAccess} onClose={() => setGeneratedAccess(null)} onError={setError} />
       ) : null}
     </div>
   )
@@ -467,28 +550,24 @@ function AccessLinkDialog({ access, onClose, onError }) {
 
   return (
     <div className="access-link-dialog-backdrop" role="presentation" onMouseDown={onClose}>
-      <section
-        className="access-link-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="access-link-title"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
+      <section className="access-link-dialog" role="dialog" aria-modal="true" aria-labelledby="access-link-title" onMouseDown={(event) => event.stopPropagation()}>
         <div className="access-link-dialog-heading">
           <div>
-            <span className="panel-kicker">ONE-TIME DISPLAY</span>
-            <h2 id="access-link-title">Access link for {access.guest_name}</h2>
+            <span className="panel-kicker">ONE-TIME IDENTITY CLAIM</span>
+            <h2 id="access-link-title">Verified access for {access.guest_name}</h2>
           </div>
           <button type="button" className="access-link-close" onClick={onClose} aria-label="Close">×</button>
         </div>
         <p>
-          Copy this link now and share it directly with the guest. The raw token is not stored and this link cannot be recovered after closing this window.
+          Share this link only with <strong>{access.authorized_email}</strong>. The first valid claim must use that Google account. After claiming, the raw token is consumed and the authorization is bound to the verified Google identity.
         </p>
         <textarea readOnly value={access.access_url} rows="4" aria-label="Generated access link" />
-        <div className="access-link-expiration">Expires: <strong>{dateTime(access.expires_at)}</strong></div>
+        <div className="access-link-expiration">
+          Expires: <strong>{dateTime(access.expires_at)}</strong> · Maximum active sessions: <strong>{access.max_active_sessions}</strong>
+        </div>
         <div className="access-link-dialog-actions">
           <button type="button" className="admin-primary-button" onClick={copyLink}>
-            <AccessLinkIcon size={17} />{copied ? 'Link copied' : 'Copy access link'}
+            <AccessLinkIcon size={17} />{copied ? 'Link copied' : 'Copy verified link'}
           </button>
           <button type="button" className="access-link-secondary" onClick={onClose}>Close</button>
         </div>

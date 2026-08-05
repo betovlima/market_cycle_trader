@@ -30,7 +30,7 @@ export function AppHeader({ workspace, activeTab, onTabChange, session, onLogout
         <div className="brand-copy">
           <h1>Market Cycle Trader</h1>
           <div className="brand-subtitle">Historical Market Simulation</div>
-          <p>Run protected simulations and review sanitized performance results.</p>
+          <p>Run protected simulations and review authorized performance results.</p>
         </div>
       </div>
 

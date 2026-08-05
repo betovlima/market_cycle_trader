@@ -1,4 +1,4 @@
-# Market Cycle Trader Frontend v1.12.56
+# Market Cycle Trader Frontend v1.12.57
 
 React + Vite frontend for protected historical simulations and Paper portfolio monitoring.
 
@@ -13,7 +13,7 @@ React + Vite frontend for protected historical simulations and Paper portfolio m
 | Portfolio Analytics | No | Yes | Yes |
 | Administration | No | No | Yes |
 
-Temporary access links can be created as `viewer` or `trader`. Existing links without a stored role remain `viewer`.
+Temporary access invitations can be created as `viewer` or `trader`. Every new invitation is bound to an administrator-approved Google email and, after the first successful claim, to the immutable Google account subject.
 
 ## Analytical dashboards
 
@@ -57,7 +57,7 @@ GET  /api/admin/invitations                 # Administrator only
 
 ## Local execution
 
-Set `VITE_API_BASE_URL` in the process environment and run:
+Set `VITE_API_BASE_URL` and `VITE_GOOGLE_CLIENT_ID` in the process environment and run:
 
 ```bash
 pnpm install
@@ -180,3 +180,15 @@ pnpm dev
 - Renames `Next automated events` to the shorter `Upcoming events`.
 - Keeps Analysis, Execution, Daily close and Portfolio update in the same row.
 - Does not change API v1.13.12, timer calculations, permissions or strategy data exposure.
+
+
+## v1.12.57 — Google identity-bound temporary access
+
+- Adds the authorized Google email and maximum active-session fields to Administration.
+- Replaces token-only Viewer/Trader login with Google Identity Services verification.
+- Keeps the invitation token only in React memory, removes it from the browser URL and never writes it to browser storage.
+- Shows the masked authorized email before Google verification.
+- Requires the complete generated link for the first claim and supports returning sign-in through its non-secret invitation identifier.
+- Displays pending, claimed, active, expired, revoked and legacy-unverified access states.
+- Shows claimed identity, active session count and session-limit controls in Administration.
+- Requires Market Cycle Trader API v1.13.13 and `VITE_GOOGLE_CLIENT_ID`.
