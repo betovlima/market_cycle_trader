@@ -410,14 +410,14 @@ export function AdministrationPage({ onSessionExpired }) {
                   const cannotDelete = primaryAdministrator || ['pending_verification', 'claimed', 'active'].includes(item.status)
                   return (
                     <tr key={item.id}>
-                      <td>
+                      <td data-label="User">
                         <strong>{item.guest_name}</strong>
                         <small className="admin-identity-email">{item.authorized_email || 'No verified email'}</small>
                         {primaryAdministrator ? <small className="primary-administrator-label">Primary Google administrator</small> : null}
                       </td>
-                      <td>{roleLabel(item.role)}</td>
-                      <td><span className={`admin-status ${statusClass(item.status)}`}>{statusLabel(item.status)}</span></td>
-                      <td>
+                      <td data-label="Role">{roleLabel(item.role)}</td>
+                      <td data-label="Status"><span className={`admin-status ${statusClass(item.status)}`}>{statusLabel(item.status)}</span></td>
+                      <td data-label="Sessions">
                         <div className="session-limit-control">
                           <strong>{item.active_sessions || 0}</strong>
                           <span>of</span>
@@ -432,13 +432,13 @@ export function AdministrationPage({ onSessionExpired }) {
                           <button type="button" onClick={() => saveSessionLimit(item)} disabled={Boolean(busyId) || locked}>Save</button>
                         </div>
                       </td>
-                      <td>
+                      <td data-label="Claimed identity">
                         <span className="claimed-identity">{item.claimed_email || (legacy ? 'New invitation required' : 'Not claimed')}</span>
                         {item.claimed_at ? <small>{dateTime(item.claimed_at)}</small> : null}
                       </td>
-                      <td>{dateTime(item.expires_at)}</td>
-                      <td>{dateTime(item.last_access_at)}</td>
-                      <td>
+                      <td data-label="Expires">{dateTime(item.expires_at)}</td>
+                      <td data-label="Last access">{dateTime(item.last_access_at)}</td>
+                      <td data-label="Actions">
                         <div className="admin-row-actions identity-row-actions">
                           <button
                             type="button"
