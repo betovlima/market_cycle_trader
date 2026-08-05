@@ -1,4 +1,4 @@
-# Market Cycle Trader Frontend v1.12.59
+# Market Cycle Trader Frontend v1.12.60
 
 React + Vite frontend for protected historical simulations and Paper portfolio monitoring.
 
@@ -202,7 +202,11 @@ pnpm dev
 - Requires Market Cycle Trader API v1.13.13.
 
 
-## v1.12.59 — unified Google authentication
+## v1.12.60 — simplified authentication screen
+
+- Removes implementation-oriented authentication explanations from the login screen.
+- Keeps only the product identity, Google sign-in action, invitation context when present, and operational feedback.
+- Authentication behavior, roles, permissions, invitation handling, and API contracts remain unchanged.
 
 - Replaces the separate Verified access and Administrator tabs with one Google authentication screen.
 - Removes the manual complete-invitation-link field. Invitation identifiers and first-claim tokens are read only from the generated URL.
