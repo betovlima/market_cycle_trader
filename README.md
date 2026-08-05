@@ -1,4 +1,4 @@
-# Market Cycle Trader Frontend v1.12.62
+# Market Cycle Trader Frontend v1.12.64
 
 React + Vite frontend for protected historical simulations and Paper portfolio monitoring.
 
@@ -12,8 +12,9 @@ React + Vite frontend for protected historical simulations and Paper portfolio m
 | Portfolio | No | Yes | Yes |
 | Portfolio Analytics | No | Yes | Yes |
 | Administration | No | No | Yes |
+| System Settings | No | No | Yes |
 
-Temporary access invitations can be created as `viewer` or `trader`. Every new invitation is bound to an administrator-approved Google email and, after the first successful claim, to the immutable Google account subject.
+Temporary access invitations can be created as `viewer`, `trader`, or `admin`. Every new invitation is bound to an administrator-approved Google email and, after the first successful claim, to the immutable Google account subject.
 
 ## Analytical dashboards
 
@@ -202,7 +203,7 @@ pnpm dev
 - Requires Market Cycle Trader API v1.13.13.
 
 
-## v1.12.62 — simplified authentication screen
+## v1.12.60 — simplified authentication screen
 
 - Removes implementation-oriented authentication explanations from the login screen.
 - Keeps only the product identity, Google sign-in action, invitation context when present, and operational feedback.
@@ -217,6 +218,30 @@ pnpm dev
 - Requires Market Cycle Trader API v1.13.14, `VITE_GOOGLE_CLIENT_ID`, and the API variable `TRADER_ADMIN_GOOGLE_EMAIL`.
 
 
-## v1.12.62 — session expiration and responsive administration
+## v1.12.61 — session expiration and responsive administration
 
 The frontend refreshes the authenticated session periodically, handles expiration, shows a brief warning near timeout, and renders administration invitations as responsive cards on narrower screens to prevent horizontal page scrolling.
+
+
+## v1.12.62 — administrative Trader control
+
+- Adds the protected Trader operation controls for active, paused, exit-only, and stopped modes.
+- Shows sanitized operational status and recent changes to Administrators.
+
+## v1.12.63 — Administrator System Settings
+
+- Adds an Administrator-only `System Settings` navigation tab.
+- Moves Trader operation controls out of access administration.
+- Adds training enablement, automatic pre-market training, model threads, numeric threads, concurrent-job limit, and backtest-timeout controls.
+- Shows detected CPU capacity, current revision, and responsive configuration history.
+- Uses cards and responsive grids without horizontal page scrolling.
+- Requires Market Cycle Trader API v1.13.17.
+
+
+## v1.12.64 — contextual parameter hints
+
+- Adds a compact `?` hint beside every configurable System Settings parameter.
+- Each hint explains the operational effect, a mathematical relationship, and a concrete numerical example.
+- Supports mouse hover, keyboard focus, and touch focus without changing the saved API payload.
+- Keeps the explanations generic and does not expose strategy rules, thresholds, features, weights, or model internals.
+- Requires Market Cycle Trader API v1.13.17; the API is unchanged in this release.

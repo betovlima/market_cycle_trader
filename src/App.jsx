@@ -6,6 +6,7 @@ import { AppHeader } from './features/backtest/components/AppHeader'
 import { BacktestPage } from './features/backtest/components/BacktestPage'
 import { useBacktestWorkspace } from './features/backtest/hooks/useBacktestWorkspace'
 import { AdministrationPage } from './features/AdministrationPage'
+import { SystemSettingsPage } from './features/SystemSettingsPage'
 import { AnalyticsPage } from './features/analytics/AnalyticsPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { LoginPage } from './features/LoginPage'
@@ -41,7 +42,7 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
 
   useEffect(() => {
     const allowed = session.role === 'admin'
-      ? ['dashboard', 'backtest', 'analytics', 'portfolio', 'administration']
+      ? ['dashboard', 'backtest', 'analytics', 'portfolio', 'administration', 'system-settings']
       : session.role === 'trader'
         ? ['dashboard', 'backtest', 'analytics', 'portfolio']
         : ['dashboard', 'backtest', 'analytics']
@@ -58,6 +59,7 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
       {activeTab === 'analytics' ? <AnalyticsPage session={session} dashboard={workspace.dashboard} /> : null}
       {activeTab === 'portfolio' && ['admin', 'trader'].includes(session.role) ? <PaperPortfolioDashboard /> : null}
       {activeTab === 'administration' && session.role === 'admin' ? <AdministrationPage onSessionExpired={onSessionExpired} /> : null}
+      {activeTab === 'system-settings' && session.role === 'admin' ? <SystemSettingsPage onSessionExpired={onSessionExpired} /> : null}
     </main>
     <footer className="app-footer">All activity is simulated. Private configuration remains server-side.</footer>
   </div>

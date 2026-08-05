@@ -1,5 +1,5 @@
 import { FRONT_VERSION } from '../../../config/env'
-import { AnalyticsIcon, BacktestIcon, DashboardIcon, PortfolioIcon } from '../../../shared/components/Icons'
+import { AnalyticsIcon, BacktestIcon, DashboardIcon, PortfolioIcon, SettingsIcon } from '../../../shared/components/Icons'
 import appLogoUrl from '../../../assets/market-cycle-trader-logo.png'
 
 const VIEWER_NAV_ITEMS = [
@@ -16,6 +16,7 @@ const TRADER_NAV_ITEMS = [
 const ADMIN_NAV_ITEMS = [
   ...TRADER_NAV_ITEMS,
   { id: 'administration', label: 'Administration', Icon: DashboardIcon },
+  { id: 'system-settings', label: 'Settings', Icon: SettingsIcon },
 ]
 
 export function AppHeader({ workspace, activeTab, onTabChange, session, onLogout }) {

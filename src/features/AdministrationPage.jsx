@@ -92,9 +92,6 @@ export function AdministrationPage({ onSessionExpired }) {
   const [extendDurations, setExtendDurations] = useState({})
   const [sessionLimits, setSessionLimits] = useState({})
   const [generatedAccess, setGeneratedAccess] = useState(null)
-  const [traderControl, setTraderControl] = useState(null)
-  const [traderHistory, setTraderHistory] = useState([])
-  const [traderBusy, setTraderBusy] = useState(false)
 
   const handleError = useCallback((requestError) => {
     if (requestError instanceof ApiError && requestError.status === 401) {
@@ -107,11 +104,9 @@ export function AdministrationPage({ onSessionExpired }) {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [invitationResponse, logResponse, traderResponse, traderHistoryResponse] = await Promise.all([
+      const [invitationResponse, logResponse] = await Promise.all([
         apiFetch(`${API}/admin/invitations`),
         apiFetch(`${API}/admin/access-logs?limit=100`),
-        apiFetch(`${API}/admin/trader-control/status`),
-        apiFetch(`${API}/admin/trader-control/history?limit=25`),
       ])
       const items = invitationResponse.items || []
       setInvitations(items)
@@ -123,8 +118,6 @@ export function AdministrationPage({ onSessionExpired }) {
         return next
       })
       setLogs(logResponse.items || [])
-      setTraderControl(traderResponse)
-      setTraderHistory(traderHistoryResponse.items || [])
       setError('')
     } catch (requestError) {
       handleError(requestError)
@@ -137,33 +130,6 @@ export function AdministrationPage({ onSessionExpired }) {
     loadData()
   }, [loadData])
 
-
-  async function changeTraderMode(mode) {
-    const labels = { active: 'Start Trader', paused: 'Pause new activity', exit_only: 'Enable exit-only mode', stopped: 'Stop Trader' }
-    const destructive = mode === 'stopped'
-    if (destructive && !window.confirm('Stop the Trader and cancel a pending non-executing run?')) return
-    setTraderBusy(true)
-    setError('')
-    setNotice('')
-    try {
-      const response = await apiFetch(`${API}/admin/trader-control/mode`, {
-        method: 'POST',
-        body: {
-          mode,
-          cancel_pending_run: destructive,
-          reason: labels[mode],
-        },
-      })
-      setTraderControl(response)
-      setNotice(`Trader mode changed to ${mode.replaceAll('_', ' ')}.`)
-      const history = await apiFetch(`${API}/admin/trader-control/history?limit=25`)
-      setTraderHistory(history.items || [])
-    } catch (requestError) {
-      handleError(requestError)
-    } finally {
-      setTraderBusy(false)
-    }
-  }
 
   async function createInvitation(event) {
     event.preventDefault()
@@ -326,44 +292,6 @@ export function AdministrationPage({ onSessionExpired }) {
       {notice ? <div className="global-inline-message success-inline">{notice}</div> : null}
 
 
-      <section className="panel trader-control-panel">
-        <div className="panel-heading">
-          <div>
-            <span className="panel-kicker">TRADING CONTROL</span>
-            <h2>Trader operation</h2>
-          </div>
-          <span className={`trader-mode-badge mode-${traderControl?.control_mode || 'stopped'}`}>
-            {(traderControl?.control_mode || 'stopped').replaceAll('_', ' ')}
-          </span>
-        </div>
-
-        <div className="trader-control-grid">
-          <div className="trader-control-status">
-            <div><span>Status</span><strong>{traderControl?.status || 'Unknown'}</strong></div>
-            <div><span>Phase</span><strong>{String(traderControl?.phase || '—').replaceAll('_', ' ')}</strong></div>
-            <div><span>Scheduler</span><strong>{traderControl?.scheduler_alive ? 'Online' : 'Offline'}</strong></div>
-            <div><span>Next session</span><strong>{traderControl?.next_execution_session || '—'}</strong></div>
-          </div>
-          <div className="trader-control-actions">
-            <button type="button" onClick={() => changeTraderMode('active')} disabled={traderBusy || traderControl?.control_mode === 'active'}>Start</button>
-            <button type="button" onClick={() => changeTraderMode('paused')} disabled={traderBusy || traderControl?.control_mode === 'paused'}>Pause</button>
-            <button type="button" onClick={() => changeTraderMode('exit_only')} disabled={traderBusy || traderControl?.control_mode === 'exit_only'}>Exit only</button>
-            <button type="button" className="danger" onClick={() => changeTraderMode('stopped')} disabled={traderBusy || traderControl?.control_mode === 'stopped'}>Stop</button>
-          </div>
-        </div>
-
-        {traderHistory.length ? (
-          <div className="trader-control-history">
-            <span>Recent changes</span>
-            {traderHistory.slice(0, 5).map((item, index) => (
-              <div key={`${item.created_at || 'event'}-${index}`}>
-                <strong>{String(item.new_mode || 'unknown').replaceAll('_', ' ')}</strong>
-                <small>{dateTime(item.created_at)}</small>
-              </div>
-            ))}
-          </div>
-        ) : null}
-      </section>
 
       <section className="admin-summary-grid">
         <AdminSummary icon={<AccessUsersIcon size={20} />} label="Access records" value={invitations.length} />
