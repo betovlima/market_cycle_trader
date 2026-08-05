@@ -11,13 +11,33 @@ import { DashboardPage } from './features/dashboard/DashboardPage'
 import { LoginPage } from './features/LoginPage'
 import { PaperPortfolioDashboard } from './features/paperPortfolio/PaperPortfolioDashboard'
 
-function AuthenticatedApp({ session, onLogout, onSessionExpired }) {
+function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefresh }) {
   const workspace = useBacktestWorkspace()
   const [activeTab, setActiveTab] = useState('dashboard')
 
   useEffect(() => {
     if (workspace.running) setActiveTab('backtest')
   }, [workspace.running])
+
+  useEffect(() => {
+    let active = true
+    const refreshSession = async () => {
+      try {
+        const value = await apiFetch(`${API}/auth/session`)
+        if (!active) return
+        if (!value?.authenticated) onSessionExpired()
+        else onSessionRefresh(value)
+      } catch (error) {
+        if (active && error?.status === 401) onSessionExpired()
+      }
+    }
+    const interval = window.setInterval(refreshSession, 60_000)
+    return () => { active = false; window.clearInterval(interval) }
+  }, [onSessionExpired, onSessionRefresh])
+
+  const idleRemaining = session.idle_expires_at
+    ? Math.max(0, Math.floor((new Date(session.idle_expires_at).getTime() - Date.now()) / 1000))
+    : null
 
   useEffect(() => {
     const allowed = session.role === 'admin'
@@ -30,6 +50,7 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired }) {
 
   return <div className="app-frame">
     <AppHeader workspace={workspace} activeTab={activeTab} onTabChange={setActiveTab} session={session} onLogout={onLogout} />
+    {idleRemaining !== null && idleRemaining <= 300 ? <div className="session-expiration-warning">Your session will expire soon.</div> : null}
     {workspace.error ? <div className="global-error"><strong>Unable to load data</strong><span>{workspace.error}</span><button type="button" onClick={() => workspace.setError('')}>×</button></div> : null}
     <main className="workspace-main">
       {activeTab === 'dashboard' ? <DashboardPage workspace={workspace} onOpenBacktest={() => setActiveTab('backtest')} canRunBacktest /> : null}
@@ -62,5 +83,5 @@ export default function App() {
 
   if (state === 'checking') return <div className="app-loading">Checking private session…</div>
   if (state !== 'authenticated' || !session) return <><LoginPage onAuthenticated={(value) => { setError(''); setSession(value); setState('authenticated') }} />{error ? <div className="startup-error">{error}</div> : null}</>
-  return <AuthenticatedApp session={session} onLogout={logout} onSessionExpired={expired} />
+  return <AuthenticatedApp session={session} onLogout={logout} onSessionExpired={expired} onSessionRefresh={setSession} />
 }

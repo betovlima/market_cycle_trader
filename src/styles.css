@@ -897,3 +897,33 @@ a { color: inherit; }
 .unified-auth-card { display: grid; gap: 20px; }
 .unified-auth-card .auth-brand { margin-bottom: 2px; }
 .primary-administrator-label { display: block; margin-top: 4px; color: #78d5a5; font-size: .6rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
+
+
+/* v1.12.61 — responsive administration and session expiration */
+.admin-page, .admin-page > *, .status-table-panel, .table-scroll { min-width: 0; max-width: 100%; }
+.session-expiration-warning { margin: 10px auto 0; width: min(1180px, calc(100% - 28px)); padding: 10px 14px; border: 1px solid rgba(255,207,106,.38); border-radius: 9px; color: #ffe0a0; background: rgba(91,62,13,.44); font-size: .74rem; font-weight: 750; }
+.identity-admin-table { min-width: 0; width: 100%; table-layout: fixed; }
+.identity-admin-table th:nth-child(1) { width: 13%; }
+.identity-admin-table th:nth-child(2) { width: 7%; }
+.identity-admin-table th:nth-child(3) { width: 7%; }
+.identity-admin-table th:nth-child(4) { width: 10%; }
+.identity-admin-table th:nth-child(5) { width: 14%; }
+.identity-admin-table th:nth-child(6), .identity-admin-table th:nth-child(7) { width: 9%; }
+.identity-admin-table th:nth-child(8) { width: 31%; }
+.identity-admin-table td { overflow-wrap: anywhere; }
+.identity-row-actions { min-width: 0; width: 100%; }
+@media (max-width: 1380px) {
+  .identity-admin-table, .identity-admin-table tbody, .identity-admin-table tr, .identity-admin-table td { display: block; width: 100%; }
+  .identity-admin-table { table-layout: auto; }
+  .identity-admin-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .identity-admin-table tbody { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 12px; }
+  .identity-admin-table tbody tr { padding: 13px; border: 1px solid var(--border); border-radius: 11px; background: rgba(6,20,38,.72); }
+  .identity-admin-table tbody td { display: grid; grid-template-columns: minmax(105px,.42fr) minmax(0,1fr); align-items: center; gap: 10px; padding: 8px 0; border: 0; border-bottom: 1px solid rgba(79,111,146,.15); }
+  .identity-admin-table tbody td:last-child { border-bottom: 0; align-items: start; }
+  .identity-admin-table tbody td::before { content: attr(data-label); color: var(--muted); font-size: .62rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+  .identity-row-actions { justify-content: flex-start; }
+}
+@media (max-width: 820px) {
+  .identity-admin-table tbody { grid-template-columns: 1fr; }
+  .identity-admin-table tbody td { grid-template-columns: minmax(92px,.36fr) minmax(0,1fr); }
+}

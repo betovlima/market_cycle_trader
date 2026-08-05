@@ -1,4 +1,4 @@
-# Market Cycle Trader Frontend v1.12.60
+# Market Cycle Trader Frontend v1.12.61
 
 React + Vite frontend for protected historical simulations and Paper portfolio monitoring.
 
@@ -202,7 +202,7 @@ pnpm dev
 - Requires Market Cycle Trader API v1.13.13.
 
 
-## v1.12.60 — simplified authentication screen
+## v1.12.61 — simplified authentication screen
 
 - Removes implementation-oriented authentication explanations from the login screen.
 - Keeps only the product identity, Google sign-in action, invitation context when present, and operational feedback.
@@ -215,3 +215,8 @@ pnpm dev
 - Adds Administrator as an access profile in Administration.
 - Keeps the Administration area inside Market Cycle Trader and leaves the standalone authentication projects on hold.
 - Requires Market Cycle Trader API v1.13.14, `VITE_GOOGLE_CLIENT_ID`, and the API variable `TRADER_ADMIN_GOOGLE_EMAIL`.
+
+
+## v1.12.61 — session expiration and responsive administration
+
+The frontend refreshes the authenticated session periodically, handles expiration, shows a brief warning near timeout, and renders administration invitations as responsive cards on narrower screens to prevent horizontal page scrolling.
