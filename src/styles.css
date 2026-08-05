@@ -893,11 +893,7 @@ a { color: inherit; }
 @media (max-width: 620px) { .identity-invite-form { grid-template-columns: 1fr; } .verified-access-details div { align-items: flex-start; flex-direction: column; gap: 4px; } }
 
 
-/* v1.12.59 — unified Google authentication */
+/* v1.12.60 — simplified authentication screen */
 .unified-auth-card { display: grid; gap: 20px; }
 .unified-auth-card .auth-brand { margin-bottom: 2px; }
-.unified-auth-intro { display: grid; gap: 7px; padding: 16px; border: 1px solid rgba(47,140,255,.28); border-radius: 12px; background: rgba(47,140,255,.08); }
-.unified-auth-intro span { color: var(--accent); font-size: .68rem; font-weight: 850; letter-spacing: .09em; }
-.unified-auth-intro strong { color: var(--text); font-size: 1.02rem; }
-.unified-auth-intro p { margin: 0; color: #adbed1; font-size: .74rem; line-height: 1.55; }
 .primary-administrator-label { display: block; margin-top: 4px; color: #78d5a5; font-size: .6rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }

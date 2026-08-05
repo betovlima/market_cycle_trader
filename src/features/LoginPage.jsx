@@ -200,22 +200,13 @@ export function LoginPage({ onAuthenticated }) {
               Continue with the Google account that owns the authorized email. A different account will be rejected.
             </p>
           </div>
-        ) : (
-          <div className="unified-auth-intro">
-            <span>GOOGLE IDENTITY</span>
-            <strong>Secure account verification</strong>
-            <p>
-              Viewer, Trader and Administrator profiles use the same login. New access must begin from the invitation link generated in Administration.
-            </p>
-          </div>
-        )}
+        ) : null}
 
         {error ? <div className="auth-error">{error}</div> : null}
         <GoogleIdentityButton disabled={disabled} onCredential={authenticateGoogle} onError={setError} />
         {checkingInvitation ? <div className="google-verification-progress"><span className="loading-ring" />Checking invitation…</div> : null}
         {busy ? <div className="google-verification-progress"><span className="loading-ring" />Verifying identity…</div> : null}
 
-        <small>Google credentials are verified by the API and exchanged for a secure HttpOnly session cookie. Invitation tokens are never stored in browser storage.</small>
       </section>
     </main>
   )
