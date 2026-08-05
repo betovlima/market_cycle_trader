@@ -54,7 +54,7 @@ function roleLabel(value) {
 }
 
 function defaultSessions(role) {
-  return role === 'trader' ? '1' : '2'
+  return ['trader', 'admin'].includes(role) ? '1' : '2'
 }
 
 async function copyText(value) {
@@ -308,7 +308,7 @@ export function AdministrationPage({ onSessionExpired }) {
 
         <form className="admin-invite-form identity-invite-form" onSubmit={createInvitation}>
           <label>
-            <span>Guest name</span>
+            <span>User name</span>
             <input
               value={form.guest_name}
               onChange={(event) => setForm({ ...form, guest_name: event.target.value })}
@@ -339,6 +339,7 @@ export function AdministrationPage({ onSessionExpired }) {
             >
               <option value="viewer">Viewer · Backtest only</option>
               <option value="trader">Trader · Backtest and Portfolio</option>
+              <option value="admin">Administrator · Full administration</option>
             </select>
           </label>
           <label>
@@ -389,7 +390,7 @@ export function AdministrationPage({ onSessionExpired }) {
             <table className="market-table admin-table identity-admin-table">
               <thead>
                 <tr>
-                  <th>Guest</th>
+                  <th>User</th>
                   <th>Role</th>
                   <th>Status</th>
                   <th>Sessions</th>
@@ -404,13 +405,15 @@ export function AdministrationPage({ onSessionExpired }) {
                   <tr><td colSpan="8" className="empty-table-cell">No access invitations generated.</td></tr>
                 ) : invitations.map((item) => {
                   const legacy = item.status === 'legacy_unverified'
+                  const primaryAdministrator = Boolean(item.primary_administrator)
                   const locked = ['revoked', 'legacy_unverified'].includes(item.status)
-                  const cannotDelete = ['pending_verification', 'claimed', 'active'].includes(item.status)
+                  const cannotDelete = primaryAdministrator || ['pending_verification', 'claimed', 'active'].includes(item.status)
                   return (
                     <tr key={item.id}>
                       <td>
                         <strong>{item.guest_name}</strong>
                         <small className="admin-identity-email">{item.authorized_email || 'No verified email'}</small>
+                        {primaryAdministrator ? <small className="primary-administrator-label">Primary Google administrator</small> : null}
                       </td>
                       <td>{roleLabel(item.role)}</td>
                       <td><span className={`admin-status ${statusClass(item.status)}`}>{statusLabel(item.status)}</span></td>
@@ -441,22 +444,22 @@ export function AdministrationPage({ onSessionExpired }) {
                             type="button"
                             title="End sessions, rotate the token and require a fresh Google identity claim."
                             onClick={() => regenerateAccessLink(item)}
-                            disabled={Boolean(busyId) || locked}
+                            disabled={Boolean(busyId) || locked || primaryAdministrator}
                           >
                             Generate new claim link
                           </button>
                           <select
                             value={extendDurations[item.id] ?? DEFAULT_DURATION_SECONDS}
                             onChange={(event) => setExtendDurations({ ...extendDurations, [item.id]: event.target.value })}
-                            disabled={locked}
+                            disabled={locked || primaryAdministrator}
                             aria-label={`Duration for ${item.guest_name}`}
                           >
                             {DURATION_OPTIONS.map(([value, label]) => <option key={value} value={value}>+{label}</option>)}
                           </select>
-                          <button type="button" onClick={() => extendInvitation(item)} disabled={Boolean(busyId) || locked}>Extend</button>
+                          <button type="button" onClick={() => extendInvitation(item)} disabled={Boolean(busyId) || locked || primaryAdministrator}>Extend</button>
                           <button
                             type="button"
-                            onClick={() => runAction(item.id, 'terminate-sessions', `Guest sessions terminated for ${item.guest_name}.`)}
+                            onClick={() => runAction(item.id, 'terminate-sessions', `Sessions terminated for ${item.guest_name}.`)}
                             disabled={Boolean(busyId) || legacy}
                           >
                             End sessions
@@ -465,7 +468,7 @@ export function AdministrationPage({ onSessionExpired }) {
                             type="button"
                             className="danger"
                             onClick={() => runAction(item.id, 'revoke', `Access revoked for ${item.guest_name}.`)}
-                            disabled={Boolean(busyId) || item.status === 'revoked' || legacy}
+                            disabled={Boolean(busyId) || item.status === 'revoked' || legacy || primaryAdministrator}
                           >
                             Revoke
                           </button>
@@ -501,7 +504,7 @@ export function AdministrationPage({ onSessionExpired }) {
               <tr>
                 <th>Time</th>
                 <th>Event</th>
-                <th>Guest</th>
+                <th>User</th>
                 <th>Google identity</th>
                 <th>Role</th>
                 <th>Result</th>
