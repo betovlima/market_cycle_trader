@@ -927,3 +927,27 @@ a { color: inherit; }
   .identity-admin-table tbody { grid-template-columns: 1fr; }
   .identity-admin-table tbody td { grid-template-columns: minmax(92px,.36fr) minmax(0,1fr); }
 }
+
+
+/* v1.12.62 — administrative Trader controls */
+.trader-control-panel { padding: 16px; overflow: hidden; }
+.trader-mode-badge { padding: 6px 10px; border: 1px solid var(--border-strong); border-radius: 999px; font-size: .68rem; font-weight: 850; text-transform: uppercase; }
+.trader-mode-badge.mode-active { color: var(--positive); border-color: rgba(24,217,147,.35); background: rgba(24,217,147,.09); }
+.trader-mode-badge.mode-paused, .trader-mode-badge.mode-exit_only { color: #ffcf6a; border-color: rgba(255,207,106,.35); background: rgba(255,207,106,.09); }
+.trader-mode-badge.mode-stopped { color: #ff9ca6; border-color: rgba(255,102,114,.35); background: rgba(255,102,114,.09); }
+.trader-control-grid { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 16px; align-items: center; }
+.trader-control-status { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
+.trader-control-status > div { min-width: 0; padding: 11px; border: 1px solid rgba(79,111,146,.22); border-radius: 9px; background: rgba(6,20,38,.55); }
+.trader-control-status span { display: block; color: var(--muted); font-size: .62rem; text-transform: uppercase; }
+.trader-control-status strong { display: block; margin-top: 5px; overflow-wrap: anywhere; font-size: .76rem; text-transform: capitalize; }
+.trader-control-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+.trader-control-actions button { min-height: 36px; padding: 0 12px; border: 1px solid var(--border-strong); border-radius: 8px; color: var(--text); background: rgba(13,31,53,.95); font-size: .7rem; font-weight: 800; cursor: pointer; }
+.trader-control-actions button:hover:not(:disabled) { border-color: rgba(47,140,255,.65); }
+.trader-control-actions button.danger { color: #ffc2c7; border-color: rgba(255,102,114,.38); background: rgba(90,25,35,.42); }
+.trader-control-actions button:disabled { opacity: .42; cursor: not-allowed; }
+.trader-control-history { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.trader-control-history > span { color: var(--muted); font-size: .64rem; font-weight: 800; text-transform: uppercase; }
+.trader-control-history > div { display: inline-flex; gap: 7px; align-items: center; padding: 5px 8px; border: 1px solid rgba(79,111,146,.2); border-radius: 7px; font-size: .64rem; text-transform: capitalize; }
+.trader-control-history small { color: var(--muted); }
+@media (max-width: 1100px) { .trader-control-grid { grid-template-columns: 1fr; } .trader-control-actions { justify-content: flex-start; } .trader-control-status { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 620px) { .trader-control-status { grid-template-columns: 1fr; } .trader-control-actions button { flex: 1 1 calc(50% - 7px); } }
