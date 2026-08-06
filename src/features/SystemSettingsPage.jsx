@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { ApiError, apiFetch } from '../api/http'
 import { API } from '../config/env'
@@ -67,6 +67,7 @@ export function SystemSettingsPage({ onSessionExpired }) {
   const [traderBusy, setTraderBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const initialLoadStartedRef = useRef(false)
 
   const handleError = useCallback((requestError) => {
     if (requestError instanceof ApiError && requestError.status === 401) {
@@ -106,8 +107,23 @@ export function SystemSettingsPage({ onSessionExpired }) {
   }, [handleError])
 
   useEffect(() => {
+    if (initialLoadStartedRef.current) return
+    initialLoadStartedRef.current = true
     loadData()
   }, [loadData])
+
+  const refreshTraderControl = useCallback(async () => {
+    try {
+      const [traderResponse, traderHistoryResponse] = await Promise.all([
+        apiFetch(`${API}/admin/trader-control/status`),
+        apiFetch(`${API}/admin/trader-control/history?limit=20`),
+      ])
+      setTraderControl(traderResponse)
+      setTraderHistory(traderHistoryResponse.items || [])
+    } catch (requestError) {
+      handleError(requestError)
+    }
+  }, [handleError])
 
   async function saveSettings(event) {
     event.preventDefault()
@@ -271,7 +287,7 @@ export function SystemSettingsPage({ onSessionExpired }) {
 
       <StrategySettingsPanel
         onSessionExpired={onSessionExpired}
-        onTraderWinnerChanged={loadData}
+        onTraderWinnerChanged={refreshTraderControl}
       />
 
       <section className="panel trader-control-panel">

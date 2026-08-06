@@ -1,4 +1,4 @@
-# Market Cycle Trader Frontend v1.12.67
+# Market Cycle Trader Frontend v1.12.70
 
 React + Vite frontend for protected historical simulations and Paper portfolio monitoring.
 
@@ -269,3 +269,38 @@ The frontend refreshes the authenticated session periodically, handles expiratio
 - Preserves former winners as locked snapshots.
 - Requires Market Cycle Trader API v1.13.20.
 - Only Administrator sessions receive or edit strategy parameters. Viewer and Trader screens continue to use sanitized payloads.
+
+
+## v1.12.70 — Candidate strategy status
+
+- Adds a visible `candidate` status between draft and winner.
+- Adds `Mark as candidate` after a completed backtest for the exact revision.
+- Candidate cards display validated status and the certified job id.
+- Editing and saving a candidate returns it to draft and requires a new backtest.
+- `Promote to Trader winner` is enabled only for an exact certified candidate revision.
+- Candidate operations update only the strategy component and never reload the whole page.
+- Requires Market Cycle Trader API v1.13.21.
+
+
+## v1.12.68 — Component-scoped settings refresh
+
+- Stops the one-minute session heartbeat from recreating settings-page callbacks and reloading editable strategy forms.
+- Uses stable authentication callbacks so session metadata refreshes do not reinitialize Administrator components.
+- Loads System Settings and the strategy catalog only once when their components mount.
+- Refreshes Trader status after a promotion without reloading the complete System Settings page.
+- Keeps active-backtest polling scoped to its status banner and action locks.
+- Preserves unsaved strategy parameters in local component state until the Administrator saves, selects another strategy or leaves the page.
+- Warns before discarding an unsaved strategy draft or reloading the browser.
+- Shows an explicit `Unsaved changes` indicator and disables saving when there is no local change.
+- Does not change API contracts, strategy parameters, the protected Trader winner or Paper state.
+- Requires Market Cycle Trader API v1.13.20.
+
+
+## v1.12.70 — Single Candidate and Winner lifecycle
+
+- Displays one current Candidate and one current Trader Winner.
+- Replaced candidates are labeled `Superseded candidate`.
+- Promoted research profiles are labeled `Promoted candidate`.
+- Former Trader winners remain labeled `Former winner`.
+- Historical candidate and winner snapshots are protected and clone-only.
+- Component-scoped refresh and unsaved-draft protection remain unchanged.

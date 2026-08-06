@@ -18,6 +18,11 @@ export function RocketIcon({ size = 28 }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14.5 4.2c2.1-1.3 4.4-1.4 5.3-1.2.2.9.1 3.2-1.2 5.3l-5.3 8.3-5.9-5.9 7.1-6.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="m9 9-4.2.7-2 2 4.6 1.1M15 15l-.7 4.2-2 2-1.1-4.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><circle cx="15.5" cy="7.5" r="1.5" stroke="currentColor" strokeWidth="1.6"/><path d="M5.5 18.5c.8-2.1 2-3.3 4.2-4.1-.5 2.3-1.8 3.5-4.2 4.1Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>
 }
 
+
+export function StarIcon({ size = 20 }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/></svg>
+}
+
 export function TrophyIcon({ size = 24 }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 4h8v4.5a4 4 0 0 1-8 0V4Z" stroke="currentColor" strokeWidth="1.8"/><path d="M8 6H4.5v1.5A3.5 3.5 0 0 0 8 11M16 6h3.5v1.5A3.5 3.5 0 0 1 16 11M12 12.5V17M8.5 21h7M9.5 17h5v4h-5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
 }

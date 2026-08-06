@@ -287,7 +287,7 @@ a { color: inherit; }
   .environment-badges { justify-content: flex-start; }
   .main-nav { justify-content: flex-start; }
   .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .result-metrics-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .result-metrics-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .portfolio-metrics-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
@@ -1105,6 +1105,11 @@ a { color: inherit; }
   white-space: nowrap;
 }
 
+.strategy-boundary-grid .candidate-boundary-card {
+  border-color: rgba(86, 203, 142, 0.26);
+  background: rgba(28, 73, 51, 0.24);
+}
+
 .strategy-boundary-grid .winner-boundary-card {
   border-color: rgba(242, 194, 74, 0.28);
   background: rgba(47, 37, 12, 0.28);
@@ -1226,6 +1231,21 @@ a { color: inherit; }
   text-transform: uppercase;
 }
 
+.strategy-status.status-candidate {
+  background: rgba(115, 221, 164, 0.14);
+  color: #7be0aa;
+}
+
+.strategy-status.status-superseded_candidate {
+  background: rgba(102, 124, 151, 0.14);
+  color: #9fb0c4;
+}
+
+.strategy-status.status-promoted_candidate {
+  background: rgba(92, 143, 210, 0.14);
+  color: #8bbcf2;
+}
+
 .strategy-status.status-winner {
   background: rgba(240, 190, 57, 0.14);
   color: #efca62;
@@ -1252,6 +1272,11 @@ a { color: inherit; }
   font-size: 0.58rem;
   font-weight: 900;
   letter-spacing: 0.06em;
+}
+
+.strategy-list-markers span.candidate {
+  background: rgba(55, 154, 105, 0.16);
+  color: #86dfb0;
 }
 
 .strategy-list-markers span.winner {
@@ -1531,4 +1556,110 @@ a { color: inherit; }
   border-color: rgba(235, 181, 62, 0.32);
   background: rgba(93, 66, 10, 0.32);
   color: #f0cf76;
+}
+
+
+/* v1.12.68 component-scoped settings refresh and protected local drafts */
+.strategy-heading-state {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.strategy-unsaved-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.strategy-save-actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 250px;
+}
+
+.strategy-save-actions small {
+  max-width: 320px;
+  color: var(--muted);
+  text-align: right;
+  line-height: 1.35;
+}
+
+@media (max-width: 760px) {
+  .strategy-heading-state,
+  .strategy-save-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .strategy-save-actions small {
+    max-width: none;
+    text-align: left;
+  }
+}
+
+
+/* v1.12.69 candidate lifecycle */
+.strategy-editor-actions .candidate-action {
+  border-color: rgba(86, 203, 142, 0.46);
+  background: rgba(55, 154, 105, 0.15);
+  color: #8ae3b4;
+}
+
+.strategy-editor-actions .candidate-action:hover:not(:disabled) {
+  background: rgba(55, 154, 105, 0.24);
+}
+
+.strategy-candidate-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 14px;
+  border: 1px solid rgba(86, 203, 142, 0.3);
+  border-radius: 10px;
+  padding: 11px 12px;
+  background: rgba(36, 126, 81, 0.11);
+  color: #89dfb2;
+}
+
+.strategy-candidate-note div {
+  display: grid;
+  gap: 3px;
+}
+
+.strategy-candidate-note span {
+  color: #9db8aa;
+  font-size: 0.74rem;
+}
+
+
+/* v1.12.70 single Candidate and Winner lifecycle */
+.strategy-status.status-superseded_candidate,
+.strategy-status.status-promoted_candidate,
+.strategy-status.status-former_winner {
+  letter-spacing: 0.035em;
+}
+
+.strategy-candidate-note.historical {
+  border-color: rgba(119, 143, 173, 0.3);
+  background: rgba(49, 66, 88, 0.18);
+  color: #aebed2;
+}
+
+.strategy-candidate-note.promoted {
+  border-color: rgba(93, 153, 221, 0.3);
+  background: rgba(33, 74, 121, 0.18);
+  color: #9cc9f3;
 }
