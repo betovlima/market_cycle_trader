@@ -1663,3 +1663,5 @@ a { color: inherit; }
   background: rgba(33, 74, 121, 0.18);
   color: #9cc9f3;
 }
+
+/* v1.12.71 metadata-only Winner promotion preserves operational state */

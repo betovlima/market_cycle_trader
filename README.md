@@ -1,4 +1,4 @@
-# Market Cycle Trader Frontend v1.12.70
+# Market Cycle Trader Frontend v1.12.71
 
 React + Vite frontend for protected historical simulations and Paper portfolio monitoring.
 
@@ -304,3 +304,13 @@ The frontend refreshes the authenticated session periodically, handles expiratio
 - Former Trader winners remain labeled `Former winner`.
 - Historical candidate and winner snapshots are protected and clone-only.
 - Component-scoped refresh and unsaved-draft protection remain unchanged.
+
+
+## v1.12.71 — Operational-state-preserving Winner promotion
+
+- Updates the promotion confirmation to describe a metadata-only handoff while the market is closed.
+- Explicitly confirms that the current position, cash, history, scheduler and armed next-session run must be preserved.
+- Sends `confirm_market_closed=true` and `confirm_preserve_operational_state=true` with the promotion request.
+- Removes the obsolete instruction to pause, liquidate or reinitialize Paper state.
+- After success, confirms that no broker interaction occurred and that the next scheduled pre-market evaluation will load the full promoted Winner asset universe.
+- Keeps component-scoped refresh behavior; the complete Settings page is not reloaded.

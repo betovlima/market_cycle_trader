@@ -353,7 +353,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged 
     }
     const confirmation = window.confirm(
       `Promote "${strategy.name}" to the Trader winner?\n\n` +
-      'A locked snapshot will be created. The current winner will remain preserved as a former winner. Trader must be paused or stopped and in cash.',
+      'This is a metadata-only handoff while the market is closed. The current position, cash, trade history, scheduler and armed next-session run will be preserved. No Alpaca request, calibration, prediction or order is executed now. The promoted Winner and all of its assets will be loaded by the next scheduled pre-market evaluation.',
     )
     if (!confirmation) return
     const note = window.prompt('Promotion reason:', `Promote ${strategy.name} after validated backtest`)?.trim()
@@ -366,12 +366,16 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged 
         method: 'POST',
         body: {
           confirm_promote_to_trader: true,
+          confirm_market_closed: true,
+          confirm_preserve_operational_state: true,
           expected_control_revision: catalog.control.revision,
           expected_strategy_revision: strategy.revision,
           note,
         },
       })
-      setNotice(`${result.winner.name} is now the single protected Trader winner. The promoted research profile was preserved as Promoted candidate. Reinitialize Paper state before restarting Trader.`)
+      const assetCount = result.promotion?.next_scheduled_evaluation_assets_count || 'all'
+      const preservedMode = result.promotion?.trader_control_mode || 'unchanged'
+      setNotice(`${result.winner.name} is now the single protected Trader winner. The current position and Paper pipeline were preserved without broker interaction. Trader mode remains ${preservedMode}; its next scheduled pre-market evaluation will load ${assetCount} assets from the new Winner.`)
       await loadCatalog(strategy.id)
       onTraderWinnerChanged?.()
     } catch (requestError) {
@@ -528,7 +532,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged 
               <button type="button" onClick={() => cloneStrategy(selected)} disabled={Boolean(busy)}>Clone for test</button>
               {selected.id !== researchId ? <button type="button" onClick={() => useForBacktest(selected)} disabled={Boolean(busy) || hasActiveBacktest}>Use for backtest</button> : null}
               {!selected.locked && selected.status === 'draft' ? <button type="button" className="candidate-action" title={canMarkCandidate ? 'Make this exact completed revision the single active Candidate' : 'Complete a backtest for this exact strategy revision first'} onClick={() => markAsCandidate(selected)} disabled={Boolean(busy) || !canMarkCandidate}>Mark as candidate</button> : null}
-              {selected.id !== winnerId ? <button type="button" className="promote-action" title={canPromote ? 'Create an immutable Trader winner snapshot' : 'Mark a completed exact revision as candidate before promotion'} onClick={() => promoteToTrader(selected)} disabled={Boolean(busy) || !canPromote}>Promote to Trader winner</button> : null}
+              {selected.id !== winnerId ? <button type="button" className="promote-action" title={canPromote ? 'Promote metadata only, preserving the current position and next scheduled pipeline' : 'Mark a completed exact revision as candidate before promotion'} onClick={() => promoteToTrader(selected)} disabled={Boolean(busy) || !canPromote}>Promote to Trader winner</button> : null}
               {!selected.locked && selected.status === 'draft' && selected.id !== researchId ? <button type="button" className="danger" onClick={() => deleteDraft(selected)} disabled={Boolean(busy) || hasActiveBacktest}>Delete draft</button> : null}
             </div>
           </div>
