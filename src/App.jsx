@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { apiFetch } from './api/http'
 import { API } from './config/env'
@@ -80,10 +80,26 @@ export default function App() {
     return () => { active = false }
   }, [])
 
-  function expired() { setSession(null); setState('anonymous') }
-  async function logout() { try { await apiFetch(`${API}/auth/logout`, { method: 'POST' }) } finally { expired() } }
+  const expired = useCallback(() => {
+    setSession(null)
+    setState('anonymous')
+  }, [])
+
+  const logout = useCallback(async () => {
+    try {
+      await apiFetch(`${API}/auth/logout`, { method: 'POST' })
+    } finally {
+      expired()
+    }
+  }, [expired])
+
+  const authenticated = useCallback((value) => {
+    setError('')
+    setSession(value)
+    setState('authenticated')
+  }, [])
 
   if (state === 'checking') return <div className="app-loading">Checking private session…</div>
-  if (state !== 'authenticated' || !session) return <><LoginPage onAuthenticated={(value) => { setError(''); setSession(value); setState('authenticated') }} />{error ? <div className="startup-error">{error}</div> : null}</>
+  if (state !== 'authenticated' || !session) return <><LoginPage onAuthenticated={authenticated} />{error ? <div className="startup-error">{error}</div> : null}</>
   return <AuthenticatedApp session={session} onLogout={logout} onSessionExpired={expired} onSessionRefresh={setSession} />
 }
