@@ -3,12 +3,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ApiError, apiFetch } from '../api/http'
 import { API } from '../config/env'
 import { ActivityIcon, ClockIcon, SettingsIcon, ShieldIcon } from '../shared/components/Icons'
+import { StrategySettingsPanel } from './StrategySettingsPanel'
 
 const DEFAULT_FORM = {
   enabled: true,
   automatic_training_enabled: true,
-  model_threads: 8,
-  numeric_threads: 4,
   max_concurrent_jobs: 1,
   timeout_minutes: 360,
   reason: '',
@@ -18,28 +17,13 @@ const DEFAULT_FORM = {
 const PARAMETER_HINTS = {
   trainingEnabled: {
     description: 'Controls whether new model-training and backtest jobs may start. Turning it off does not forcibly terminate a job that is already running.',
-    formula: 'jobs_started = 0 if disabled; min(jobs_requested, concurrent_job_limit) if enabled',
+    formula: 'jobs_started = 0 if disabled; otherwise one active backtest at a time',
     example: 'With training disabled and 3 requested jobs, jobs_started = 0.',
   },
   automaticTraining: {
     description: 'Allows the scheduler to start the authorized pre-market training cycle automatically when an eligible market session is approaching.',
     formula: 'automatic_runs ≤ eligible_market_sessions',
     example: 'With 5 eligible market sessions in a week, at most 5 scheduled pre-market runs can be started.',
-  },
-  modelThreads: {
-    description: 'Maximum CPU threads offered to the model-training process. A value above the available CPU count usually creates contention instead of proportional speed.',
-    formula: 'ideal_time(p) ≈ time(1) / min(p, available_CPU)',
-    example: 'An 80-minute single-thread task with 8 effective threads has an ideal lower bound near 10 minutes. Real time is higher because of overhead.',
-  },
-  numericThreads: {
-    description: 'Thread limit for numerical operations used during data preparation, array processing, and matrix calculations.',
-    formula: 'rows_per_thread ≈ total_rows / numeric_threads',
-    example: '1,000,000 rows / 4 threads ≈ 250,000 rows per thread in an ideally balanced step.',
-  },
-  concurrentJobs: {
-    description: 'Maximum number of training or backtest jobs allowed to run at the same time. More jobs increase total resource demand.',
-    formula: 'requested_threads = model_threads × concurrent_jobs',
-    example: '8 model threads × 2 jobs = 16 requested threads. On an 8-vCPU machine, both jobs compete for CPU.',
   },
   timeoutMinutes: {
     description: 'Maximum wall-clock duration allowed for one backtest before the API stops it.',
@@ -67,8 +51,8 @@ function historySummary(item) {
   return [
     training.enabled ? 'Training on' : 'Training off',
     training.automatic_training_enabled ? 'Automatic on' : 'Automatic off',
-    `${training.model_threads || 1} Model threads`,
-    `${training.max_concurrent_jobs || 1} job limit`,
+    'Strategy catalog separated from runtime controls',
+    'Single backtest queue',
   ].join(' · ')
 }
 
@@ -109,8 +93,6 @@ export function SystemSettingsPage({ onSessionExpired }) {
       setForm({
         enabled: Boolean(training.enabled),
         automatic_training_enabled: Boolean(training.automatic_training_enabled),
-        model_threads: Number(training.model_threads || 1),
-        numeric_threads: Number(training.numeric_threads || 1),
         max_concurrent_jobs: Number(training.max_concurrent_jobs || 1),
         timeout_minutes: Math.max(5, Math.round(Number(training.timeout_seconds || 21600) / 60)),
         reason: '',
@@ -146,8 +128,6 @@ export function SystemSettingsPage({ onSessionExpired }) {
           training: {
             enabled: Boolean(form.enabled),
             automatic_training_enabled: Boolean(form.automatic_training_enabled),
-            model_threads: Number(form.model_threads),
-            numeric_threads: Number(form.numeric_threads),
             max_concurrent_jobs: Number(form.max_concurrent_jobs),
             timeout_seconds: Number(form.timeout_minutes) * 60,
           },
@@ -216,7 +196,7 @@ export function SystemSettingsPage({ onSessionExpired }) {
         <div className="page-title-icon"><SettingsIcon size={22} /></div>
         <div>
           <h2>System Settings</h2>
-          <p>Manage training and Trader operation.</p>
+          <p>Manage runtime controls, research strategies and the protected Trader winner.</p>
         </div>
         <span className="settings-revision-badge">Revision {settings?.revision || 1}</span>
       </div>
@@ -260,16 +240,23 @@ export function SystemSettingsPage({ onSessionExpired }) {
             />
           </div>
 
-          <div className="settings-field-grid">
-            <NumberField id="model-threads" label="Model threads" hint={PARAMETER_HINTS.modelThreads} hintAlign="left" value={form.model_threads} min="1" max="64" onChange={(value) => setForm({ ...form, model_threads: value })} />
-            <NumberField id="numeric-threads" label="Numeric threads" hint={PARAMETER_HINTS.numericThreads} hintAlign="left" value={form.numeric_threads} min="1" max="64" onChange={(value) => setForm({ ...form, numeric_threads: value })} />
-            <NumberField id="concurrent-jobs" label="Concurrent jobs" hint={PARAMETER_HINTS.concurrentJobs} hintAlign="right" value={form.max_concurrent_jobs} min="1" max="8" onChange={(value) => setForm({ ...form, max_concurrent_jobs: value })} />
+          <div className="settings-field-grid single-field-grid">
             <NumberField id="backtest-timeout-minutes" label="Backtest timeout (minutes)" hint={PARAMETER_HINTS.timeoutMinutes} hintAlign="right" value={form.timeout_minutes} min="5" max="1440" step="5" onChange={(value) => setForm({ ...form, timeout_minutes: value })} />
           </div>
 
-          <div className="settings-runtime-note">
-            <strong>{timeoutHours >= 1 ? `${timeoutHours.toFixed(timeoutHours % 1 ? 1 : 0)} hours` : `${form.timeout_minutes} minutes`}</strong>
-            <span>Current backtest time limit</span>
+          <div className="settings-runtime-grid">
+            <div className="settings-runtime-note">
+              <strong>Separated</strong>
+              <span>Strategy parameters are managed in the research workspace below</span>
+            </div>
+            <div className="settings-runtime-note">
+              <strong>Single backtest queue</strong>
+              <span>Clone and edit drafts while a run is active; another run remains locked</span>
+            </div>
+            <div className="settings-runtime-note">
+              <strong>{timeoutHours >= 1 ? `${timeoutHours.toFixed(timeoutHours % 1 ? 1 : 0)} hours` : `${form.timeout_minutes} minutes`}</strong>
+              <span>Current backtest time limit</span>
+            </div>
           </div>
 
           <div className="settings-save-row">
@@ -281,6 +268,11 @@ export function SystemSettingsPage({ onSessionExpired }) {
           </div>
         </form>
       </section>
+
+      <StrategySettingsPanel
+        onSessionExpired={onSessionExpired}
+        onTraderWinnerChanged={loadData}
+      />
 
       <section className="panel trader-control-panel">
         <div className="panel-heading">
@@ -297,6 +289,7 @@ export function SystemSettingsPage({ onSessionExpired }) {
             <div><span>Phase</span><strong>{modeLabel(traderControl?.phase || '—')}</strong></div>
             <div><span>Scheduler</span><strong>{traderControl?.scheduler_alive ? 'Online' : 'Offline'}</strong></div>
             <div><span>Next session</span><strong>{traderControl?.next_execution_session || '—'}</strong></div>
+            <div><span>Trader winner</span><strong>{traderControl?.trader_winner?.name || '—'}</strong></div>
           </div>
           <div className="trader-control-actions">
             <button type="button" onClick={() => changeTraderMode('active')} disabled={traderBusy || traderControl?.control_mode === 'active'}>Start</button>

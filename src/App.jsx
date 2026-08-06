@@ -55,7 +55,7 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
     {workspace.error ? <div className="global-error"><strong>Unable to load data</strong><span>{workspace.error}</span><button type="button" onClick={() => workspace.setError('')}>×</button></div> : null}
     <main className="workspace-main">
       {activeTab === 'dashboard' ? <DashboardPage workspace={workspace} onOpenBacktest={() => setActiveTab('backtest')} canRunBacktest /> : null}
-      {activeTab === 'backtest' ? <BacktestPage workspace={workspace} /> : null}
+      {activeTab === 'backtest' ? <BacktestPage workspace={workspace} canExportResults={session.role === 'admin'} /> : null}
       {activeTab === 'analytics' ? <AnalyticsPage session={session} dashboard={workspace.dashboard} /> : null}
       {activeTab === 'portfolio' && ['admin', 'trader'].includes(session.role) ? <PaperPortfolioDashboard /> : null}
       {activeTab === 'administration' && session.role === 'admin' ? <AdministrationPage onSessionExpired={onSessionExpired} /> : null}

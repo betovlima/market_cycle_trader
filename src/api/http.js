@@ -37,3 +37,37 @@ export async function apiFetch(url, options = {}) {
   if (response.status === 204) return null
   return response.json()
 }
+
+
+export async function downloadFile(url, fallbackFilename = 'download.bin') {
+  const response = await fetch(url, {
+    credentials: 'include',
+    headers: { Accept: 'application/octet-stream, application/zip, text/csv, */*' },
+  })
+  if (!response.ok) {
+    let message = `Request failed with status ${response.status}`
+    try {
+      const data = await response.json()
+      message = formatApiErrorDetail(data.detail, message)
+    } catch {
+    }
+    throw new ApiError(message, response.status)
+  }
+
+  const disposition = response.headers.get('Content-Disposition') || ''
+  const encodedMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i)
+  const plainMatch = disposition.match(/filename="?([^";]+)"?/i)
+  const filename = encodedMatch
+    ? decodeURIComponent(encodedMatch[1])
+    : plainMatch?.[1] || fallbackFilename
+
+  const blob = await response.blob()
+  const objectUrl = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = objectUrl
+  anchor.download = filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(objectUrl)
+}

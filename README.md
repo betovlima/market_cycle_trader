@@ -1,4 +1,4 @@
-# Market Cycle Trader Frontend v1.12.64
+# Market Cycle Trader Frontend v1.12.67
 
 React + Vite frontend for protected historical simulations and Paper portfolio monitoring.
 
@@ -218,6 +218,15 @@ pnpm dev
 - Requires Market Cycle Trader API v1.13.14, `VITE_GOOGLE_CLIENT_ID`, and the API variable `TRADER_ADMIN_GOOGLE_EMAIL`.
 
 
+## v1.12.65 — Administrator result export and winner execution lock
+
+- Restores the complete backtest result export action for Administrator sessions.
+- Removes editable model-thread and numeric-thread fields because winner execution settings are immutable.
+- Keeps training enablement, automatic scheduling, concurrency, timeout, Trader controls, history, and hints.
+- Shows the winner execution profile as locked.
+- Requires Market Cycle Trader API v1.13.18.
+
+
 ## v1.12.61 — session expiration and responsive administration
 
 The frontend refreshes the authenticated session periodically, handles expiration, shows a brief warning near timeout, and renders administration invitations as responsive cards on narrower screens to prevent horizontal page scrolling.
@@ -245,3 +254,18 @@ The frontend refreshes the authenticated session periodically, handles expiratio
 - Supports mouse hover, keyboard focus, and touch focus without changing the saved API payload.
 - Keeps the explanations generic and does not expose strategy rules, thresholds, features, weights, or model internals.
 - Requires Market Cycle Trader API v1.13.17; the API is unchanged in this release.
+
+
+## v1.12.67 — Winner-safe strategy research workspace
+
+- Adds an Administrator-only strategy catalog inside System Settings.
+- Preserves the Railway production winner as an immutable Trader snapshot.
+- Clones protected winners into editable test strategies and exposes every server-validated strategy parameter without frontend defaults.
+- Keeps the selected backtest strategy separate from the Trader winner.
+- Allows cloning and editing drafts while a backtest is running.
+- Shows the active backtest lock and disables strategy selection, deletion, promotion and another backtest until completion.
+- Shows a fixed single-backtest queue instead of an editable concurrency control.
+- Requires explicit promotion after a completed backtest for the exact candidate revision to change Trader.
+- Preserves former winners as locked snapshots.
+- Requires Market Cycle Trader API v1.13.20.
+- Only Administrator sessions receive or edit strategy parameters. Viewer and Trader screens continue to use sanitized payloads.

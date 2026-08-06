@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
-import { apiFetch } from '../../../api/http'
+import { apiFetch, downloadFile } from '../../../api/http'
 import { API } from '../../../config/env'
 import { BacktestIcon, PlayIcon } from '../../../shared/components/Icons'
 import { durationLabel, money, percent, shortDate, shortDateTime } from '../../../shared/formatters'
@@ -105,7 +105,7 @@ function RotationPanel({ jobId }) {
   )
 }
 
-export function BacktestPage({ workspace }) {
+export function BacktestPage({ workspace, canExportResults = false }) {
   const { dashboard, detail, loadingDetail, running, restoringExecution, startingBacktest, startDisabled, runBacktest } = workspace
   const metrics = detail?.metrics || {}
   const chartRows = (detail?.series || []).map((row) => ({
@@ -113,6 +113,24 @@ export function BacktestPage({ workspace }) {
     label: shortDate(row.timestamp),
   }))
   const historyColumnCount = 7
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState('')
+
+  async function exportResults() {
+    if (!canExportResults || !detail?.id || exporting) return
+    setExporting(true)
+    setExportError('')
+    try {
+      await downloadFile(
+        `${API}/jobs/${encodeURIComponent(detail.id)}/export.zip`,
+        `market_cycle_trader_${detail.id}.zip`,
+      )
+    } catch (requestError) {
+      setExportError(requestError.message || 'Unable to export the result.')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <section className="page-stack">
@@ -121,12 +139,20 @@ export function BacktestPage({ workspace }) {
           <div className="page-title-icon"><BacktestIcon size={20} /></div>
           <div><h2>Backtest</h2><p>Execute and analyze protected historical simulations.</p></div>
         </div>
-        <button type="button" className="primary-action compact" onClick={runBacktest} disabled={startDisabled}>
-          <PlayIcon /> {restoringExecution ? 'Checking Execution' : startingBacktest ? 'Starting…' : running ? 'Simulation Running' : 'Start New Backtest'}
-        </button>
+        <div className="page-heading-actions">
+          {canExportResults && detail?.metrics ? (
+            <button type="button" className="secondary-action compact" onClick={exportResults} disabled={exporting}>
+              {exporting ? 'Exporting…' : 'Export Results'}
+            </button>
+          ) : null}
+          <button type="button" className="primary-action compact" onClick={runBacktest} disabled={startDisabled}>
+            <PlayIcon /> {restoringExecution ? 'Checking Execution' : startingBacktest ? 'Starting…' : running ? 'Simulation Running' : 'Start New Backtest'}
+          </button>
+        </div>
       </div>
 
       <ExecutionStatus workspace={workspace} />
+      {exportError ? <div className="global-inline-message error-inline">{exportError}</div> : null}
 
       {loadingDetail ? <section className="data-panel loading-state">Loading simulation result…</section> : null}
 
