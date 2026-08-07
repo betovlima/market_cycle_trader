@@ -106,15 +106,21 @@ function RotationPanel({ jobId }) {
 }
 
 export function BacktestPage({ workspace, canExportResults = false }) {
-  const { dashboard, detail, loadingDetail, running, restoringExecution, startingBacktest, startDisabled, runBacktest } = workspace
+  const { job, dashboard, detail, loadingDetail, running, restoringExecution, startingBacktest, startDisabled, runBacktest, refreshDashboard } = workspace
   const metrics = detail?.metrics || {}
   const chartRows = (detail?.series || []).map((row) => ({
     ...row,
     label: shortDate(row.timestamp),
   }))
-  const historyColumnCount = 7
+  const historyColumnCount = 8
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState('')
+  const selectedStrategyName = dashboard?.selected_backtest_strategy_name || 'Not selected'
+  const activeStrategyName = (running ? job?.strategy_profile_name : null) || selectedStrategyName
+
+  useEffect(() => {
+    refreshDashboard()
+  }, [refreshDashboard])
 
   async function exportResults() {
     if (!canExportResults || !detail?.id || exporting) return
@@ -137,7 +143,20 @@ export function BacktestPage({ workspace, canExportResults = false }) {
       <div className="page-heading-row">
         <div className="page-heading">
           <div className="page-title-icon"><BacktestIcon size={20} /></div>
-          <div><h2>Backtest</h2><p>Execute and analyze protected historical simulations.</p></div>
+          <div>
+            <h2>Backtest</h2>
+            <p>Execute and analyze protected historical simulations.</p>
+            <div className="backtest-strategy-context" aria-live="polite">
+              <span>{running ? 'Evaluating' : 'Selected test'}</span>
+              <strong title={activeStrategyName}>{activeStrategyName}</strong>
+            </div>
+            {!running && detail?.strategy_profile_name ? (
+              <div className="backtest-strategy-context secondary-context">
+                <span>Displayed result</span>
+                <strong title={detail.strategy_profile_name}>{detail.strategy_profile_name}</strong>
+              </div>
+            ) : null}
+          </div>
         </div>
         <div className="page-heading-actions">
           {canExportResults && detail?.metrics ? (
@@ -213,11 +232,12 @@ export function BacktestPage({ workspace, canExportResults = false }) {
         <div className="panel-heading"><div><span className="panel-kicker">History</span><h2>Backtest History</h2></div></div>
         <div className="table-wrap">
           <table className="dashboard-table">
-            <thead><tr><th>Date</th><th>Status</th><th>Total Return</th><th>Sharpe Ratio</th><th>Max Drawdown</th><th>Rotations</th><th>Duration</th></tr></thead>
+            <thead><tr><th>Date</th><th>Test</th><th>Status</th><th>Total Return</th><th>Sharpe Ratio</th><th>Max Drawdown</th><th>Rotations</th><th>Duration</th></tr></thead>
             <tbody>
               {dashboard?.recent_backtests?.length ? dashboard.recent_backtests.map((item) => (
                 <tr key={item.id} className={detail?.id === item.id ? 'selected-row' : ''}>
                   <td>{shortDateTime(item.created_at)}</td>
+                  <td className="backtest-name-cell" title={item.strategy_profile_name || 'Unknown test'}>{item.strategy_profile_name || 'Unknown test'}</td>
                   <td><StatusBadge status={item.status} /></td>
                   <td className={item.metrics?.simulation_return == null ? '' : Number(item.metrics.simulation_return) >= 0 ? 'positive' : 'negative'}>{percent(item.metrics?.simulation_return)}</td>
                   <td>{item.metrics?.sharpe == null ? '—' : Number(item.metrics.sharpe).toFixed(3)}</td>
