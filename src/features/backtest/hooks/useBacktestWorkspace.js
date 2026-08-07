@@ -23,7 +23,7 @@ export function useBacktestWorkspace() {
   const refreshDashboard = useCallback(async () => {
     setLoadingDashboard(true)
     try {
-      const payload = await apiFetch(`${API}/dashboard/summary?limit=12`)
+      const payload = await apiFetch(`${API}/dashboard/summary?limit=50`)
       setDashboard(payload)
       return payload
     } catch (requestError) {
