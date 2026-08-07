@@ -4183,3 +4183,117 @@ a { color: inherit; }
   .admin-pagination { align-items: flex-start; flex-direction: column; }
   .admin-readonly-badge { display: inline-flex; }
 }
+
+
+/* v1.12.86 — compact System Settings runtime and model execution workspace */
+.settings-runtime-overview {
+  display: grid;
+  grid-template-columns: .7fr .9fr 1fr .8fr 1.25fr;
+  min-width: 0;
+  border-bottom: 1px solid rgba(79, 111, 146, .2);
+  background: rgba(4, 15, 29, .18);
+}
+.settings-runtime-fact {
+  min-width: 0;
+  min-height: 42px;
+  padding: 7px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-right: 1px solid rgba(79, 111, 146, .16);
+}
+.settings-runtime-fact:last-child { border-right: 0; }
+.settings-runtime-fact .settings-control-label { flex: 0 1 auto; }
+.settings-runtime-fact .settings-control-label-text {
+  color: #7f95ad;
+  font-size: .59rem;
+  font-weight: 800;
+  letter-spacing: .025em;
+  text-transform: uppercase;
+}
+.settings-runtime-fact .parameter-hint-trigger { width: 17px; height: 17px; font-size: .6rem; }
+.settings-runtime-fact > strong {
+  min-width: 0;
+  margin-left: auto;
+  color: #e7f1fc;
+  font-size: .72rem;
+  font-weight: 850;
+  text-align: right;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+.settings-runtime-fact.positive > strong { color: var(--positive); }
+.settings-runtime-fact.warning > strong { color: #ffcf6a; }
+.settings-runtime-overview + .settings-workspace-section { border-top: 0; }
+.settings-training-section { padding-top: 10px; padding-bottom: 10px; }
+.settings-compact-heading { margin-bottom: 7px; }
+.settings-model-execution-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, .82fr) minmax(235px, 1.08fr) minmax(155px, .72fr) minmax(300px, 1.8fr) auto;
+  align-items: end;
+  min-width: 0;
+  border: 1px solid rgba(79, 111, 146, .2);
+  border-radius: 10px;
+  overflow: visible;
+  background: rgba(6, 20, 38, .34);
+}
+.settings-model-execution-grid .settings-toggle,
+.settings-model-execution-grid .settings-number-field,
+.settings-model-execution-grid .settings-inline-reason {
+  min-width: 0;
+  min-height: 58px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 0;
+  border-right: 1px solid rgba(79, 111, 146, .16);
+  border-radius: 0;
+  background: transparent;
+}
+.settings-model-execution-grid .settings-toggle { align-items: center; }
+.settings-model-execution-grid .settings-number-field,
+.settings-model-execution-grid .settings-inline-reason { display: grid; align-content: center; gap: 5px; }
+.settings-model-execution-grid .settings-number-field input,
+.settings-model-execution-grid .settings-inline-reason input { height: 32px; }
+.settings-model-execution-grid .settings-control-label-text { white-space: nowrap; }
+.settings-inline-save {
+  align-self: stretch;
+  min-height: 58px;
+  margin: 0;
+  padding-inline: 16px;
+  border-radius: 0 9px 9px 0;
+  white-space: nowrap;
+}
+.settings-training-section + .settings-strategy-section { border-top-color: rgba(79, 111, 146, .24); }
+
+@media (max-width: 1380px) {
+  .settings-runtime-overview { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .settings-runtime-fact { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .settings-runtime-fact > strong { margin-left: 0; text-align: left; }
+  .settings-model-execution-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .settings-model-execution-grid .settings-inline-reason { grid-column: 1 / span 2; border-top: 1px solid rgba(79, 111, 146, .16); }
+  .settings-inline-save { border-radius: 0 0 9px 0; border-top: 1px solid rgba(79, 111, 146, .16); }
+}
+
+@media (max-width: 900px) {
+  .settings-runtime-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settings-runtime-fact { border-bottom: 1px solid rgba(79, 111, 146, .14); }
+  .settings-runtime-fact:nth-child(2n) { border-right: 0; }
+  .settings-runtime-fact:last-child { grid-column: 1 / -1; border-bottom: 0; }
+  .settings-model-execution-grid { grid-template-columns: 1fr; }
+  .settings-model-execution-grid .settings-toggle,
+  .settings-model-execution-grid .settings-number-field,
+  .settings-model-execution-grid .settings-inline-reason {
+    grid-column: auto;
+    border-right: 0;
+    border-bottom: 1px solid rgba(79, 111, 146, .14);
+  }
+  .settings-inline-save { min-height: 42px; border-top: 0; border-radius: 0 0 9px 9px; }
+}
+
+@media (max-width: 560px) {
+  .settings-runtime-overview { grid-template-columns: 1fr; }
+  .settings-runtime-fact { flex-direction: row; align-items: center; border-right: 0; }
+  .settings-runtime-fact > strong { margin-left: auto; text-align: right; }
+  .settings-runtime-fact:last-child { grid-column: auto; }
+  .settings-model-execution-grid .settings-control-label-text { white-space: normal; }
+}

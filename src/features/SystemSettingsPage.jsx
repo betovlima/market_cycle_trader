@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { ApiError, apiFetch } from '../api/http'
 import { API } from '../config/env'
-import { ActivityIcon, ClockIcon, SettingsIcon, ShieldIcon } from '../shared/components/Icons'
+import { SettingsIcon } from '../shared/components/Icons'
 import { ParameterHint } from '../shared/components/ParameterHint'
 import { StrategySettingsPanel } from './StrategySettingsPanel'
 
@@ -38,6 +38,26 @@ const PARAMETER_HINTS = {
   },
 }
 
+
+
+const RUNTIME_HINTS = {
+  detectedCpu: {
+    description: 'Number of CPU cores detected by the API runtime for capacity awareness.',
+    relationship: 'This is an observed runtime value and is not directly editable from this screen.',
+  },
+  traderMode: {
+    description: 'Current operational mode of the Trader service.',
+    relationship: 'Use Trader operation below to change the mode. This status is shown here only as a compact runtime summary.',
+  },
+  queue: {
+    description: 'Backtests use a single execution queue so only one simulation job runs at a time.',
+    relationship: 'Strategy drafts remain editable while another backtest is running.',
+  },
+  strategySeparation: {
+    description: 'Research strategy parameters stay in the dedicated strategy workspace instead of being mixed with runtime controls.',
+    relationship: 'This keeps operational settings and research configuration separated.',
+  },
+}
 
 
 const TRADER_FIELD_HINTS = {
@@ -252,24 +272,24 @@ export function SystemSettingsPage({ onSessionExpired }) {
         {error ? <div className="global-inline-message error-inline settings-workspace-message">{error}</div> : null}
         {notice ? <div className="global-inline-message success-inline settings-workspace-message">{notice}</div> : null}
 
-        <div className="settings-workspace-metrics">
-          <SettingsSummary icon={<ActivityIcon size={18} />} label="Training" value={form.enabled ? 'Enabled' : 'Disabled'} tone={form.enabled ? 'positive' : 'negative'} />
-          <SettingsSummary icon={<ClockIcon size={18} />} label="Automatic training" value={form.automatic_training_enabled ? 'Enabled' : 'Disabled'} tone={form.automatic_training_enabled ? 'positive' : 'warning'} />
-          <SettingsSummary icon={<SettingsIcon size={18} />} label="Detected CPU" value={settings?.runtime?.detected_cpu_count || '—'} />
-          <SettingsSummary icon={<ShieldIcon size={18} />} label="Trader mode" value={modeLabel(traderControl?.control_mode)} tone={traderControl?.control_mode === 'active' ? 'positive' : 'warning'} />
+        <div className="settings-runtime-overview" aria-label="Runtime summary">
+          <RuntimeFact label="CPU" value={settings?.runtime?.detected_cpu_count || '—'} hint={RUNTIME_HINTS.detectedCpu} hintId="hint-runtime-cpu" />
+          <RuntimeFact label="Trader" value={modeLabel(traderControl?.control_mode)} tone={traderControl?.control_mode === 'active' ? 'positive' : 'warning'} hint={RUNTIME_HINTS.traderMode} hintId="hint-runtime-trader" />
+          <RuntimeFact label="Backtest limit" value={timeoutHours >= 1 ? `${timeoutHours.toFixed(timeoutHours % 1 ? 1 : 0)} h` : `${form.timeout_minutes} min`} hint={PARAMETER_HINTS.timeoutMinutes} hintId="hint-runtime-timeout" />
+          <RuntimeFact label="Queue" value="Single" hint={RUNTIME_HINTS.queue} hintId="hint-runtime-queue" />
+          <RuntimeFact label="Strategy parameters" value="Separated" hint={RUNTIME_HINTS.strategySeparation} hintId="hint-runtime-strategy-separation" />
         </div>
 
         <section className="settings-workspace-section settings-training-section">
-          <div className="settings-section-heading">
+          <div className="settings-section-heading settings-compact-heading">
             <div>
               <span className="panel-kicker">TRAINING</span>
               <h2>Model execution</h2>
             </div>
-            <span className="settings-section-meta">Current limit {timeoutHours >= 1 ? `${timeoutHours.toFixed(timeoutHours % 1 ? 1 : 0)} h` : `${form.timeout_minutes} min`}</span>
           </div>
 
           <form className="settings-form settings-compact-form" onSubmit={saveSettings}>
-            <div className="settings-control-strip">
+            <div className="settings-model-execution-grid">
               <ToggleField
                 id="training-enabled"
                 label="Training enabled"
@@ -281,36 +301,25 @@ export function SystemSettingsPage({ onSessionExpired }) {
                 id="automatic-training-enabled"
                 label="Automatic pre-market training"
                 hint={PARAMETER_HINTS.automaticTraining}
-                hintAlign="right"
                 checked={form.automatic_training_enabled}
                 disabled={!form.enabled}
                 onChange={(checked) => setForm({ ...form, automatic_training_enabled: checked })}
               />
               <NumberField
                 id="backtest-timeout-minutes"
-                label="Backtest timeout (minutes)"
+                label="Timeout (minutes)"
                 hint={PARAMETER_HINTS.timeoutMinutes}
-                hintAlign="right"
                 value={form.timeout_minutes}
                 min="5"
                 max="1440"
                 step="5"
                 onChange={(value) => setForm({ ...form, timeout_minutes: value })}
               />
-            </div>
-
-            <div className="settings-runtime-strip">
-              <div><strong>Separated</strong><span>Strategy parameters stay in the research workspace</span></div>
-              <div><strong>Single backtest queue</strong><span>Draft editing remains available while a run is active</span></div>
-              <div><strong>{timeoutHours >= 1 ? `${timeoutHours.toFixed(timeoutHours % 1 ? 1 : 0)} hours` : `${form.timeout_minutes} minutes`}</strong><span>Maximum duration for one backtest</span></div>
-            </div>
-
-            <div className="settings-save-row settings-compact-save-row">
-              <div className="settings-reason-field">
-                <FieldLabel label="Change reason" hint={PARAMETER_HINTS.changeReason} hintId="hint-change-reason" align="left" />
+              <div className="settings-reason-field settings-inline-reason">
+                <FieldLabel label="Change reason" hint={PARAMETER_HINTS.changeReason} hintId="hint-change-reason" align="right" />
                 <input id="settings-change-reason" value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} maxLength={500} required />
               </div>
-              <button type="submit" className="admin-primary-button" disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button>
+              <button type="submit" className="admin-primary-button settings-inline-save" disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button>
             </div>
           </form>
         </section>
@@ -417,11 +426,11 @@ function FieldLabel({ label, hint, hintId, align = 'left' }) {
   )
 }
 
-function SettingsSummary({ icon, label, value, tone = '' }) {
+function RuntimeFact({ label, value, tone = '', hint, hintId }) {
   return (
-    <article className={`settings-summary-card ${tone}`}>
-      <div className="settings-summary-icon">{icon}</div>
-      <div><span>{label}</span><strong>{value}</strong></div>
-    </article>
+    <div className={`settings-runtime-fact ${tone}`}>
+      <FieldLabel label={label} hint={hint} hintId={hintId} />
+      <strong>{value}</strong>
+    </div>
   )
 }
