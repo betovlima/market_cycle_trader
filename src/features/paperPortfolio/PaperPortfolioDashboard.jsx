@@ -302,7 +302,9 @@ export function PaperPortfolioDashboard() {
   const portfolioTimerRef = useRef(null)
   const portfolioRequestRef = useRef(false)
   const chartWheelTargetRef = useRef(null)
+  const panStateRef = useRef(null)
   const [zoomDomain, setZoomDomain] = useState(null)
+  const [isPanning, setIsPanning] = useState(false)
 
   const loadRobotStatus = useCallback(async ({ silent = false } = {}) => {
     try {
@@ -534,6 +536,54 @@ export function PaperPortfolioDashboard() {
     return () => chartNode.removeEventListener('wheel', handleWheel)
   }, [fullTimeDomain, minimumTimeSpan])
 
+  function beginChartPan(event) {
+    if (event.button !== 0 || !zoomActive || !effectiveZoomDomain || !fullTimeDomain) return
+    if (event.target?.closest?.('.portfolio-trade-marker-hit')) return
+    const chartNode = chartWheelTargetRef.current
+    if (!chartNode) return
+    const rect = chartNode.getBoundingClientRect()
+    const leftInset = Math.min(68, rect.width * 0.18)
+    const rightInset = Math.min(22, rect.width * 0.08)
+    const plotWidth = Math.max(1, rect.width - leftInset - rightInset)
+    panStateRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      domainStart: effectiveZoomDomain.start,
+      domainEnd: effectiveZoomDomain.end,
+      plotWidth,
+    }
+    setIsPanning(true)
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    event.preventDefault()
+  }
+
+  function moveChartPan(event) {
+    const pan = panStateRef.current
+    if (!pan || pan.pointerId !== event.pointerId || !fullTimeDomain) return
+    const span = pan.domainEnd - pan.domainStart
+    const shift = -((event.clientX - pan.startX) / pan.plotWidth) * span
+    let start = pan.domainStart + shift
+    let end = pan.domainEnd + shift
+    if (start < fullTimeDomain.start) {
+      start = fullTimeDomain.start
+      end = start + span
+    }
+    if (end > fullTimeDomain.end) {
+      end = fullTimeDomain.end
+      start = end - span
+    }
+    setZoomDomain({ start, end })
+    event.preventDefault()
+  }
+
+  function endChartPan(event) {
+    const pan = panStateRef.current
+    if (!pan || pan.pointerId !== event.pointerId) return
+    panStateRef.current = null
+    setIsPanning(false)
+    event.currentTarget.releasePointerCapture?.(event.pointerId)
+  }
+
   const position = data?.position
 
   return (
@@ -583,7 +633,7 @@ export function PaperPortfolioDashboard() {
                     <span><i className="sell" />Sell</span>
                   </div>
                   <div className="portfolio-chart-zoom-controls" aria-live="polite">
-                    <span>{zoomActive ? `Zoom ${zoomLevel >= 10 ? zoomLevel.toFixed(0) : zoomLevel.toFixed(1)}×` : 'Wheel to zoom'}</span>
+                    <span>{zoomActive ? `Zoom ${zoomLevel >= 10 ? zoomLevel.toFixed(0) : zoomLevel.toFixed(1)}× · Drag to pan` : 'Wheel to zoom · Drag to pan'}</span>
                     {zoomActive ? <button type="button" onClick={() => setZoomDomain(null)}>Reset zoom</button> : null}
                   </div>
                   <div className="portfolio-monitor"><span className={data.market_clock?.is_open ? 'positive' : 'muted'}>{data.market_clock?.is_open ? 'Market open' : 'Market closed'}</span></div>
@@ -591,8 +641,12 @@ export function PaperPortfolioDashboard() {
               </div>
               <div
                 ref={chartWheelTargetRef}
-                className={`performance-chart portfolio-chart portfolio-chart-events ${zoomActive ? 'is-zoomed' : ''}`}
-                aria-label="Portfolio evolution chart. Use the mouse wheel over the chart to zoom in or out around the pointer."
+                className={`performance-chart portfolio-chart portfolio-chart-events portfolio-interactive-chart ${zoomActive ? 'is-zoomed' : ''} ${isPanning ? 'is-panning' : ''}`}
+                aria-label="Portfolio evolution chart. Use the mouse wheel to zoom. When zoomed, hold the left mouse button and drag to pan through time. Buy and sell markers use a pointer cursor."
+                onPointerDown={beginChartPan}
+                onPointerMove={moveChartPan}
+                onPointerUp={endChartPan}
+                onPointerCancel={endChartPan}
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={visibleChartData} margin={{ top: 18, right: 18, left: 10, bottom: 6 }}>
