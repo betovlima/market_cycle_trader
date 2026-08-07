@@ -8,6 +8,9 @@ import { compactDate, money, number, percent, shortDateTime } from '../../shared
 
 const POLL_MS = 60 * 60 * 1000
 const ROBOT_POLL_MS = 30 * 1000
+const ZOOM_STEP = 0.84
+const MIN_ZOOM_POINTS = 6
+const DAY_MS = 24 * 60 * 60 * 1000
 
 function countdownLabel(totalSeconds) {
   const safeSeconds = Math.max(0, Number(totalSeconds) || 0)
@@ -255,6 +258,37 @@ function nearestHistoryIndex(history, targetTimestamp) {
   return nearestIndex
 }
 
+function clamp(value, minimum, maximum) {
+  return Math.min(maximum, Math.max(minimum, value))
+}
+
+function minimumZoomSpan(points) {
+  if (points.length < 2) return 0
+  const gaps = []
+  for (let index = 1; index < points.length; index += 1) {
+    const gap = Number(points[index].timestamp) - Number(points[index - 1].timestamp)
+    if (Number.isFinite(gap) && gap > 0) gaps.push(gap)
+  }
+  if (!gaps.length) return 0
+  gaps.sort((left, right) => left - right)
+  const medianGap = gaps[Math.floor(gaps.length / 2)]
+  return medianGap * Math.max(2, MIN_ZOOM_POINTS - 1)
+}
+
+function portfolioAxisLabel(value, visibleSpan) {
+  const date = new Date(Number(value))
+  if (Number.isNaN(date.getTime())) return ''
+  if (visibleSpan <= DAY_MS * 2) {
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+  }
+  if (visibleSpan <= DAY_MS * 14) {
+    const day = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    const time = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    return `${day} ${time}`
+  }
+  return compactDate(date)
+}
+
 export function PaperPortfolioDashboard() {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
@@ -267,6 +301,8 @@ export function PaperPortfolioDashboard() {
   const mountedRef = useRef(false)
   const portfolioTimerRef = useRef(null)
   const portfolioRequestRef = useRef(false)
+  const chartWheelTargetRef = useRef(null)
+  const [zoomDomain, setZoomDomain] = useState(null)
 
   const loadRobotStatus = useCallback(async ({ silent = false } = {}) => {
     try {
@@ -339,7 +375,7 @@ export function PaperPortfolioDashboard() {
   const history = useMemo(() => (data?.history || []).map((item) => ({
     ...item,
     timestamp: timestampValue(item.recorded_at),
-  })).filter((item) => item.timestamp !== null), [data])
+  })).filter((item) => item.timestamp !== null).sort((left, right) => left.timestamp - right.timestamp), [data])
 
   const chartData = useMemo(() => {
     const points = history.map((point) => ({ ...point, tradeEvents: [] }))
@@ -379,6 +415,125 @@ export function PaperPortfolioDashboard() {
 
     return points
   }, [data, history])
+  const fullTimeDomain = useMemo(() => {
+    if (chartData.length < 2) return null
+    const start = Number(chartData[0]?.timestamp)
+    const end = Number(chartData[chartData.length - 1]?.timestamp)
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null
+    return { start, end }
+  }, [chartData])
+
+  const minimumTimeSpan = useMemo(() => {
+    if (!fullTimeDomain) return 0
+    const calculated = minimumZoomSpan(chartData)
+    const fullSpan = fullTimeDomain.end - fullTimeDomain.start
+    return Math.min(fullSpan, Math.max(calculated, fullSpan / 250))
+  }, [chartData, fullTimeDomain])
+
+  const effectiveZoomDomain = useMemo(() => {
+    if (!fullTimeDomain) return null
+    if (!zoomDomain) return fullTimeDomain
+
+    const fullSpan = fullTimeDomain.end - fullTimeDomain.start
+    const requestedSpan = Math.max(minimumTimeSpan, zoomDomain.end - zoomDomain.start)
+    if (!Number.isFinite(requestedSpan) || requestedSpan >= fullSpan * 0.995) return fullTimeDomain
+
+    let start = clamp(zoomDomain.start, fullTimeDomain.start, fullTimeDomain.end - requestedSpan)
+    let end = start + requestedSpan
+    if (end > fullTimeDomain.end) {
+      end = fullTimeDomain.end
+      start = end - requestedSpan
+    }
+    return { start, end }
+  }, [fullTimeDomain, minimumTimeSpan, zoomDomain])
+
+  const zoomActive = Boolean(fullTimeDomain && effectiveZoomDomain
+    && (effectiveZoomDomain.end - effectiveZoomDomain.start) < (fullTimeDomain.end - fullTimeDomain.start) * 0.995)
+
+  const visibleChartData = useMemo(() => {
+    if (!zoomActive || !effectiveZoomDomain) return chartData
+    return chartData.filter((point) => point.timestamp >= effectiveZoomDomain.start && point.timestamp <= effectiveZoomDomain.end)
+  }, [chartData, effectiveZoomDomain, zoomActive])
+
+  const yDomain = useMemo(() => {
+    const values = visibleChartData
+      .map((point) => Number(point.portfolio_value))
+      .filter((value) => Number.isFinite(value))
+    if (!values.length) return ['auto', 'auto']
+
+    const minimum = Math.min(...values)
+    const maximum = Math.max(...values)
+    const spread = maximum - minimum
+    const magnitude = Math.max(Math.abs(minimum), Math.abs(maximum), 1)
+    const padding = spread > 0
+      ? Math.max(spread * 0.12, magnitude * 0.00005)
+      : Math.max(magnitude * 0.0002, 1)
+
+    return [minimum - padding, maximum + padding]
+  }, [visibleChartData])
+
+  const visibleTimeSpan = effectiveZoomDomain
+    ? Math.max(0, effectiveZoomDomain.end - effectiveZoomDomain.start)
+    : 0
+
+  const zoomLevel = useMemo(() => {
+    if (!zoomActive || !fullTimeDomain || !effectiveZoomDomain) return 1
+    const fullSpan = fullTimeDomain.end - fullTimeDomain.start
+    const visibleSpan = effectiveZoomDomain.end - effectiveZoomDomain.start
+    return visibleSpan > 0 ? fullSpan / visibleSpan : 1
+  }, [effectiveZoomDomain, fullTimeDomain, zoomActive])
+
+  useEffect(() => {
+    const chartNode = chartWheelTargetRef.current
+    if (!chartNode || !fullTimeDomain) return undefined
+
+    const handleWheel = (event) => {
+      if (event.deltaY === 0) return
+      event.preventDefault()
+
+      const fullSpan = fullTimeDomain.end - fullTimeDomain.start
+      if (fullSpan <= 0 || minimumTimeSpan >= fullSpan) return
+
+      const rect = chartNode.getBoundingClientRect()
+      const leftInset = Math.min(68, rect.width * 0.18)
+      const rightInset = Math.min(22, rect.width * 0.08)
+      const plotWidth = Math.max(1, rect.width - leftInset - rightInset)
+      const pointerRatio = clamp((event.clientX - rect.left - leftInset) / plotWidth, 0, 1)
+      const intensity = clamp(Math.abs(event.deltaY) / 120, 0.35, 1.6)
+      const factor = event.deltaY < 0
+        ? Math.pow(ZOOM_STEP, intensity)
+        : Math.pow(1 / ZOOM_STEP, intensity)
+
+      setZoomDomain((current) => {
+        const requestedStart = current?.start ?? fullTimeDomain.start
+        const requestedEnd = current?.end ?? fullTimeDomain.end
+        const currentSpan = clamp(requestedEnd - requestedStart, minimumTimeSpan, fullSpan)
+        const currentStart = clamp(requestedStart, fullTimeDomain.start, fullTimeDomain.end - currentSpan)
+        const nextSpan = clamp(currentSpan * factor, minimumTimeSpan, fullSpan)
+
+        if (nextSpan >= fullSpan * 0.995) return null
+
+        const anchor = currentStart + currentSpan * pointerRatio
+        let start = anchor - nextSpan * pointerRatio
+        let end = start + nextSpan
+
+        if (start < fullTimeDomain.start) {
+          start = fullTimeDomain.start
+          end = start + nextSpan
+        }
+        if (end > fullTimeDomain.end) {
+          end = fullTimeDomain.end
+          start = end - nextSpan
+        }
+
+        return { start, end }
+      })
+    }
+
+    chartNode.addEventListener('wheel', handleWheel, { passive: false })
+    return () => chartNode.removeEventListener('wheel', handleWheel)
+  }, [fullTimeDomain, minimumTimeSpan])
+
   const position = data?.position
 
   return (
@@ -427,22 +582,31 @@ export function PaperPortfolioDashboard() {
                     <span><i className="buy" />Buy</span>
                     <span><i className="sell" />Sell</span>
                   </div>
+                  <div className="portfolio-chart-zoom-controls" aria-live="polite">
+                    <span>{zoomActive ? `Zoom ${zoomLevel >= 10 ? zoomLevel.toFixed(0) : zoomLevel.toFixed(1)}×` : 'Wheel to zoom'}</span>
+                    {zoomActive ? <button type="button" onClick={() => setZoomDomain(null)}>Reset zoom</button> : null}
+                  </div>
                   <div className="portfolio-monitor"><span className={data.market_clock?.is_open ? 'positive' : 'muted'}>{data.market_clock?.is_open ? 'Market open' : 'Market closed'}</span></div>
                 </div>
               </div>
-              <div className="performance-chart portfolio-chart portfolio-chart-events">
+              <div
+                ref={chartWheelTargetRef}
+                className={`performance-chart portfolio-chart portfolio-chart-events ${zoomActive ? 'is-zoomed' : ''}`}
+                aria-label="Portfolio evolution chart. Use the mouse wheel over the chart to zoom in or out around the pointer."
+              >
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData} margin={{ top: 18, right: 18, left: 10, bottom: 6 }}>
+                  <ComposedChart data={visibleChartData} margin={{ top: 18, right: 18, left: 10, bottom: 6 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis
                       dataKey="timestamp"
                       type="number"
                       scale="time"
-                      domain={['dataMin', 'dataMax']}
+                      domain={effectiveZoomDomain ? [effectiveZoomDomain.start, effectiveZoomDomain.end] : ['dataMin', 'dataMax']}
+                      allowDataOverflow
                       minTickGap={42}
-                      tickFormatter={(value) => compactDate(new Date(value))}
+                      tickFormatter={(value) => portfolioAxisLabel(value, visibleTimeSpan)}
                     />
-                    <YAxis domain={['auto', 'auto']} tickFormatter={(value) => `$${Number(value).toLocaleString('en-US', { maximumFractionDigits: 0 })}`} />
+                    <YAxis domain={yDomain} tickFormatter={(value) => `$${Number(value).toLocaleString('en-US', { maximumFractionDigits: 0 })}`} />
                     <Tooltip content={<PortfolioChartTooltip />} cursor={{ stroke: 'rgba(157, 175, 195, .45)', strokeWidth: 1 }} />
                     <Line type="monotone" dataKey="portfolio_value" name="Portfolio" dot={<TradeEventDot />} activeDot={false} strokeWidth={2.5} stroke="var(--positive)" isAnimationActive={false} />
                   </ComposedChart>

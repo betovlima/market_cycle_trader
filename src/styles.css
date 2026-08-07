@@ -2620,3 +2620,52 @@ a { color: inherit; }
   .trade-event-legend { gap: 6px; }
   .compact-order-scroll { max-height: 210px; }
 }
+
+/* v1.12.79 — Pointer-centered mouse-wheel zoom for Portfolio Evolution */
+.portfolio-chart-zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(82, 132, 190, .16);
+}
+.portfolio-chart-zoom-controls > span {
+  color: #7f94ad;
+  font-size: .56rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.portfolio-chart-zoom-controls > button {
+  min-height: 24px;
+  padding: 3px 7px;
+  border: 1px solid rgba(105, 159, 216, .25);
+  border-radius: 6px;
+  color: #abc6e5;
+  background: rgba(14, 42, 70, .44);
+  font: inherit;
+  font-size: .54rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.portfolio-chart-zoom-controls > button:hover {
+  border-color: rgba(105, 159, 216, .48);
+  color: #e5f1ff;
+  background: rgba(18, 54, 89, .62);
+}
+.portfolio-chart-zoom-controls > button:focus-visible {
+  outline: 2px solid rgba(105, 181, 255, .68);
+  outline-offset: 2px;
+}
+.portfolio-chart-events {
+  overscroll-behavior: contain;
+  cursor: zoom-in;
+}
+.portfolio-chart-events.is-zoomed { cursor: crosshair; }
+
+@media (max-width: 760px) {
+  .portfolio-chart-zoom-controls {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
