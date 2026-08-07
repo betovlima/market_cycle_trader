@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { apiFetch } from '../../api/http'
 import { API } from '../../config/env'
-import { AccessLockIcon, ActivityIcon, ClockIcon, MarketOpenIcon, PortfolioIcon } from '../../shared/components/Icons'
+import { ActivityIcon, PortfolioIcon } from '../../shared/components/Icons'
 import { compactDate, money, number, percent, shortDateTime } from '../../shared/formatters'
 
 const POLL_MS = 60 * 60 * 1000
 const ROBOT_POLL_MS = 30 * 1000
-
 
 function countdownLabel(totalSeconds) {
   const safeSeconds = Math.max(0, Number(totalSeconds) || 0)
@@ -18,240 +17,242 @@ function countdownLabel(totalSeconds) {
   return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':')
 }
 
-function PaperMarketStatus({ connection, marketClock, refreshing }) {
-  const firstCheckPending = refreshing && !connection.checkedAt
-  const status = firstCheckPending ? 'checking' : connection.status
-  const isReady = status === 'ready'
-  const marketLabel = marketClock ? (marketClock.is_open ? 'Market open' : 'Market closed') : 'Market status pending'
-  const checkedLabel = connection.checkedAt
-    ? `Checked ${connection.checkedAt.toLocaleTimeString()}`
-    : 'Waiting for the first successful check'
-
-  const title = isReady
-    ? 'Alpaca Paper connected'
-    : status === 'checking'
-      ? 'Checking Alpaca Paper'
-      : 'Alpaca Paper unavailable'
-
-  const detail = isReady
-    ? 'The Paper account responded successfully and the Portfolio data is available.'
-    : status === 'checking'
-      ? 'Validating the Paper account and requesting the latest portfolio snapshot.'
-      : 'The last connection attempt failed. Use Refresh after checking the API or Alpaca credentials.'
-
-  return (
-    <section className={`paper-market-status ${status}`} aria-live="polite">
-      <div className="paper-market-status-icon"><ActivityIcon size={24} /></div>
-      <div className="paper-market-status-copy">
-        <span className="panel-kicker">Paper Market status</span>
-        <strong>{title}</strong>
-        <p>{detail}</p>
-      </div>
-      <div className="paper-market-status-meta">
-        <span className={`connection-pill ${isReady ? 'ready' : status === 'checking' ? 'checking' : 'unavailable'}`}>
-          <span className="connection-dot" />
-          {isReady ? 'Connected' : status === 'checking' ? 'Checking' : 'Unavailable'}
-        </span>
-        <span className="paper-market-clock"><ClockIcon size={15} />{marketLabel}</span>
-        <small>{checkedLabel}</small>
-      </div>
-    </section>
-  )
-}
-
-function TradingRobotStatus({ robot }) {
-  const enabled = Boolean(robot?.enabled)
-  const schedulerAlive = Boolean(robot?.scheduler_alive)
-  const blocked = robot?.status === 'blocked'
-  const visual = blocked || (enabled && !schedulerAlive) ? 'unavailable' : enabled ? 'ready' : 'checking'
-  const title = blocked
-    ? 'Paper robot requires review'
-    : enabled && schedulerAlive
-      ? 'Paper robot active for every session'
-      : enabled
-        ? 'Paper robot enabled, scheduler unavailable'
-        : 'Paper robot stopped'
-  const detail = enabled
-    ? 'The continuous controller refreshes completed daily data and prepares the next session during the mandatory pre-market window.'
-    : 'No recurring Paper automation is enabled. Use the protected API documentation to start it.'
-  const phase = String(robot?.active_run?.phase || robot?.phase || 'stopped').replaceAll('_', ' ')
-  const session = robot?.next_execution_session || 'No session scheduled'
-
-  return (
-    <section className={`paper-market-status robot-status ${visual}`} aria-live="polite">
-      <div className="paper-market-status-icon"><ActivityIcon size={24} /></div>
-      <div className="paper-market-status-copy">
-        <span className="panel-kicker">Trading robot</span>
-        <strong>{title}</strong>
-        <p>{detail}</p>
-      </div>
-      <div className="paper-market-status-meta">
-        <span className={`connection-pill ${enabled && schedulerAlive && !blocked ? 'ready' : blocked || (enabled && !schedulerAlive) ? 'unavailable' : 'checking'}`}>
-          <span className="connection-dot" />
-          {blocked ? 'Review required' : enabled && schedulerAlive ? 'Active' : enabled ? 'Degraded' : 'Stopped'}
-        </span>
-        <span className="paper-market-clock"><ClockIcon size={15} />{phase}</span>
-        <small>Next execution session: {session}</small>
-      </div>
-    </section>
-  )
-}
-
 function timestampValue(value) {
   if (!value) return null
   const parsed = new Date(value).getTime()
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function StrategyScheduleClock({ label, targetAt, now, description, tone = 'blue', running = false, cycleSeconds = null }) {
+function scheduleValue(targetAt, now, running = false) {
+  if (running) return 'Running now'
   const target = timestampValue(targetAt)
-  const remaining = target === null ? null : Math.max(0, Math.ceil((target - now) / 1000))
-  const progress = remaining === null
-    ? 0
-    : cycleSeconds
-      ? Math.max(0, Math.min(1, remaining / cycleSeconds))
-      : remaining > 0 && remaining % 60 === 0
-        ? 1
-        : (remaining % 60) / 60
-  const value = running
-    ? 'Running now'
-    : remaining === null
-      ? 'Pending'
-      : remaining === 0
-        ? 'Due now'
-        : countdownLabel(remaining)
-  const scheduledAt = target === null ? '' : new Date(target).toLocaleString()
-  const accessibilityLabel = [label, value, description, scheduledAt ? `Expected at ${scheduledAt}` : '']
-    .filter(Boolean)
-    .join('. ')
-
-  return (
-    <article
-      className={`strategy-schedule-clock ${tone} ${running ? 'running' : ''}`}
-      aria-label={accessibilityLabel}
-      aria-live="polite"
-      title={scheduledAt ? `${label}: ${scheduledAt}` : undefined}
-    >
-      <div
-        className="strategy-schedule-dial"
-        style={{ '--strategy-clock-progress': `${progress * 360}deg` }}
-        aria-hidden="true"
-      >
-        {running ? <span className="strategy-schedule-spinner" /> : <span>{value}</span>}
-      </div>
-      <div className="strategy-schedule-copy">
-        <span>{label}</span>
-        <strong>{value}</strong>
-        <small>{description}</small>
-      </div>
-    </article>
-  )
+  if (target === null) return 'Pending'
+  const remaining = Math.max(0, Math.ceil((target - now) / 1000))
+  return remaining === 0 ? 'Due now' : countdownLabel(remaining)
 }
 
-function AutomationScheduleClocks({ robot, marketClock, now, refreshing, nextRefreshAt }) {
-  const phase = String(robot?.active_run?.phase || robot?.phase || '').toLowerCase()
+function TradingSessionStrip({ connection, marketClock, robot, now, refreshing, nextRefreshAt }) {
+  const firstCheckPending = refreshing && !connection.checkedAt
+  const connectionStatus = firstCheckPending ? 'checking' : connection.status
+  const connectionReady = connectionStatus === 'ready'
+
   const enabled = Boolean(robot?.enabled)
   const schedulerAlive = Boolean(robot?.scheduler_alive)
   const blocked = robot?.status === 'blocked'
   const unavailable = robot?.status === 'unavailable'
-  const statusLoaded = Boolean(robot)
-  const analysisRunning = phase.includes('training') || phase.includes('refreshing_market_data') || phase.includes('preparing_premarket_plan')
-  const executionRunning = phase.includes('submitting_alpaca_paper_orders') || phase === 'executing'
+  const robotLoaded = Boolean(robot)
+  const robotReady = robotLoaded && enabled && schedulerAlive && !blocked && !unavailable
+  const robotTone = robotReady ? 'ready' : blocked || unavailable || (enabled && !schedulerAlive) ? 'unavailable' : 'checking'
+  const robotLabel = !robotLoaded ? 'Checking' : robotReady ? 'Active' : blocked ? 'Review' : enabled ? 'Degraded' : 'Stopped'
+
+  const marketLoaded = Boolean(marketClock)
+  const marketOpen = marketLoaded && Boolean(marketClock.is_open)
+  const marketTone = !marketLoaded ? 'checking' : marketOpen ? 'ready' : 'closed'
+  const marketLabel = !marketLoaded ? 'Market checking' : marketOpen ? 'Market open' : 'Market closed'
+
+  const phaseRaw = String(robot?.active_run?.phase || robot?.phase || 'stopped')
+  const phase = phaseRaw.replaceAll('_', ' ')
+  const phaseLower = phaseRaw.toLowerCase()
+  const analysisRunning = phaseLower.includes('training') || phaseLower.includes('refreshing_market_data') || phaseLower.includes('preparing_premarket_plan')
+  const executionRunning = phaseLower.includes('submitting_alpaca_paper_orders') || phaseLower === 'executing'
   const analysisAt = robot?.next_premarket_analysis_at || robot?.active_run?.premarket_analysis_at
   const nextOpenAt = robot?.next_market_open || robot?.active_run?.expected_market_open
   const nextCloseAt = marketClock?.next_close
-  const visual = !statusLoaded
-    ? 'checking'
-    : blocked || unavailable || (enabled && !schedulerAlive)
-      ? 'unavailable'
-      : enabled
-        ? 'ready'
-        : 'checking'
+  const session = robot?.next_execution_session || 'No session scheduled'
+  const checkedLabel = connection.checkedAt
+    ? `Broker ${connection.checkedAt.toLocaleTimeString()}`
+    : 'Broker check pending'
+
+  const schedule = [
+    { label: 'Analysis', value: scheduleValue(analysisAt, now, analysisRunning), tone: analysisRunning ? 'green' : 'blue' },
+    { label: 'Execution', value: scheduleValue(nextOpenAt, now, executionRunning), tone: executionRunning ? 'green' : 'purple' },
+    { label: 'Daily close', value: scheduleValue(nextCloseAt, now), tone: 'gold' },
+    { label: 'Portfolio update', value: refreshing ? 'Running now' : scheduleValue(nextRefreshAt, now), tone: refreshing ? 'green' : 'cyan' },
+  ]
 
   return (
-    <section className={`paper-market-status live-schedule-status ${visual}`} aria-label="Live automation schedule">
-      <div className="paper-market-status-icon"><ClockIcon size={24} /></div>
-      <div className="paper-market-status-copy live-schedule-copy">
-        <span className="panel-kicker">Live schedule</span>
-        <strong>Upcoming events</strong>
+    <div className="portfolio-session-strip" aria-label="Trading session status" aria-live="polite">
+      <div className="portfolio-session-main">
+        <div className="portfolio-session-title" title={`Robot phase: ${phase}. Next execution: ${session}. ${checkedLabel}.`}>
+          <span className="portfolio-session-icon"><ActivityIcon size={16} /></span>
+          <span>Trading Session</span>
+        </div>
+        <div className="trading-session-statuses portfolio-session-statuses">
+          <span className={`session-status-chip ${connectionReady ? 'ready' : connectionStatus === 'checking' ? 'checking' : 'unavailable'}`}>
+            <span className="connection-dot" />Alpaca {connectionReady ? 'Connected' : connectionStatus === 'checking' ? 'Checking' : 'Unavailable'}
+          </span>
+          <span className={`session-status-chip ${robotTone}`}><span className="connection-dot" />Robot {robotLabel}</span>
+          <span className={`session-status-chip ${marketTone}`}><span className="connection-dot" />{marketLabel}</span>
+        </div>
       </div>
-      <div className="strategy-schedule-grid">
-        <StrategyScheduleClock
-          label="Analysis"
-          targetAt={analysisAt}
-          now={now}
-          description={analysisRunning ? 'Updating data and preparing the decision.' : 'Updates data and prepares the decision.'}
-          tone={analysisRunning ? 'green' : 'blue'}
-          running={analysisRunning}
-        />
-        <StrategyScheduleClock
-          label="Execution"
-          targetAt={nextOpenAt}
-          now={now}
-          description={executionRunning ? 'Applying the prepared decision.' : 'Applies the decision at market open.'}
-          tone={executionRunning ? 'green' : 'purple'}
-          running={executionRunning}
-        />
-        <StrategyScheduleClock
-          label="Daily close"
-          targetAt={nextCloseAt}
-          now={now}
-          description="Completes data for the next analysis."
-          tone="gold"
-        />
-        <StrategyScheduleClock
-          label="Portfolio update"
-          targetAt={nextRefreshAt}
-          now={now}
-          description={refreshing ? 'Requesting the latest account snapshot.' : 'Refreshes the latest account snapshot.'}
-          tone={refreshing ? 'green' : 'cyan'}
-          running={refreshing}
-          cycleSeconds={POLL_MS / 1000}
-        />
+      <div className="portfolio-session-schedule" aria-label={`Robot phase ${phase}. Next execution ${session}.`}>
+        {schedule.map((item) => (
+          <div key={item.label} className={`portfolio-session-step ${item.tone}`}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+          </div>
+        ))}
       </div>
-    </section>
+    </div>
   )
 }
 
-function marketTimeLabel(value) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  return date.toLocaleString([], {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+function PortfolioMetric({ label, value, detail, tone = '' }) {
+  return (
+    <div className={`portfolio-workspace-metric ${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      {detail ? <small>{detail}</small> : null}
+    </div>
+  )
+}
+
+function PortfolioMetricsStrip({ data, position }) {
+  const activePositions = position ? 1 : 0
+  const returnTone = Number(data.total_return) >= 0 ? 'positive' : 'negative'
+
+  return (
+    <div className="portfolio-workspace-metrics" aria-label="Portfolio summary">
+      <PortfolioMetric label="Starting Capital" value={money(data.initial_capital)} tone="blue" />
+      <PortfolioMetric label="Portfolio Value" value={money(data.portfolio_value)} tone="blue" />
+      <PortfolioMetric label="Total P/L" value={money(data.total_pnl)} detail={percent(data.total_return)} tone={returnTone} />
+      <PortfolioMetric label="Cash" value={money(data.strategy_cash)} tone="purple" />
+      <PortfolioMetric label="Position" value={String(activePositions)} detail={position ? position.symbol : 'Cash'} tone="gold" />
+    </div>
+  )
+}
+
+function CurrentPosition({ position, cash }) {
+  if (!position) {
+    return (
+      <aside className="current-position-section">
+        <div className="portfolio-section-heading compact">
+          <div><span className="panel-kicker">Position</span><h2>Current Position</h2></div>
+        </div>
+        <div className="cash-state current-position-cash"><strong>{money(cash)}</strong><span>Cash</span><p>No open position.</p></div>
+      </aside>
+    )
+  }
+
+  const quantity = Number(position.quantity)
+  const entryPrice = Number(position.average_entry_price)
+  const marketValue = Number(position.market_value)
+  const costBasis = Number.isFinite(quantity) && Number.isFinite(entryPrice) ? quantity * entryPrice : null
+  const unrealizedPnl = Number.isFinite(marketValue) && Number.isFinite(costBasis) ? marketValue - costBasis : null
+  const returnPositive = Number(position.unrealized_return) >= 0
+
+  return (
+    <aside className="current-position-section">
+      <div className="portfolio-section-heading compact current-position-heading">
+        <div><span className="panel-kicker">Position</span><h2>Current Position</h2></div>
+        <span className="current-trade-open">Open</span>
+      </div>
+
+      <div className="current-trade-asset current-position-asset">
+        <strong>{position.symbol}</strong>
+        <span>{number(position.quantity, 6)} shares</span>
+      </div>
+
+      <div className="current-position-stats">
+        <div><span>Entry</span><strong>{money(position.average_entry_price)}</strong></div>
+        <div><span>Current</span><strong>{money(position.current_price)}</strong></div>
+        <div><span>Market value</span><strong>{money(position.market_value)}</strong></div>
+        <div><span>Trade P/L</span><strong className={returnPositive ? 'positive' : 'negative'}>{unrealizedPnl === null ? '—' : money(unrealizedPnl)}</strong></div>
+      </div>
+
+      <div className={`current-trade-return current-position-return ${returnPositive ? 'positive' : 'negative'}`}>
+        <span>Unrealized return</span>
+        <strong>{percent(position.unrealized_return)}</strong>
+      </div>
+    </aside>
+  )
+}
+
+function TradeEventDot({ cx, cy, payload }) {
+  const events = Array.isArray(payload?.tradeEvents) ? payload.tradeEvents : []
+  if (!Number.isFinite(cx) || !Number.isFinite(cy) || !events.length) return null
+
+  let buyLevel = 0
+  let sellLevel = 0
+
+  return (
+    <g className="portfolio-trade-event-group" transform={`translate(${cx}, ${cy})`}>
+      {events.map((event) => {
+        const isBuy = event.tradeSide === 'buy'
+        const level = isBuy ? buyLevel++ : sellLevel++
+        const markerY = (isBuy ? 8 : -8) + (isBuy ? 1 : -1) * level * 13
+        const markerClass = isBuy ? 'buy' : 'sell'
+        return (
+          <g
+            key={event.markerKey}
+            className={`portfolio-trade-marker ${markerClass}`}
+            transform={`translate(0, ${markerY})`}
+          >
+            <circle r="11" className="portfolio-trade-marker-hit" />
+            <circle r="6" className="portfolio-trade-marker-dot" />
+          </g>
+        )
+      })}
+    </g>
+  )
+}
+
+function PortfolioChartTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null
+  const pointPayload = payload.find((item) => item?.payload?.portfolio_value !== undefined)?.payload
+  if (!pointPayload) return null
+
+  const tradeEvents = Array.isArray(pointPayload.tradeEvents) ? pointPayload.tradeEvents : []
+  if (tradeEvents.length) {
+    const singleTrade = tradeEvents.length === 1 ? tradeEvents[0] : null
+    return (
+      <div className={`portfolio-chart-tooltip trade ${singleTrade?.tradeSide || 'multiple'}`}>
+        <div className="portfolio-tooltip-title">
+          <strong>{singleTrade ? singleTrade.tradeSide.toUpperCase() : `${tradeEvents.length} EXECUTIONS`}</strong>
+          <span>{singleTrade?.symbol || shortDateTime(pointPayload.recorded_at)}</span>
+        </div>
+        <div className="portfolio-tooltip-trades">
+          {tradeEvents.map((trade) => (
+            <div key={trade.markerKey} className={`portfolio-tooltip-trade ${trade.tradeSide}`}>
+              {tradeEvents.length > 1 ? (
+                <div className="portfolio-tooltip-trade-header">
+                  <strong>{trade.tradeSide.toUpperCase()}</strong><span>{trade.symbol || '—'}</span>
+                </div>
+              ) : null}
+              <div className="portfolio-tooltip-grid">
+                <span>Executed</span><strong>{shortDateTime(trade.orderTime)}</strong>
+                <span>Quantity</span><strong>{trade.quantity ?? '—'}</strong>
+                <span>Average fill</span><strong>{trade.price == null ? '—' : money(trade.price)}</strong>
+                <span>Portfolio</span><strong>{money(pointPayload.portfolio_value)}</strong>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="portfolio-chart-tooltip">
+      <span>{shortDateTime(pointPayload.recorded_at)}</span>
+      <strong>Portfolio · {money(pointPayload.portfolio_value)}</strong>
+    </div>
+  )
+}
+
+function nearestHistoryIndex(history, targetTimestamp) {
+  if (!history.length || targetTimestamp === null) return -1
+  let nearestIndex = -1
+  let nearestDistance = Number.POSITIVE_INFINITY
+  history.forEach((point, index) => {
+    if (!Number.isFinite(point.timestamp) || !Number.isFinite(Number(point.portfolio_value))) return
+    const distance = Math.abs(point.timestamp - targetTimestamp)
+    if (distance < nearestDistance) {
+      nearestIndex = index
+      nearestDistance = distance
+    }
   })
-}
-
-function MarketStatusMetric({ marketClock }) {
-  const hasClock = Boolean(marketClock)
-  const isOpen = hasClock && Boolean(marketClock.is_open)
-  const state = !hasClock ? 'pending' : isOpen ? 'open' : 'closed'
-  const value = state === 'open' ? 'Open' : state === 'closed' ? 'Closed' : 'Checking'
-  const sessionLabel = state === 'open' ? 'Market Open' : state === 'closed' ? 'Market Closed' : 'Market status pending'
-  const scheduleValue = state === 'open' ? marketClock?.next_close : marketClock?.next_open
-  const scheduleLabel = state === 'open' ? 'Closes' : 'Next open'
-  const schedule = marketTimeLabel(scheduleValue)
-
-  return (
-    <article className={`portfolio-metric market-status-metric ${state}`} aria-live="polite">
-      <div className="market-status-metric-icon">
-        {state === 'open' ? <MarketOpenIcon size={25} /> : state === 'closed' ? <AccessLockIcon size={25} /> : <ClockIcon size={25} />}
-      </div>
-      <div className="market-status-metric-copy">
-        <span>Market Status</span>
-        <strong>{value}</strong>
-        <small>{sessionLabel}{schedule ? <em>{scheduleLabel}: {schedule}</em> : null}</small>
-      </div>
-    </article>
-  )
-}
-
-function PortfolioMetric({ label, value, note, tone = '' }) {
-  return <article className={`portfolio-metric ${tone}`}><span>{label}</span><strong>{value}</strong><small>{note}</small></article>
+  return nearestIndex
 }
 
 export function PaperPortfolioDashboard() {
@@ -337,37 +338,51 @@ export function PaperPortfolioDashboard() {
 
   const history = useMemo(() => (data?.history || []).map((item) => ({
     ...item,
-    label: compactDate(item.recorded_at),
-  })), [data])
+    timestamp: timestampValue(item.recorded_at),
+  })).filter((item) => item.timestamp !== null), [data])
 
+  const chartData = useMemo(() => {
+    const points = history.map((point) => ({ ...point, tradeEvents: [] }))
+
+    ;(data?.recent_orders || []).forEach((order, index) => {
+      const filledQuantity = Number(order.filled_quantity)
+      const rawFilledPrice = order.filled_average_price
+      const filledPrice = Number(rawFilledPrice)
+      const orderStatus = String(order.status || '').toLowerCase()
+      const hasFilledPrice = rawFilledPrice !== null
+        && rawFilledPrice !== undefined
+        && rawFilledPrice !== ''
+        && Number.isFinite(filledPrice)
+        && filledPrice > 0
+      const hasExecution = orderStatus === 'filled'
+        || (Number.isFinite(filledQuantity) && filledQuantity > 0)
+        || hasFilledPrice
+      if (!hasExecution) return
+
+      const tradeSide = String(order.side || '').toLowerCase()
+      if (!['buy', 'sell'].includes(tradeSide)) return
+
+      const orderTime = order.filled_at || order.updated_at || order.created_at || order.submitted_at
+      const nearestIndex = nearestHistoryIndex(points, timestampValue(orderTime))
+      if (nearestIndex < 0) return
+
+      points[nearestIndex].tradeEvents.push({
+        tradeSide,
+        symbol: order.symbol,
+        quantity: order.filled_quantity ?? order.quantity,
+        price: order.filled_average_price,
+        orderTime,
+        status: order.status,
+        markerKey: `${orderTime || 'order'}-${order.symbol || 'asset'}-${tradeSide}-${index}`,
+      })
+    })
+
+    return points
+  }, [data, history])
   const position = data?.position
-  const activePositions = position ? 1 : 0
 
   return (
-    <section className="page-stack portfolio-page" aria-busy={refreshing}>
-      <div className="page-heading-row">
-        <div className="page-heading">
-          <div className="page-title-icon"><PortfolioIcon size={20} /></div>
-          <div><h2>Portfolio</h2><p>View the simulated account value, current position and recent orders.</p></div>
-        </div>
-        <div className="portfolio-heading-actions">
-          <button type="button" className="secondary-action portfolio-refresh-button" disabled={refreshing} onClick={() => refreshPortfolio({ includeRobot: true })}>
-            {refreshing ? <span className="portfolio-button-spinner" aria-hidden="true" /> : null}
-            {refreshing ? 'Refreshing…' : 'Refresh'}
-          </button>
-        </div>
-      </div>
-
-      <AutomationScheduleClocks
-        robot={robot}
-        marketClock={data?.market_clock}
-        now={clockNow}
-        refreshing={refreshing}
-        nextRefreshAt={nextRefreshAt}
-      />
-      <PaperMarketStatus connection={connection} marketClock={data?.market_clock} refreshing={refreshing} />
-      <TradingRobotStatus robot={robot} />
-
+    <section className="page-stack portfolio-page portfolio-single-workspace" aria-busy={refreshing}>
       {error ? <div className="inline-error"><strong>Portfolio unavailable</strong><span>{error}</span><button type="button" onClick={() => setError('')}>×</button></div> : null}
 
       {!data ? (
@@ -377,54 +392,74 @@ export function PaperPortfolioDashboard() {
           <p>Connecting to Alpaca Paper and requesting the latest read-only portfolio snapshot.</p>
         </section>
       ) : (
-        <>
-          <section className="portfolio-metrics-grid">
-            <MarketStatusMetric marketClock={data.market_clock} />
-            <PortfolioMetric label="Total Capital" value={money(data.initial_capital)} note="Simulated starting capital" tone="blue" />
-            <PortfolioMetric label="Total Return" value={percent(data.total_return)} note={money(data.total_pnl)} tone={Number(data.total_return) >= 0 ? 'green' : 'red'} />
-            <PortfolioMetric label="Current Value" value={money(data.portfolio_value)} note={lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Current valuation'} tone="blue" />
-            <PortfolioMetric label="Cash Balance" value={money(data.strategy_cash)} note="Available cash" tone="purple" />
-            <PortfolioMetric label="Active Positions" value={String(activePositions)} note={position ? position.symbol : 'Portfolio is in cash'} tone="gold" />
-          </section>
+        <section className="data-panel portfolio-workspace-panel">
+          <header className="portfolio-workspace-header">
+            <div className="portfolio-workspace-title">
+              <div className="page-title-icon"><PortfolioIcon size={18} /></div>
+              <div><h2>Portfolio</h2><p>Account evolution, current position and recent Paper executions.</p></div>
+            </div>
+            <div className="portfolio-workspace-actions">
+              <span>{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Read-only snapshot'}</span>
+              <button type="button" className="secondary-action portfolio-refresh-button compact" disabled={refreshing} onClick={() => refreshPortfolio({ includeRobot: true })}>
+                {refreshing ? <span className="portfolio-button-spinner" aria-hidden="true" /> : null}
+                {refreshing ? 'Refreshing…' : 'Refresh'}
+              </button>
+            </div>
+          </header>
 
-          <section className="portfolio-content-grid">
-            <article className="data-panel chart-card">
-              <div className="panel-heading">
-                <div><span className="panel-kicker">Performance</span><h2>Portfolio Value</h2></div>
-                <div className="portfolio-monitor"><span>{data.market_clock?.is_open ? 'Market open' : 'Market closed'}</span><small>{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Read-only snapshot'}</small></div>
+          <PortfolioMetricsStrip data={data} position={position} />
+
+          <TradingSessionStrip
+            connection={connection}
+            marketClock={data?.market_clock}
+            robot={robot}
+            now={clockNow}
+            refreshing={refreshing}
+            nextRefreshAt={nextRefreshAt}
+          />
+
+          <div className="portfolio-workspace-main">
+            <section className="portfolio-evolution-section">
+              <div className="portfolio-section-heading portfolio-chart-heading">
+                <div><span className="panel-kicker">Performance</span><h2>Portfolio Evolution</h2></div>
+                <div className="portfolio-chart-heading-right">
+                  <div className="trade-event-legend" aria-label="Trade event legend">
+                    <span><i className="buy" />Buy</span>
+                    <span><i className="sell" />Sell</span>
+                  </div>
+                  <div className="portfolio-monitor"><span className={data.market_clock?.is_open ? 'positive' : 'muted'}>{data.market_clock?.is_open ? 'Market open' : 'Market closed'}</span></div>
+                </div>
               </div>
-              <div className="performance-chart portfolio-chart">
+              <div className="performance-chart portfolio-chart portfolio-chart-events">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={history} margin={{ top: 10, right: 16, left: 8, bottom: 8 }}>
+                  <ComposedChart data={chartData} margin={{ top: 18, right: 18, left: 10, bottom: 6 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="label" minTickGap={32} />
+                    <XAxis
+                      dataKey="timestamp"
+                      type="number"
+                      scale="time"
+                      domain={['dataMin', 'dataMax']}
+                      minTickGap={42}
+                      tickFormatter={(value) => compactDate(new Date(value))}
+                    />
                     <YAxis domain={['auto', 'auto']} tickFormatter={(value) => `$${Number(value).toLocaleString('en-US', { maximumFractionDigits: 0 })}`} />
-                    <Tooltip formatter={(value) => money(value)} labelFormatter={(_, payload) => payload?.[0]?.payload?.recorded_at || ''} />
-                    <Line type="monotone" dataKey="portfolio_value" name="Portfolio" dot={false} strokeWidth={2.5} stroke="var(--positive)" />
-                  </LineChart>
+                    <Tooltip content={<PortfolioChartTooltip />} cursor={{ stroke: 'rgba(157, 175, 195, .45)', strokeWidth: 1 }} />
+                    <Line type="monotone" dataKey="portfolio_value" name="Portfolio" dot={<TradeEventDot />} activeDot={false} strokeWidth={2.5} stroke="var(--positive)" isAnimationActive={false} />
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
-            </article>
+            </section>
 
-            <article className="data-panel holdings-card">
-              <div className="panel-heading"><div><span className="panel-kicker">Allocation</span><h2>Current Holding</h2></div></div>
-              {position ? (
-                <dl className="holding-details">
-                  <div><dt>Asset</dt><dd>{position.symbol}</dd></div>
-                  <div><dt>Quantity</dt><dd>{number(position.quantity, 6)}</dd></div>
-                  <div><dt>Average entry</dt><dd>{money(position.average_entry_price)}</dd></div>
-                  <div><dt>Current price</dt><dd>{money(position.current_price)}</dd></div>
-                  <div><dt>Market value</dt><dd>{money(position.market_value)}</dd></div>
-                  <div><dt>Return</dt><dd className={Number(position.unrealized_return) >= 0 ? 'positive' : 'negative'}>{percent(position.unrealized_return)}</dd></div>
-                </dl>
-              ) : <div className="cash-state"><strong>{money(data.strategy_cash)}</strong><span>Cash</span><p>No open position.</p></div>}
-            </article>
-          </section>
+            <CurrentPosition position={position} cash={data.strategy_cash} />
+          </div>
 
-          <section className="data-panel">
-            <div className="panel-heading"><div><span className="panel-kicker">Activity</span><h2>Recent Paper Orders</h2></div><span className="panel-count">{data.recent_orders?.length || 0} records</span></div>
-            <div className="table-wrap">
-              <table className="dashboard-table">
+          <section className="portfolio-orders-section">
+            <div className="portfolio-section-heading portfolio-orders-heading">
+              <div><span className="panel-kicker">Activity</span><h2>Recent Paper Orders</h2></div>
+              <span className="panel-count">{data.recent_orders?.length || 0} records</span>
+            </div>
+            <div className="table-wrap portfolio-orders-table-wrap compact-order-scroll">
+              <table className="dashboard-table portfolio-orders-table">
                 <thead><tr><th>Created</th><th>Asset</th><th>Side</th><th>Status</th><th>Quantity</th><th>Average Fill</th></tr></thead>
                 <tbody>
                   {data.recent_orders?.length ? data.recent_orders.map((order, index) => (
@@ -438,7 +473,7 @@ export function PaperPortfolioDashboard() {
               </table>
             </div>
           </section>
-        </>
+        </section>
       )}
     </section>
   )
