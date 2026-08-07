@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError, apiFetch } from '../api/http'
 import { API } from '../config/env'
 import { ActivityIcon, ClockIcon, SettingsIcon, ShieldIcon } from '../shared/components/Icons'
+import { ParameterHint } from '../shared/components/ParameterHint'
 import { StrategySettingsPanel } from './StrategySettingsPanel'
 
 const DEFAULT_FORM = {
@@ -17,23 +18,48 @@ const DEFAULT_FORM = {
 const PARAMETER_HINTS = {
   trainingEnabled: {
     description: 'Controls whether new model-training and backtest jobs may start. Turning it off does not forcibly terminate a job that is already running.',
-    formula: 'jobs_started = 0 if disabled; otherwise one active backtest at a time',
+    relationship: 'When disabled, the system will not start new training or backtest jobs.',
     example: 'With training disabled and 3 requested jobs, jobs_started = 0.',
   },
   automaticTraining: {
     description: 'Allows the scheduler to start the authorized pre-market training cycle automatically when an eligible market session is approaching.',
-    formula: 'automatic_runs ≤ eligible_market_sessions',
+    relationship: 'Runs only for eligible pre-market sessions and only while training is enabled.',
     example: 'With 5 eligible market sessions in a week, at most 5 scheduled pre-market runs can be started.',
   },
   timeoutMinutes: {
     description: 'Maximum wall-clock duration allowed for one backtest before the API stops it.',
-    formula: 'timeout_seconds = timeout_minutes × 60',
+    relationship: 'The UI stores minutes; the API persists the equivalent duration in seconds.',
     example: '360 minutes × 60 = 21,600 seconds = 6 hours.',
   },
   changeReason: {
     description: 'Required audit note explaining why the Administrator changed the configuration. It is stored with the resulting revision.',
-    formula: 'new_revision = current_revision + 1',
+    relationship: 'Saving creates a new audited system-settings revision.',
     example: 'Saving revision 12 with a valid reason creates revision 13 and records the Administrator and timestamp.',
+  },
+}
+
+
+
+const TRADER_FIELD_HINTS = {
+  status: {
+    description: 'Current operational state reported by the Trader service.',
+    relationship: 'This is runtime state, not a strategy parameter.',
+  },
+  phase: {
+    description: 'Current stage of the Trader lifecycle, such as waiting, evaluating, executing or stopped.',
+    relationship: 'Phase changes as the scheduled trading workflow advances.',
+  },
+  scheduler: {
+    description: 'Shows whether the process that coordinates scheduled Trader sessions is alive.',
+    relationship: 'Online means the scheduler loop is responding; it does not mean an order is being sent.',
+  },
+  nextSession: {
+    description: 'Next market session currently scheduled for the Trader workflow.',
+    relationship: 'The date is derived by the backend from the market calendar and Trader state.',
+  },
+  traderWinner: {
+    description: 'Protected strategy revision currently assigned to the live Paper Trader.',
+    relationship: 'Research edits do not change this winner until an explicit candidate promotion is completed.',
   },
 }
 
@@ -208,147 +234,154 @@ export function SystemSettingsPage({ onSessionExpired }) {
 
   return (
     <div className="page-stack system-settings-page">
-      <div className="page-heading">
-        <div className="page-title-icon"><SettingsIcon size={22} /></div>
-        <div>
-          <h2>System Settings</h2>
-          <p>Manage runtime controls, research strategies and the protected Trader winner.</p>
-        </div>
-        <span className="settings-revision-badge">Revision {settings?.revision || 1}</span>
-      </div>
-
-      {error ? <div className="global-inline-message error-inline">{error}</div> : null}
-      {notice ? <div className="global-inline-message success-inline">{notice}</div> : null}
-
-      <section className="settings-summary-grid">
-        <SettingsSummary icon={<ActivityIcon size={20} />} label="Training" value={form.enabled ? 'Enabled' : 'Disabled'} tone={form.enabled ? 'positive' : 'negative'} />
-        <SettingsSummary icon={<ClockIcon size={20} />} label="Automatic training" value={form.automatic_training_enabled ? 'Enabled' : 'Disabled'} tone={form.automatic_training_enabled ? 'positive' : 'warning'} />
-        <SettingsSummary icon={<SettingsIcon size={20} />} label="Detected CPU" value={settings?.runtime?.detected_cpu_count || '—'} />
-        <SettingsSummary icon={<ShieldIcon size={20} />} label="Trader mode" value={modeLabel(traderControl?.control_mode)} tone={traderControl?.control_mode === 'active' ? 'positive' : 'warning'} />
-      </section>
-
-      <section className="panel settings-panel">
-        <div className="panel-heading">
-          <div>
-            <span className="panel-kicker">TRAINING</span>
-            <h2>Model execution</h2>
+      <section className="panel settings-workspace-panel">
+        <div className="settings-workspace-header">
+          <div className="settings-workspace-title">
+            <div className="page-title-icon"><SettingsIcon size={22} /></div>
+            <div>
+              <h2>System Settings</h2>
+              <p>Runtime controls, research strategies, Trader operation and audit history in one workspace.</p>
+            </div>
+          </div>
+          <div className="settings-workspace-actions">
+            <span className="settings-revision-badge">Revision {settings?.revision || 1}</span>
+            <button type="button" className="secondary-action settings-refresh-button" onClick={loadData} disabled={loading}>Refresh</button>
           </div>
         </div>
 
-        <form className="settings-form" onSubmit={saveSettings}>
-          <div className="settings-toggle-grid">
-            <ToggleField
-              id="training-enabled"
-              label="Training enabled"
-              hint={PARAMETER_HINTS.trainingEnabled}
-              hintAlign="left"
-              checked={form.enabled}
-              onChange={(checked) => setForm({ ...form, enabled: checked })}
-            />
-            <ToggleField
-              id="automatic-training-enabled"
-              label="Automatic pre-market training"
-              hint={PARAMETER_HINTS.automaticTraining}
-              hintAlign="right"
-              checked={form.automatic_training_enabled}
-              disabled={!form.enabled}
-              onChange={(checked) => setForm({ ...form, automatic_training_enabled: checked })}
-            />
-          </div>
+        {error ? <div className="global-inline-message error-inline settings-workspace-message">{error}</div> : null}
+        {notice ? <div className="global-inline-message success-inline settings-workspace-message">{notice}</div> : null}
 
-          <div className="settings-field-grid single-field-grid">
-            <NumberField id="backtest-timeout-minutes" label="Backtest timeout (minutes)" hint={PARAMETER_HINTS.timeoutMinutes} hintAlign="right" value={form.timeout_minutes} min="5" max="1440" step="5" onChange={(value) => setForm({ ...form, timeout_minutes: value })} />
-          </div>
-
-          <div className="settings-runtime-grid">
-            <div className="settings-runtime-note">
-              <strong>Separated</strong>
-              <span>Strategy parameters are managed in the research workspace below</span>
-            </div>
-            <div className="settings-runtime-note">
-              <strong>Single backtest queue</strong>
-              <span>Clone and edit drafts while a run is active; another run remains locked</span>
-            </div>
-            <div className="settings-runtime-note">
-              <strong>{timeoutHours >= 1 ? `${timeoutHours.toFixed(timeoutHours % 1 ? 1 : 0)} hours` : `${form.timeout_minutes} minutes`}</strong>
-              <span>Current backtest time limit</span>
-            </div>
-          </div>
-
-          <div className="settings-save-row">
-            <div className="settings-reason-field">
-              <FieldLabel label="Change reason" hint={PARAMETER_HINTS.changeReason} hintId="hint-change-reason" align="left" />
-              <input id="settings-change-reason" value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} maxLength={500} required />
-            </div>
-            <button type="submit" className="admin-primary-button" disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button>
-          </div>
-        </form>
-      </section>
-
-      <StrategySettingsPanel
-        onSessionExpired={onSessionExpired}
-        onTraderWinnerChanged={refreshTraderControl}
-      />
-
-      <section className="panel trader-control-panel">
-        <div className="panel-heading">
-          <div>
-            <span className="panel-kicker">TRADER</span>
-            <h2>Trader operation</h2>
-          </div>
-          <span className={`trader-mode-badge mode-${traderControl?.control_mode || 'stopped'}`}>{modeLabel(traderControl?.control_mode)}</span>
+        <div className="settings-workspace-metrics">
+          <SettingsSummary icon={<ActivityIcon size={18} />} label="Training" value={form.enabled ? 'Enabled' : 'Disabled'} tone={form.enabled ? 'positive' : 'negative'} />
+          <SettingsSummary icon={<ClockIcon size={18} />} label="Automatic training" value={form.automatic_training_enabled ? 'Enabled' : 'Disabled'} tone={form.automatic_training_enabled ? 'positive' : 'warning'} />
+          <SettingsSummary icon={<SettingsIcon size={18} />} label="Detected CPU" value={settings?.runtime?.detected_cpu_count || '—'} />
+          <SettingsSummary icon={<ShieldIcon size={18} />} label="Trader mode" value={modeLabel(traderControl?.control_mode)} tone={traderControl?.control_mode === 'active' ? 'positive' : 'warning'} />
         </div>
 
-        <div className="trader-control-grid">
-          <div className="trader-control-status">
-            <div><span>Status</span><strong>{traderControl?.status || 'Unknown'}</strong></div>
-            <div><span>Phase</span><strong>{modeLabel(traderControl?.phase || '—')}</strong></div>
-            <div><span>Scheduler</span><strong>{traderControl?.scheduler_alive ? 'Online' : 'Offline'}</strong></div>
-            <div><span>Next session</span><strong>{traderControl?.next_execution_session || '—'}</strong></div>
-            <div><span>Trader winner</span><strong>{traderControl?.trader_winner?.name || '—'}</strong></div>
+        <section className="settings-workspace-section settings-training-section">
+          <div className="settings-section-heading">
+            <div>
+              <span className="panel-kicker">TRAINING</span>
+              <h2>Model execution</h2>
+            </div>
+            <span className="settings-section-meta">Current limit {timeoutHours >= 1 ? `${timeoutHours.toFixed(timeoutHours % 1 ? 1 : 0)} h` : `${form.timeout_minutes} min`}</span>
           </div>
-          <div className="trader-control-actions">
-            <button type="button" onClick={() => changeTraderMode('active')} disabled={traderBusy || traderControl?.control_mode === 'active'}>Start</button>
-            <button type="button" onClick={() => changeTraderMode('paused')} disabled={traderBusy || traderControl?.control_mode === 'paused'}>Pause</button>
-            <button type="button" onClick={() => changeTraderMode('exit_only')} disabled={traderBusy || traderControl?.control_mode === 'exit_only'}>Exit only</button>
-            <button type="button" className="danger" onClick={() => changeTraderMode('stopped')} disabled={traderBusy || traderControl?.control_mode === 'stopped'}>Stop</button>
-          </div>
-        </div>
 
-        {traderHistory.length ? (
-          <div className="trader-control-history">
-            <span>Recent changes</span>
-            {traderHistory.slice(0, 5).map((item, index) => (
-              <div key={`${item.created_at || 'event'}-${index}`}>
-                <strong>{modeLabel(item.new_mode)}</strong>
-                <small>{dateTime(item.created_at)}</small>
+          <form className="settings-form settings-compact-form" onSubmit={saveSettings}>
+            <div className="settings-control-strip">
+              <ToggleField
+                id="training-enabled"
+                label="Training enabled"
+                hint={PARAMETER_HINTS.trainingEnabled}
+                checked={form.enabled}
+                onChange={(checked) => setForm({ ...form, enabled: checked })}
+              />
+              <ToggleField
+                id="automatic-training-enabled"
+                label="Automatic pre-market training"
+                hint={PARAMETER_HINTS.automaticTraining}
+                hintAlign="right"
+                checked={form.automatic_training_enabled}
+                disabled={!form.enabled}
+                onChange={(checked) => setForm({ ...form, automatic_training_enabled: checked })}
+              />
+              <NumberField
+                id="backtest-timeout-minutes"
+                label="Backtest timeout (minutes)"
+                hint={PARAMETER_HINTS.timeoutMinutes}
+                hintAlign="right"
+                value={form.timeout_minutes}
+                min="5"
+                max="1440"
+                step="5"
+                onChange={(value) => setForm({ ...form, timeout_minutes: value })}
+              />
+            </div>
+
+            <div className="settings-runtime-strip">
+              <div><strong>Separated</strong><span>Strategy parameters stay in the research workspace</span></div>
+              <div><strong>Single backtest queue</strong><span>Draft editing remains available while a run is active</span></div>
+              <div><strong>{timeoutHours >= 1 ? `${timeoutHours.toFixed(timeoutHours % 1 ? 1 : 0)} hours` : `${form.timeout_minutes} minutes`}</strong><span>Maximum duration for one backtest</span></div>
+            </div>
+
+            <div className="settings-save-row settings-compact-save-row">
+              <div className="settings-reason-field">
+                <FieldLabel label="Change reason" hint={PARAMETER_HINTS.changeReason} hintId="hint-change-reason" align="left" />
+                <input id="settings-change-reason" value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} maxLength={500} required />
               </div>
-            ))}
-          </div>
-        ) : null}
-      </section>
+              <button type="submit" className="admin-primary-button" disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button>
+            </div>
+          </form>
+        </section>
 
-      <section className="panel settings-panel">
-        <div className="panel-heading">
-          <div>
-            <span className="panel-kicker">HISTORY</span>
-            <h2>Configuration history</h2>
+        <StrategySettingsPanel
+          embedded
+          onSessionExpired={onSessionExpired}
+          onTraderWinnerChanged={refreshTraderControl}
+        />
+
+        <section className="settings-workspace-section trader-control-panel settings-trader-section">
+          <div className="settings-section-heading">
+            <div>
+              <span className="panel-kicker">TRADER</span>
+              <h2>Trader operation</h2>
+            </div>
+            <span className={`trader-mode-badge mode-${traderControl?.control_mode || 'stopped'}`}>{modeLabel(traderControl?.control_mode)}</span>
           </div>
-        </div>
-        <div className="settings-history-list">
-          {history.length ? history.map((item) => (
-            <article key={`${item.revision}-${item.updated_at}`} className="settings-history-item">
-              <div>
-                <strong>Revision {item.revision}</strong>
-                <span>{historySummary(item)}</span>
-              </div>
-              <div>
-                <strong>{item.reason}</strong>
-                <span>{item.updated_by || 'Administrator'} · {dateTime(item.updated_at)}</span>
-              </div>
-            </article>
-          )) : <div className="settings-empty-history">No settings changes recorded.</div>}
-        </div>
+
+          <div className="trader-control-grid settings-trader-grid">
+            <div className="trader-control-status">
+              <div><FieldLabel label="Status" hint={TRADER_FIELD_HINTS.status} hintId="hint-trader-status" /><strong>{traderControl?.status || 'Unknown'}</strong></div>
+              <div><FieldLabel label="Phase" hint={TRADER_FIELD_HINTS.phase} hintId="hint-trader-phase" /><strong>{modeLabel(traderControl?.phase || '—')}</strong></div>
+              <div><FieldLabel label="Scheduler" hint={TRADER_FIELD_HINTS.scheduler} hintId="hint-trader-scheduler" /><strong>{traderControl?.scheduler_alive ? 'Online' : 'Offline'}</strong></div>
+              <div><FieldLabel label="Next session" hint={TRADER_FIELD_HINTS.nextSession} hintId="hint-trader-next-session" /><strong>{traderControl?.next_execution_session || '—'}</strong></div>
+              <div><FieldLabel label="Trader winner" hint={TRADER_FIELD_HINTS.traderWinner} hintId="hint-trader-winner" align="right" /><strong>{traderControl?.trader_winner?.name || '—'}</strong></div>
+            </div>
+            <div className="trader-control-actions">
+              <button type="button" title="Allow the Trader to execute its normal scheduled Paper workflow." onClick={() => changeTraderMode('active')} disabled={traderBusy || traderControl?.control_mode === 'active'}>Start</button>
+              <button type="button" title="Pause new Trader actions while preserving the current operational state." onClick={() => changeTraderMode('paused')} disabled={traderBusy || traderControl?.control_mode === 'paused'}>Pause</button>
+              <button type="button" title="Allow exits from existing positions but do not open new positions." onClick={() => changeTraderMode('exit_only')} disabled={traderBusy || traderControl?.control_mode === 'exit_only'}>Exit only</button>
+              <button type="button" className="danger" title="Stop Trader operation and cancel a pending non-executing run after confirmation." onClick={() => changeTraderMode('stopped')} disabled={traderBusy || traderControl?.control_mode === 'stopped'}>Stop</button>
+            </div>
+          </div>
+
+          {traderHistory.length ? (
+            <div className="trader-control-history">
+              <span>Recent changes</span>
+              {traderHistory.slice(0, 5).map((item, index) => (
+                <div key={`${item.created_at || 'event'}-${index}`}>
+                  <strong>{modeLabel(item.new_mode)}</strong>
+                  <small>{dateTime(item.created_at)}</small>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </section>
+
+        <section className="settings-workspace-section settings-history-section">
+          <div className="settings-section-heading">
+            <div>
+              <span className="panel-kicker">HISTORY</span>
+              <h2>Configuration history</h2>
+            </div>
+            <span className="settings-section-meta">{history.length} revisions loaded</span>
+          </div>
+          <div className="settings-history-list">
+            {history.length ? history.map((item) => (
+              <article key={`${item.revision}-${item.updated_at}`} className="settings-history-item">
+                <div>
+                  <strong>Revision {item.revision}</strong>
+                  <span>{historySummary(item)}</span>
+                </div>
+                <div>
+                  <strong>{item.reason}</strong>
+                  <span>{item.updated_by || 'Administrator'} · {dateTime(item.updated_at)}</span>
+                </div>
+              </article>
+            )) : <div className="settings-empty-history">No settings changes recorded.</div>}
+          </div>
+        </section>
       </section>
     </div>
   )
@@ -381,21 +414,6 @@ function FieldLabel({ label, hint, hintId, align = 'left' }) {
       <span className="settings-control-label-text">{label}</span>
       {hint ? <ParameterHint id={hintId} title={label} align={align} {...hint} /> : null}
     </div>
-  )
-}
-
-function ParameterHint({ id, title, description, formula, example, align = 'left' }) {
-  return (
-    <span className={`parameter-hint align-${align}`}>
-      <button type="button" className="parameter-hint-trigger" aria-label={`Help for ${title}`} aria-describedby={id}>?</button>
-      <span id={id} role="tooltip" className="parameter-hint-card">
-        <strong>{title}</strong>
-        <span className="parameter-hint-description">{description}</span>
-        <span className="parameter-hint-section-label">Relationship</span>
-        <code>{formula}</code>
-        <span className="parameter-hint-example"><b>Example:</b> {example}</span>
-      </span>
-    </span>
   )
 }
 

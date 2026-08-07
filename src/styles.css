@@ -1026,9 +1026,11 @@ a { color: inherit; }
 .parameter-hint { position: relative; flex: 0 0 auto; display: inline-flex; align-items: center; }
 .parameter-hint-trigger { width: 19px; height: 19px; padding: 0; display: inline-grid; place-items: center; border: 1px solid rgba(91, 140, 255, .42); border-radius: 50%; color: #a9ccff; background: rgba(47, 140, 255, .11); font: 800 .68rem/1 system-ui, sans-serif; cursor: help; transition: border-color .16s ease, background .16s ease, color .16s ease; }
 .parameter-hint-trigger:hover, .parameter-hint-trigger:focus-visible { border-color: rgba(117, 174, 255, .86); color: #e4f0ff; background: rgba(47, 140, 255, .24); outline: 0; box-shadow: 0 0 0 3px rgba(47, 140, 255, .1); }
-.parameter-hint-card { position: absolute; z-index: 80; top: calc(100% + 8px); left: 0; width: min(330px, calc(100vw - 48px)); padding: 12px; display: grid; gap: 8px; border: 1px solid rgba(91, 140, 255, .34); border-radius: 10px; color: #c7d7e9; background: #081a2e; box-shadow: 0 18px 44px rgba(0, 0, 0, .42); opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(-4px); transition: opacity .14s ease, transform .14s ease, visibility .14s ease; white-space: normal; }
-.parameter-hint.align-right .parameter-hint-card { right: 0; left: auto; }
-.parameter-hint:hover .parameter-hint-card, .parameter-hint:focus-within .parameter-hint-card { opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0); }
+.parameter-hint-card { width: min(330px, calc(100vw - 24px)); padding: 12px; display: grid; gap: 8px; border: 1px solid rgba(91, 140, 255, .34); border-radius: 10px; color: #c7d7e9; background: #081a2e; box-shadow: 0 18px 44px rgba(0, 0, 0, .42); white-space: normal; }
+.parameter-hint-card-portal { position: fixed; z-index: 10000; margin: 0; pointer-events: auto; animation: parameter-hint-in .14s ease both; }
+.parameter-hint-card-portal[data-placement="top"] { transform-origin: bottom left; }
+.parameter-hint-card-portal[data-placement="bottom"] { transform-origin: top left; }
+@keyframes parameter-hint-in { from { opacity: 0; transform: translateY(-3px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .parameter-hint-card > strong { color: #eef6ff; font-size: .76rem; }
 .parameter-hint-section-label { color: #7ea9d8; font-size: .57rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
 .parameter-hint-description, .parameter-hint-example { display: block; color: #aebed1; font-size: .67rem; line-height: 1.5; }
@@ -1037,8 +1039,7 @@ a { color: inherit; }
 .settings-toggle.disabled .settings-toggle-switch { cursor: not-allowed; }
 
 @media (max-width: 720px) {
-  .parameter-hint.align-right .parameter-hint-card { right: auto; left: 0; }
-  .parameter-hint-card { width: min(292px, calc(100vw - 64px)); }
+  .parameter-hint-card { width: min(292px, calc(100vw - 24px)); }
 }
 
 /* Strategy research workspace */
@@ -2669,3 +2670,495 @@ a { color: inherit; }
     border-left: 0;
   }
 }
+
+/* v1.12.80 — unified System Settings workspace and descriptive field hints */
+.system-settings-page {
+  gap: 0;
+}
+
+.settings-workspace-panel {
+  min-width: 0;
+  padding: 0;
+  overflow: visible;
+}
+
+.settings-workspace-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(79, 111, 146, .2);
+}
+
+.settings-workspace-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.settings-workspace-title .page-title-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+}
+
+.settings-workspace-title h2 {
+  margin: 0;
+  font-size: 1.08rem;
+}
+
+.settings-workspace-title p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: .7rem;
+}
+
+.settings-workspace-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.settings-refresh-button {
+  min-height: 34px;
+  padding: 0 12px;
+}
+
+.settings-workspace-message {
+  margin: 10px 14px 0;
+}
+
+.settings-workspace-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid rgba(79, 111, 146, .2);
+}
+
+.settings-workspace-metrics .settings-summary-card {
+  min-height: 64px;
+  padding: 9px 13px;
+  border: 0;
+  border-right: 1px solid rgba(79, 111, 146, .18);
+  border-radius: 0;
+  background: transparent;
+}
+
+.settings-workspace-metrics .settings-summary-card:last-child {
+  border-right: 0;
+}
+
+.settings-workspace-metrics .settings-summary-card.positive,
+.settings-workspace-metrics .settings-summary-card.warning,
+.settings-workspace-metrics .settings-summary-card.negative {
+  border-color: rgba(79, 111, 146, .18);
+}
+
+.settings-workspace-metrics .settings-summary-icon {
+  width: 34px;
+  height: 34px;
+  flex-basis: 34px;
+  border-radius: 8px;
+}
+
+.settings-workspace-metrics .settings-summary-card span {
+  font-size: .59rem;
+}
+
+.settings-workspace-metrics .settings-summary-card strong {
+  margin-top: 3px;
+  font-size: .86rem;
+}
+
+.settings-workspace-section {
+  min-width: 0;
+  padding: 13px 14px;
+  border-top: 1px solid rgba(79, 111, 146, .18);
+}
+
+.settings-workspace-metrics + .settings-workspace-section {
+  border-top: 0;
+}
+
+.settings-section-heading {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.settings-section-heading h2 {
+  margin: 2px 0 0;
+  font-size: .94rem;
+}
+
+.settings-section-meta {
+  color: #7f95ad;
+  font-size: .66rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.settings-compact-form {
+  gap: 10px;
+}
+
+.settings-control-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid rgba(79, 111, 146, .2);
+  border-radius: 10px;
+  background: rgba(6, 20, 38, .34);
+}
+
+.settings-control-strip .settings-toggle,
+.settings-control-strip .settings-number-field {
+  min-width: 0;
+  min-height: 54px;
+  margin: 0;
+  padding: 9px 11px;
+  border: 0;
+  border-right: 1px solid rgba(79, 111, 146, .16);
+  border-radius: 0;
+  background: transparent;
+}
+
+.settings-control-strip > :last-child {
+  border-right: 0;
+}
+
+.settings-control-strip .settings-number-field {
+  align-content: center;
+}
+
+.settings-control-strip .settings-number-field input {
+  height: 32px;
+}
+
+.settings-runtime-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid rgba(79, 111, 146, .15);
+  border-radius: 9px;
+  background: rgba(4, 15, 29, .27);
+}
+
+.settings-runtime-strip > div {
+  min-width: 0;
+  padding: 8px 10px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  border-right: 1px solid rgba(79, 111, 146, .14);
+}
+
+.settings-runtime-strip > div:last-child {
+  border-right: 0;
+}
+
+.settings-runtime-strip strong {
+  flex: 0 0 auto;
+  color: #d9e7f5;
+  font-size: .7rem;
+}
+
+.settings-runtime-strip span {
+  min-width: 0;
+  color: var(--muted);
+  font-size: .63rem;
+  line-height: 1.35;
+}
+
+.settings-compact-save-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 0;
+}
+
+.settings-strategy-section.strategy-lab-panel,
+.settings-trader-section.trader-control-panel,
+.settings-history-section {
+  margin: 0;
+}
+
+.settings-strategy-section .panel-heading {
+  margin-bottom: 10px;
+}
+
+.settings-strategy-section .strategy-lab-heading p {
+  margin-top: 3px;
+  font-size: .7rem;
+}
+
+.settings-strategy-section .strategy-boundary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 10px 0;
+  border: 1px solid rgba(126, 158, 197, .16);
+  border-radius: 10px;
+  background: rgba(6, 20, 38, .32);
+}
+
+.settings-strategy-section .strategy-boundary-grid article {
+  min-height: 62px;
+  padding: 9px 10px;
+  border: 0;
+  border-right: 1px solid rgba(126, 158, 197, .14);
+  border-radius: 0;
+  background: transparent;
+}
+
+.settings-strategy-section .strategy-boundary-grid article:last-child {
+  border-right: 0;
+}
+
+.settings-strategy-section .strategy-boundary-grid .candidate-boundary-card,
+.settings-strategy-section .strategy-boundary-grid .winner-boundary-card {
+  background: transparent;
+}
+
+.strategy-boundary-label,
+.strategy-field-label-with-hint {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.strategy-boundary-label .parameter-hint-trigger,
+.strategy-field-label-with-hint .parameter-hint-trigger {
+  width: 17px;
+  height: 17px;
+  font-size: .61rem;
+}
+
+.settings-strategy-section .strategy-workspace {
+  grid-template-columns: minmax(270px, .62fr) minmax(0, 2.38fr);
+  gap: 0;
+  border: 1px solid rgba(126, 158, 197, .17);
+  border-radius: 11px;
+  background: rgba(5, 15, 30, .34);
+  overflow: visible;
+}
+
+.settings-strategy-section .strategy-list-panel,
+.settings-strategy-section .strategy-editor-panel {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.settings-strategy-section .strategy-list-panel {
+  border-right: 1px solid rgba(126, 158, 197, .14);
+  border-radius: 11px 0 0 11px;
+}
+
+.settings-strategy-section .strategy-editor-panel {
+  padding: 12px;
+}
+
+.settings-strategy-section .strategy-editor-header {
+  margin-bottom: 10px;
+}
+
+.settings-strategy-section .strategy-metadata-grid {
+  margin-bottom: 9px;
+}
+
+.settings-strategy-section .strategy-parameter-tools {
+  margin: 0 0 9px;
+  padding: 9px 10px;
+}
+
+.settings-strategy-section .strategy-parameter-groups {
+  gap: 7px;
+}
+
+.settings-strategy-section .strategy-parameter-groups summary {
+  padding: 8px 10px;
+}
+
+.settings-strategy-section .strategy-parameter-grid {
+  padding: 10px;
+  gap: 9px;
+}
+
+.settings-strategy-section .strategy-save-row {
+  margin-top: 10px;
+}
+
+.strategy-field-label-with-hint > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.strategy-field-heading > .strategy-field-label-with-hint {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.strategy-field-heading > code {
+  flex: 0 1 auto;
+}
+
+.settings-trader-section .settings-section-heading,
+.settings-history-section .settings-section-heading {
+  margin-bottom: 9px;
+}
+
+.settings-trader-grid {
+  gap: 10px;
+}
+
+.settings-trader-section .trader-control-status {
+  gap: 0;
+  border: 1px solid rgba(79, 111, 146, .18);
+  border-radius: 9px;
+  background: rgba(6, 20, 38, .3);
+}
+
+.settings-trader-section .trader-control-status > div {
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 0;
+  border-right: 1px solid rgba(79, 111, 146, .14);
+  border-radius: 0;
+  background: transparent;
+}
+
+.settings-trader-section .trader-control-status > div:last-child {
+  border-right: 0;
+}
+
+.settings-trader-section .trader-control-status .settings-control-label-text {
+  color: var(--muted);
+  font-size: .59rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.settings-trader-section .trader-control-status strong {
+  margin-top: 4px;
+}
+
+.settings-history-section .settings-history-list {
+  gap: 0;
+  border: 1px solid rgba(79, 111, 146, .17);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.settings-history-section .settings-history-item {
+  padding: 9px 11px;
+  border: 0;
+  border-bottom: 1px solid rgba(79, 111, 146, .14);
+  border-radius: 0;
+  background: rgba(6, 20, 38, .24);
+}
+
+.settings-history-section .settings-history-item:last-child {
+  border-bottom: 0;
+}
+
+@media (max-width: 1180px) {
+  .settings-workspace-metrics,
+  .settings-strategy-section .strategy-boundary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .settings-workspace-metrics .settings-summary-card:nth-child(2),
+  .settings-strategy-section .strategy-boundary-grid article:nth-child(2) {
+    border-right: 0;
+  }
+
+  .settings-workspace-metrics .settings-summary-card:nth-child(-n+2),
+  .settings-strategy-section .strategy-boundary-grid article:nth-child(-n+2) {
+    border-bottom: 1px solid rgba(79, 111, 146, .14);
+  }
+
+  .settings-control-strip,
+  .settings-runtime-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-control-strip .settings-toggle,
+  .settings-control-strip .settings-number-field,
+  .settings-runtime-strip > div {
+    border-right: 0;
+    border-bottom: 1px solid rgba(79, 111, 146, .14);
+  }
+
+  .settings-control-strip > :last-child,
+  .settings-runtime-strip > div:last-child {
+    border-bottom: 0;
+  }
+
+  .settings-strategy-section .strategy-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-strategy-section .strategy-list-panel {
+    border-right: 0;
+    border-bottom: 1px solid rgba(126, 158, 197, .14);
+    border-radius: 11px 11px 0 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .settings-workspace-header {
+    align-items: flex-start;
+  }
+
+  .settings-workspace-title p {
+    display: none;
+  }
+
+  .settings-workspace-actions {
+    align-items: flex-end;
+    flex-direction: column;
+  }
+
+  .settings-workspace-metrics,
+  .settings-strategy-section .strategy-boundary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-workspace-metrics .settings-summary-card,
+  .settings-strategy-section .strategy-boundary-grid article {
+    border-right: 0;
+    border-bottom: 1px solid rgba(79, 111, 146, .14);
+  }
+
+  .settings-workspace-metrics .settings-summary-card:last-child,
+  .settings-strategy-section .strategy-boundary-grid article:last-child {
+    border-bottom: 0;
+  }
+
+  .settings-compact-save-row,
+  .settings-history-item {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-workspace-section {
+    padding: 11px 10px;
+  }
+
+  .settings-section-heading {
+    align-items: flex-start;
+  }
+
+  .settings-section-meta {
+    white-space: normal;
+    text-align: right;
+  }
+}
+
+
+/* v1.12.81 — portal-based hints avoid clipping inside strategy groups and compact workspaces */
+.parameter-hint-card-portal { max-height: min(72vh, 520px); overflow-y: auto; overscroll-behavior: contain; }
+@media (prefers-reduced-motion: reduce) { .parameter-hint-card-portal { animation: none; } }

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError, apiFetch } from '../api/http'
 import { API } from '../config/env'
 import { ActivityIcon, ShieldIcon, StarIcon, TrophyIcon } from '../shared/components/Icons'
+import { ParameterHint } from '../shared/components/ParameterHint'
 
 const ACTIVE_JOB_STATUSES = new Set(['queued', 'running'])
 
@@ -22,6 +23,61 @@ const STATUS_LABELS = {
   promoted_candidate: 'Promoted candidate',
   winner: 'Winner',
   former_winner: 'Former winner',
+}
+
+
+const STRATEGY_FIELD_HINTS = {
+  name: {
+    description: 'Human-readable name used to identify this research strategy in the catalog and backtest selection.',
+    relationship: 'Renaming a draft does not change the protected Trader winner.',
+  },
+  description: {
+    description: 'Short explanation of the purpose of this research revision so later comparisons remain understandable.',
+    relationship: 'Use it to record the intent of the test, not confidential credentials or runtime secrets.',
+  },
+  search: {
+    description: 'Filters the editable configuration by visible label, technical parameter name, group name or available schema metadata.',
+    relationship: 'Filtering changes only what is visible in this page; it never changes the strategy configuration.',
+  },
+  changeReason: {
+    description: 'Audit note explaining why this strategy revision is being changed.',
+    relationship: 'A valid note is required before saving an editable draft revision.',
+  },
+}
+
+const BOUNDARY_HINTS = {
+  winner: {
+    description: 'Protected strategy snapshot currently used by the Trader.',
+    relationship: 'Research edits remain isolated until an explicitly validated candidate is promoted.',
+  },
+  backtest: {
+    description: 'Strategy revision currently selected as the source for the next backtest.',
+    relationship: 'Selecting a backtest strategy does not change the Trader winner.',
+  },
+  candidate: {
+    description: 'Single validated strategy revision eligible for promotion to Trader winner.',
+    relationship: 'A candidate represents the exact revision that completed its qualifying backtest.',
+  },
+  lifecycle: {
+    description: 'Lifecycle protection keeps only one active candidate and one protected Trader winner at a time.',
+    relationship: 'Older validated or promoted snapshots remain protected for audit and cloning.',
+  },
+}
+
+function parameterRelationship(name, schema, reference) {
+  const details = []
+  const enumValues = Array.isArray(schema?.enum) ? schema.enum : []
+  if (enumValues.length) details.push(`Allowed: ${enumValues.join(', ')}`)
+  if (schema?.minimum !== undefined) details.push(`Minimum: ${schema.minimum}`)
+  if (schema?.exclusiveMinimum !== undefined) details.push(`Greater than: ${schema.exclusiveMinimum}`)
+  if (schema?.maximum !== undefined) details.push(`Maximum: ${schema.maximum}`)
+  if (schema?.exclusiveMaximum !== undefined) details.push(`Less than: ${schema.exclusiveMaximum}`)
+  if (typeof reference === 'boolean') details.push('Type: on/off')
+  else if (Array.isArray(reference)) details.push('Type: JSON array')
+  else if (typeof reference === 'number') details.push(schema?.type === 'integer' ? 'Type: integer' : 'Type: number')
+  else details.push('Type: text')
+  details.push(`Technical name: ${name}`)
+  return details.join(' · ')
 }
 
 function statusLabel(value) {
@@ -93,7 +149,7 @@ function parseEditorValues(values, original) {
   return configuration
 }
 
-export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged }) {
+export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged, embedded = false }) {
   const [catalog, setCatalog] = useState(null)
   const [selected, setSelected] = useState(null)
   const [editorValues, setEditorValues] = useState({})
@@ -455,11 +511,11 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged 
   )
 
   if (loading) {
-    return <section className="panel strategy-lab-panel"><div className="settings-loading"><span className="loading-ring" />Loading strategies…</div></section>
+    return <section className={`${embedded ? 'settings-workspace-section settings-strategy-section' : 'panel'} strategy-lab-panel`}><div className="settings-loading"><span className="loading-ring" />Loading strategies…</div></section>
   }
 
   if (!catalog || !selected) {
-    return <section className="panel strategy-lab-panel"><div className="global-inline-message error-inline">{error || 'Strategy catalog is unavailable.'}</div></section>
+    return <section className={`${embedded ? 'settings-workspace-section settings-strategy-section' : 'panel'} strategy-lab-panel`}><div className="global-inline-message error-inline">{error || 'Strategy catalog is unavailable.'}</div></section>
   }
 
   const researchId = catalog.control?.research_strategy_id
@@ -482,7 +538,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged 
   })
 
   return (
-    <section className="panel strategy-lab-panel">
+    <section className={`${embedded ? 'settings-workspace-section settings-strategy-section' : 'panel'} strategy-lab-panel`}>
       <div className="panel-heading strategy-lab-heading">
         <div>
           <span className="panel-kicker">STRATEGIES</span>
@@ -506,19 +562,31 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged 
       <div className="strategy-boundary-grid">
         <article className="winner-boundary-card">
           <TrophyIcon size={20} />
-          <div><span>Trader winner</span><strong>{catalog.control.trader_winner?.name}</strong></div>
+          <div>
+            <span className="strategy-boundary-label">Trader winner <ParameterHint id="hint-boundary-winner" title="Trader winner" {...BOUNDARY_HINTS.winner} /></span>
+            <strong>{catalog.control.trader_winner?.name}</strong>
+          </div>
         </article>
         <article>
           <ActivityIcon size={20} />
-          <div><span>Backtest strategy</span><strong>{catalog.control.research_strategy?.name}</strong></div>
+          <div>
+            <span className="strategy-boundary-label">Backtest strategy <ParameterHint id="hint-boundary-backtest" title="Backtest strategy" {...BOUNDARY_HINTS.backtest} /></span>
+            <strong>{catalog.control.research_strategy?.name}</strong>
+          </div>
         </article>
         <article className="candidate-boundary-card">
           <StarIcon size={20} />
-          <div><span>Current candidate</span><strong>{catalog.control.candidate_strategy?.name || 'No active candidate'}</strong></div>
+          <div>
+            <span className="strategy-boundary-label">Current candidate <ParameterHint id="hint-boundary-candidate" title="Current candidate" {...BOUNDARY_HINTS.candidate} /></span>
+            <strong>{catalog.control.candidate_strategy?.name || 'No active candidate'}</strong>
+          </div>
         </article>
         <article>
           <ShieldIcon size={20} />
-          <div><span>Lifecycle rule</span><strong>One Candidate · one Winner</strong></div>
+          <div>
+            <span className="strategy-boundary-label">Lifecycle rule <ParameterHint id="hint-boundary-lifecycle" title="Lifecycle rule" align="right" {...BOUNDARY_HINTS.lifecycle} /></span>
+            <strong>One Candidate · one Winner</strong>
+          </div>
         </article>
       </div>
 
@@ -607,13 +675,19 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged 
 
           <form className="strategy-parameter-form" onSubmit={saveStrategy}>
             <div className="strategy-metadata-grid">
-              <label><span>Strategy name</span><input value={name} onChange={(event) => setName(event.target.value)} disabled={selected.locked} required /></label>
-              <label><span>Description</span><input value={description} onChange={(event) => setDescription(event.target.value)} disabled={selected.locked} /></label>
+              <label>
+                <StrategyFieldLabel id="hint-strategy-name" label="Strategy name" hint={STRATEGY_FIELD_HINTS.name} />
+                <input value={name} onChange={(event) => setName(event.target.value)} disabled={selected.locked} required />
+              </label>
+              <label>
+                <StrategyFieldLabel id="hint-strategy-description" label="Description" hint={STRATEGY_FIELD_HINTS.description} align="right" />
+                <input value={description} onChange={(event) => setDescription(event.target.value)} disabled={selected.locked} />
+              </label>
             </div>
 
             <div className="strategy-parameter-tools">
               <label className="strategy-parameter-search">
-                <span>Find a parameter</span>
+                <StrategyFieldLabel id="hint-parameter-search" label="Find a parameter" hint={STRATEGY_FIELD_HINTS.search} />
                 <div className="strategy-parameter-search-control">
                   <input
                     type="search"
@@ -633,13 +707,14 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged 
                 <details key={`${group.id}:${parameterSearch ? 'filtered' : 'all'}`} open={parameterSearch ? true : index === 0 || group.id === 'model'}>
                   <summary>{group.label}<span>{group.fields.length} parameters</span></summary>
                   <div className="strategy-parameter-grid">
-                    {group.fields.map((field) => (
+                    {group.fields.map((field, fieldIndex) => (
                       <ParameterField
                         key={field}
                         name={field}
                         value={editorValues[field]}
                         reference={selected.configuration[field]}
                         schema={resolveFieldSchema(catalog.parameter_schema, field)}
+                        hintAlign={fieldIndex % 2 === 1 ? 'right' : 'left'}
                         disabled={selected.locked}
                         onChange={(value) => setEditorValues((current) => ({ ...current, [field]: value }))}
                       />
@@ -654,7 +729,10 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged 
 
             {!selected.locked ? (
               <div className="strategy-save-row">
-                <label><span>Change reason</span><input value={changeNote} onChange={(event) => setChangeNote(event.target.value)} maxLength={500} required /></label>
+                <label>
+                  <StrategyFieldLabel id="hint-strategy-change-reason" label="Change reason" hint={STRATEGY_FIELD_HINTS.changeReason} />
+                  <input value={changeNote} onChange={(event) => setChangeNote(event.target.value)} maxLength={500} required />
+                </label>
                 <div className="strategy-save-actions">
                   <small>{hasUnsavedChanges ? selected.status === 'candidate' ? 'Unsaved edits are local. Saving them will create a new draft revision.' : 'Local draft preserved until you save or leave this strategy.' : 'No unsaved changes.'}</small>
                   <button type="submit" className="admin-primary-button" disabled={Boolean(busy) || !hasUnsavedChanges}>{busy === 'save' ? 'Saving…' : 'Save test strategy'}</button>
@@ -674,9 +752,30 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged 
   )
 }
 
-function ParameterField({ name, value, reference, schema, disabled, onChange }) {
+function StrategyFieldLabel({ id, label, hint, align = 'left' }) {
+  return (
+    <span className="strategy-field-label-with-hint">
+      <span>{label}</span>
+      <ParameterHint id={id} title={label} align={align} {...hint} />
+    </span>
+  )
+}
+
+function ParameterField({ name, value, reference, schema, hintAlign = 'left', disabled, onChange }) {
   const label = schema?.title || titleFromName(name)
-  const fieldHeading = <span className="strategy-field-heading"><span>{label}</span><code>{name}</code></span>
+  const hint = {
+    description: schema?.description || `Controls the ${label.toLocaleLowerCase()} value used by this protected research configuration.`,
+    relationship: parameterRelationship(name, schema, reference),
+  }
+  const fieldHeading = (
+    <span className="strategy-field-heading">
+      <span className="strategy-field-label-with-hint">
+        <span>{label}</span>
+        <ParameterHint id={`hint-strategy-parameter-${name}`} title={label} align={hintAlign} {...hint} />
+      </span>
+      <code>{name}</code>
+    </span>
+  )
   const enumValues = Array.isArray(schema?.enum) ? schema.enum : []
   if (enumValues.length) {
     return (
