@@ -38,6 +38,14 @@ function lifecycleSummary(item, isWinner, isCandidate) {
   return 'Backtest required'
 }
 
+
+function strategyCatalogRank(item, winnerId, researchId, candidateId) {
+  if (item.id === winnerId) return 0
+  if (item.id === researchId) return 1
+  if (item.id === candidateId) return 2
+  return 3
+}
+
 function resolveFieldSchema(schema, name) {
   const property = schema?.properties?.[name] || {}
   const resolve = (value) => {
@@ -97,6 +105,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged 
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [activeJob, setActiveJob] = useState(null)
+  const [parameterSearch, setParameterSearch] = useState('')
   const initialLoadStartedRef = useRef(false)
   const catalogLoadedRef = useRef(false)
 
@@ -420,8 +429,30 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged 
     }).filter((group) => group.fields.length)
     const other = order.filter((field) => !used.has(field) && selected.configuration[field] !== undefined)
     if (other.length) groups.push({ id: 'other', label: 'Other parameters', fields: other })
-    return groups
-  }, [catalog?.parameter_groups, catalog?.parameter_order, selected])
+
+    const query = parameterSearch.trim().toLocaleLowerCase()
+    if (!query) return groups
+
+    return groups.map((group) => ({
+      ...group,
+      fields: group.fields.filter((field) => {
+        const schema = resolveFieldSchema(catalog?.parameter_schema, field)
+        const searchableText = [
+          field,
+          titleFromName(field),
+          group.label,
+          schema?.title,
+          schema?.description,
+        ].filter(Boolean).join(' ').toLocaleLowerCase()
+        return searchableText.includes(query)
+      }),
+    })).filter((group) => group.fields.length)
+  }, [catalog?.parameter_groups, catalog?.parameter_order, catalog?.parameter_schema, parameterSearch, selected])
+
+  const visibleParameterCount = useMemo(
+    () => groupedParameters.reduce((total, group) => total + group.fields.length, 0),
+    [groupedParameters],
+  )
 
   if (loading) {
     return <section className="panel strategy-lab-panel"><div className="settings-loading"><span className="loading-ring" />Loading strategies…</div></section>
@@ -443,6 +474,12 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged 
     && Boolean(selected.candidate_backtest_id)
     && selected.id !== winnerId
     && !hasActiveBacktest
+  const orderedStrategies = [...catalog.items].sort((left, right) => {
+    const rankDifference = strategyCatalogRank(left, winnerId, researchId, candidateId)
+      - strategyCatalogRank(right, winnerId, researchId, candidateId)
+    if (rankDifference !== 0) return rankDifference
+    return String(left.name || '').localeCompare(String(right.name || ''), undefined, { sensitivity: 'base' })
+  })
 
   return (
     <section className="panel strategy-lab-panel">
@@ -467,6 +504,10 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged 
       ) : null}
 
       <div className="strategy-boundary-grid">
+        <article className="winner-boundary-card">
+          <TrophyIcon size={20} />
+          <div><span>Trader winner</span><strong>{catalog.control.trader_winner?.name}</strong></div>
+        </article>
         <article>
           <ActivityIcon size={20} />
           <div><span>Backtest strategy</span><strong>{catalog.control.research_strategy?.name}</strong></div>
@@ -474,10 +515,6 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged 
         <article className="candidate-boundary-card">
           <StarIcon size={20} />
           <div><span>Current candidate</span><strong>{catalog.control.candidate_strategy?.name || 'No active candidate'}</strong></div>
-        </article>
-        <article className="winner-boundary-card">
-          <TrophyIcon size={20} />
-          <div><span>Trader winner</span><strong>{catalog.control.trader_winner?.name}</strong></div>
         </article>
         <article>
           <ShieldIcon size={20} />
@@ -496,7 +533,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged 
             <button type="button" onClick={() => cloneStrategy(catalog.control.trader_winner)} disabled={Boolean(busy)}>Clone winner</button>
           </div>
           <div className="strategy-list">
-            {catalog.items.map((item) => {
+            {orderedStrategies.map((item) => {
               const isResearch = item.id === researchId
               const isWinner = item.id === winnerId
               const isCandidate = item.id === candidateId
@@ -574,9 +611,26 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged 
               <label><span>Description</span><input value={description} onChange={(event) => setDescription(event.target.value)} disabled={selected.locked} /></label>
             </div>
 
+            <div className="strategy-parameter-tools">
+              <label className="strategy-parameter-search">
+                <span>Find a parameter</span>
+                <div className="strategy-parameter-search-control">
+                  <input
+                    type="search"
+                    value={parameterSearch}
+                    placeholder="Search by label or technical name, for example rotation_cash_threshold"
+                    onChange={(event) => setParameterSearch(event.target.value)}
+                    autoComplete="off"
+                  />
+                  {parameterSearch ? <button type="button" onClick={() => setParameterSearch('')}>Clear</button> : null}
+                </div>
+              </label>
+              <small>{parameterSearch ? `${visibleParameterCount} matching parameter${visibleParameterCount === 1 ? '' : 's'}` : `${visibleParameterCount} parameters available`}</small>
+            </div>
+
             <div className="strategy-parameter-groups">
               {groupedParameters.map((group, index) => (
-                <details key={group.id} open={index === 0 || group.id === 'model'}>
+                <details key={`${group.id}:${parameterSearch ? 'filtered' : 'all'}`} open={parameterSearch ? true : index === 0 || group.id === 'model'}>
                   <summary>{group.label}<span>{group.fields.length} parameters</span></summary>
                   <div className="strategy-parameter-grid">
                     {group.fields.map((field) => (
@@ -593,6 +647,9 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged 
                   </div>
                 </details>
               ))}
+              {visibleParameterCount === 0 ? (
+                <div className="strategy-parameter-empty">No parameter matches “{parameterSearch}”. Search by part of the visible label or technical name.</div>
+              ) : null}
             </div>
 
             {!selected.locked ? (
@@ -618,12 +675,13 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged 
 }
 
 function ParameterField({ name, value, reference, schema, disabled, onChange }) {
-  const label = titleFromName(name)
+  const label = schema?.title || titleFromName(name)
+  const fieldHeading = <span className="strategy-field-heading"><span>{label}</span><code>{name}</code></span>
   const enumValues = Array.isArray(schema?.enum) ? schema.enum : []
   if (enumValues.length) {
     return (
       <label>
-        <span>{label}</span>
+        {fieldHeading}
         <select value={value ?? ''} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
           {enumValues.map((option) => <option key={String(option)} value={option}>{String(option)}</option>)}
         </select>
@@ -633,7 +691,7 @@ function ParameterField({ name, value, reference, schema, disabled, onChange }) 
   if (typeof reference === 'boolean') {
     return (
       <label className="strategy-boolean-field">
-        <span>{label}</span>
+        {fieldHeading}
         <input type="checkbox" checked={Boolean(value)} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />
       </label>
     )
@@ -641,7 +699,7 @@ function ParameterField({ name, value, reference, schema, disabled, onChange }) 
   if (Array.isArray(reference)) {
     return (
       <label className="strategy-array-field">
-        <span>{label}</span>
+        {fieldHeading}
         <textarea value={value ?? ''} disabled={disabled} rows="2" spellCheck="false" onChange={(event) => onChange(event.target.value)} />
       </label>
     )
@@ -649,7 +707,7 @@ function ParameterField({ name, value, reference, schema, disabled, onChange }) 
   if (typeof reference === 'number') {
     return (
       <label>
-        <span>{label}</span>
+        {fieldHeading}
         <input
           type="number"
           value={value ?? ''}
@@ -665,7 +723,7 @@ function ParameterField({ name, value, reference, schema, disabled, onChange }) 
   }
   return (
     <label>
-      <span>{label}</span>
+      {fieldHeading}
       <input value={value ?? ''} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
     </label>
   )

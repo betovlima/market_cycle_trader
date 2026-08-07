@@ -1,4 +1,4 @@
-# Market Cycle Trader Frontend v1.12.71
+# Market Cycle Trader Frontend v1.12.72
 
 React + Vite frontend for protected historical simulations and Paper portfolio monitoring.
 
@@ -314,3 +314,12 @@ The frontend refreshes the authenticated session periodically, handles expiratio
 - Removes the obsolete instruction to pause, liquidate or reinitialize Paper state.
 - After success, confirms that no broker interaction occurred and that the next scheduled pre-market evaluation will load the full promoted Winner asset universe.
 - Keeps component-scoped refresh behavior; the complete Settings page is not reloaded.
+
+
+## v1.12.72 — Strategy priority ordering
+
+- Orders the strategy boundary summary as Trader Winner, Backtest strategy, Current Candidate and lifecycle rule.
+- Orders the Strategy catalog with the active Winner first, the selected Backtest strategy second and the active Candidate third.
+- Keeps all remaining historical and draft strategies alphabetically ordered after the three operational priorities.
+- Does not reload the page or change any strategy, lifecycle pointer, API contract, Paper state or Trader behavior.
+- Requires Market Cycle Trader API v1.13.23; the API is unchanged in this release.

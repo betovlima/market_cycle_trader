@@ -14,6 +14,17 @@ export function ExecutionStatus({ workspace }) {
 
   const progress = Math.max(0, Math.min(100, Number(job.progress ?? 0)))
   const progressLabel = progress.toFixed(progress % 1 ? 1 : 0)
+  const detail = job.progress_detail && typeof job.progress_detail === 'object'
+    ? job.progress_detail
+    : {}
+  const runIndex = Number(detail.run_index || 0)
+  const runCount = Number(detail.run_count || job.total_runs || 0)
+  const foldIndex = Number(detail.fold_index || 0)
+  const foldCount = Number(detail.fold_count || 0)
+  const trainedModels = Number(detail.trained_models || 0)
+  const totalModels = Number(detail.total_models || 0)
+  const phase = String(detail.phase || '').trim()
+  const device = String(detail.device || '').trim()
 
   return (
     <section className="execution-panel" aria-live="polite">
@@ -25,6 +36,15 @@ export function ExecutionStatus({ workspace }) {
         </div>
         <span>{progressLabel}%</span>
       </div>
+      {(runCount > 0 || foldCount > 0 || phase) ? (
+        <div className="execution-detail-grid" aria-label="Detailed training progress">
+          {runCount > 0 ? <span><small>Run</small><strong>{Math.max(0, runIndex)}/{runCount}</strong></span> : null}
+          {foldCount > 0 ? <span><small>Fold</small><strong>{Math.max(0, foldIndex)}/{foldCount}</strong></span> : null}
+          {phase ? <span className="phase"><small>Phase</small><strong>{phase}</strong></span> : null}
+          {totalModels > 0 ? <span><small>Models</small><strong>{trainedModels}/{totalModels}</strong></span> : null}
+          {device ? <span><small>Device</small><strong>{device}</strong></span> : null}
+        </div>
+      ) : null}
       <div
         className="progress-track"
         role="progressbar"
