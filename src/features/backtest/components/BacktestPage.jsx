@@ -1,3 +1,4 @@
+import { getIntlLocale, tr } from '../../../i18n/runtime'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
@@ -51,12 +52,12 @@ function backtestAxisLabel(value, visibleSpan) {
   const date = new Date(Number(value))
   if (Number.isNaN(date.getTime())) return ''
   if (visibleSpan <= DAY_MS * 2) {
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    return date.toLocaleTimeString(getIntlLocale(), { hour: '2-digit', minute: '2-digit', hour12: false })
   }
   if (visibleSpan <= DAY_MS * 45) {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    return date.toLocaleDateString(getIntlLocale(), { month: 'short', day: 'numeric' })
   }
-  return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+  return date.toLocaleDateString(getIntlLocale(), { month: 'short', year: '2-digit' })
 }
 
 function nearestChartIndex(points, targetTimestamp) {
@@ -92,7 +93,7 @@ function BacktestTradeEventDot({ cx, cy, payload }) {
               r="13"
               className="backtest-trade-marker-hit"
               onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
-              aria-label={`${event.tradeSide} ${event.asset || ''}`}
+              aria-label={`${tr(event.tradeSide === 'buy' ? 'Buy' : event.tradeSide === 'sell' ? 'Sell' : event.tradeSide)} ${event.asset || ''}`}
             />
             <circle r="5.5" className="backtest-trade-marker-dot" />
           </g>
@@ -111,7 +112,7 @@ function BacktestChartTooltip({ active, payload }) {
   return (
     <div className={`backtest-chart-tooltip ${tradeEvents.length ? 'trade' : ''}`}>
       <div className="backtest-chart-tooltip-title">
-        <strong>{tradeEvents.length ? `${tradeEvents.length} EXECUTION${tradeEvents.length === 1 ? '' : 'S'}` : 'EQUITY'}</strong>
+        <strong>{tradeEvents.length ? tr(tradeEvents.length === 1 ? '{count} EXECUTION' : '{count} EXECUTIONS', { count: tradeEvents.length }) : tr('EQUITY')}</strong>
         <span>{shortDateTime(point.timestamp)}</span>
       </div>
       {tradeEvents.length ? (
@@ -119,22 +120,22 @@ function BacktestChartTooltip({ active, payload }) {
           {tradeEvents.map((trade) => (
             <div key={trade.markerKey} className={`backtest-chart-tooltip-event ${trade.tradeSide}`}>
               <div className="backtest-chart-tooltip-event-title">
-                <strong>{trade.tradeSide.toUpperCase()} · {trade.asset || 'CASH'}</strong>
+                <strong>{tr(trade.tradeSide === 'buy' ? 'BUY' : trade.tradeSide === 'sell' ? 'SELL' : trade.tradeSide.toUpperCase())} · {trade.asset || 'CASH'}</strong>
                 <span>{trade.fromAsset || 'CASH'} → {trade.toAsset || 'CASH'}</span>
               </div>
               <div className="backtest-chart-tooltip-grid">
-                <span>Executed</span><strong>{shortDateTime(trade.executedAt)}</strong>
-                {trade.tradeSide === 'sell' ? <><span>Position return</span><strong>{percent(trade.positionReturn)}</strong></> : null}
-                {trade.tradeSide === 'sell' ? <><span>Realized P/L</span><strong>{money(trade.realizedPnl)}</strong></> : null}
-                <span>Fees</span><strong>{money(trade.transactionFees)}</strong>
+                <span>{tr("Executed")}</span><strong>{shortDateTime(trade.executedAt)}</strong>
+                {trade.tradeSide === 'sell' ? <><span>{tr("Position return")}</span><strong>{percent(trade.positionReturn)}</strong></> : null}
+                {trade.tradeSide === 'sell' ? <><span>{tr("Realized P/L")}</span><strong>{money(trade.realizedPnl)}</strong></> : null}
+                <span>{tr("Fees")}</span><strong>{money(trade.transactionFees)}</strong>
               </div>
             </div>
           ))}
         </div>
       ) : null}
       <div className="backtest-chart-tooltip-equity">
-        <span>Simulation</span><strong>{money(point.simulation_equity)}</strong>
-        <span>Reference</span><strong>{money(point.reference_equity)}</strong>
+        <span>{tr("Simulation")}</span><strong>{money(point.simulation_equity)}</strong>
+        <span>{tr("Reference")}</span><strong>{money(point.reference_equity)}</strong>
       </div>
     </div>
   )
@@ -177,8 +178,8 @@ const ROTATION_HINTS = {
 function MetricLabel({ id, label, hint }) {
   return (
     <span className="backtest-field-label">
-      <span>{label}</span>
-      {hint ? <ParameterHint id={id} title={label} description={hint} /> : null}
+      <span>{tr(label)}</span>
+      {hint ? <ParameterHint id={id} title={tr(label)} description={hint} /> : null}
     </span>
   )
 }
@@ -188,13 +189,13 @@ function Metric({ id, label, value, note, tone = '', hint = '' }) {
     <article className={`result-metric ${tone}`}>
       <MetricLabel id={id} label={label} hint={hint} />
       <strong>{value}</strong>
-      <small>{note}</small>
+      <small>{typeof note === 'string' ? tr(note) : note}</small>
     </article>
   )
 }
 
 function StatusBadge({ status }) {
-  return <span className={`table-status ${status || 'unknown'}`}>{String(status || 'unknown').replace('_', ' ')}</span>
+  return <span className={`table-status ${status || 'unknown'}`}>{tr(String(status || 'unknown').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()))}</span>
 }
 
 function compareValues(left, right) {
@@ -222,11 +223,11 @@ function SortableHeader({ label, field, sort, onSort, hint = '' }) {
   return (
     <th aria-sort={active ? (sort.direction === 'desc' ? 'descending' : 'ascending') : 'none'}>
       <div className="backtest-sort-header">
-        <button type="button" onClick={() => onSort(field)} title={`${description} ${label}`}>
-          <span>{label}</span>
+        <button type="button" onClick={() => onSort(field)} title={`${tr(description)} ${tr(label)}`}>
+          <span>{tr(label)}</span>
           <SortIcon size={14} descending={!active || sort.direction === 'desc'} />
         </button>
-        {hint ? <ParameterHint id={`hint-${field}`} title={label} description={hint} align="right" /> : null}
+        {hint ? <ParameterHint id={`hint-${field}`} title={tr(label)} description={hint} align="right" /> : null}
       </div>
     </th>
   )
@@ -239,10 +240,10 @@ function FilterButton({ active, label, onClick, tone = '', children = null }) {
       className={`backtest-filter-button ${tone} ${active ? 'active' : ''}`}
       onClick={onClick}
       aria-pressed={active}
-      title={label}
+      title={tr(label)}
     >
       {children}
-      <span>{label}</span>
+      <span>{tr(label)}</span>
     </button>
   )
 }
@@ -263,12 +264,12 @@ function ListToolbar({
           type="search"
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
-          placeholder={placeholder}
-          aria-label={placeholder}
+          placeholder={tr(placeholder)}
+          aria-label={tr(placeholder)}
         />
       </label>
       <div className="backtest-list-filters">{children}</div>
-      <span className="backtest-list-count">{resultCount} {resultLabel}</span>
+      <span className="backtest-list-count">{resultCount} {tr(resultLabel)}</span>
     </div>
   )
 }
@@ -280,11 +281,11 @@ function Pagination({ page, pages, total, pageSize, onPageChange }) {
   const to = Math.min(safePage * pageSize, total)
   return (
     <div className="backtest-pagination">
-      <span>{total ? `${from}–${to} of ${total}` : '0 results'}</span>
+      <span>{total ? tr("{from}–{to} of {total}", { from, to, total }) : tr("0 results")}</span>
       <div>
-        <button type="button" onClick={() => onPageChange(safePage - 1)} disabled={safePage <= 1} aria-label="Previous page" title="Previous page"><ChevronLeftIcon size={16} /></button>
-        <strong>Page {safePage} of {safePages}</strong>
-        <button type="button" onClick={() => onPageChange(safePage + 1)} disabled={safePage >= safePages} aria-label="Next page" title="Next page"><ChevronRightIcon size={16} /></button>
+        <button type="button" onClick={() => onPageChange(safePage - 1)} disabled={safePage <= 1} aria-label={tr("Previous page")} title={tr("Previous page")}><ChevronLeftIcon size={16} /></button>
+        <strong>{tr("Page")}{' '}{safePage} {tr("of")}{' '}{safePages}</strong>
+        <button type="button" onClick={() => onPageChange(safePage + 1)} disabled={safePage >= safePages} aria-label={tr("Next page")} title={tr("Next page")}><ChevronRightIcon size={16} /></button>
       </div>
     </div>
   )
@@ -330,51 +331,51 @@ function RotationPanel({ jobId, payload, loading, error }) {
   useEffect(() => { setPage(1) }, [jobId, outcome, query, sort])
 
   if (loading) {
-    return <section className="backtest-workspace-section backtest-loading-row">Loading capital rotations…</section>
+    return <section className="backtest-workspace-section backtest-loading-row">{tr("Loading capital rotations…")}</section>
   }
 
   if (error) {
-    return <section className="backtest-workspace-section rotation-error"><strong>Unable to load capital rotations</strong><span>{error}</span></section>
+    return <section className="backtest-workspace-section rotation-error"><strong>{tr("Unable to load capital rotations")}</strong><span>{tr(error)}</span></section>
   }
 
   return (
     <section className="backtest-workspace-section rotation-workspace-section">
       <div className="backtest-section-heading">
-        <div><span className="panel-kicker">Backtest analytics</span><h2>Capital Rotations</h2></div>
-        <span className="backtest-section-meta">Executed switches only · strategy-neutral</span>
+        <div><span className="panel-kicker">{tr("Backtest analytics")}</span><h2>{tr("Capital Rotations")}</h2></div>
+        <span className="backtest-section-meta">{tr("Executed switches only · strategy-neutral")}</span>
       </div>
 
       <div className="backtest-rotation-summary">
-        <Metric id="hint-rotation-count" label="Capital Rotations" value={String(summary.total_rotations ?? 0)} note="Completed asset switches" tone="blue" hint={METRIC_HINTS.total_rotations} />
-        <Metric id="hint-profitable-rotations" label="Profitable Exits" value={String(summary.profitable_rotations ?? 0)} note={`${summary.losing_rotations ?? 0} losing · ${summary.flat_rotations ?? 0} flat`} tone="green" hint={METRIC_HINTS.profitable_rotations} />
-        <Metric id="hint-realized-pnl" label="Realized P/L" value={money(summary.total_realized_pnl)} note={`Fees ${money(summary.total_transaction_fees)}`} tone={Number(summary.total_realized_pnl || 0) >= 0 ? 'green' : 'red'} hint={METRIC_HINTS.total_realized_pnl} />
-        <Metric id="hint-average-holding" label="Average Holding" value={summary.average_holding_days == null ? '—' : `${Number(summary.average_holding_days).toFixed(1)} days`} note={summary.last_rotation_at ? `Last ${shortDateTime(summary.last_rotation_at)}` : 'No rotation recorded'} tone="purple" hint={METRIC_HINTS.average_holding_days} />
+        <Metric id="hint-rotation-count" label={tr("Capital Rotations")} value={String(summary.total_rotations ?? 0)} note={tr("Completed asset switches")} tone="blue" hint={METRIC_HINTS.total_rotations} />
+        <Metric id="hint-profitable-rotations" label={tr("Profitable Exits")} value={String(summary.profitable_rotations ?? 0)} note={tr('{losing} losing · {flat} flat', { losing: summary.losing_rotations ?? 0, flat: summary.flat_rotations ?? 0 })} tone="green" hint={METRIC_HINTS.profitable_rotations} />
+        <Metric id="hint-realized-pnl" label={tr("Realized P/L")} value={money(summary.total_realized_pnl)} note={tr('Fees {value}', { value: money(summary.total_transaction_fees) })} tone={Number(summary.total_realized_pnl || 0) >= 0 ? 'green' : 'red'} hint={METRIC_HINTS.total_realized_pnl} />
+        <Metric id="hint-average-holding" label={tr("Average Holding")} value={summary.average_holding_days == null ? '—' : tr('{count} days', { count: Number(summary.average_holding_days).toFixed(1) })} note={summary.last_rotation_at ? tr('Last {value}', { value: shortDateTime(summary.last_rotation_at) }) : tr('No rotation recorded')} tone="purple" hint={METRIC_HINTS.average_holding_days} />
       </div>
 
       <ListToolbar
         query={query}
         onQueryChange={setQuery}
-        placeholder="Filter by sold or bought asset"
+        placeholder={tr("Filter by sold or bought asset")}
         resultCount={filteredRows.length}
         resultLabel={filteredRows.length === 1 ? 'rotation' : 'rotations'}
       >
-        <FilterButton active={outcome === 'all'} label="All" onClick={() => setOutcome('all')}><ListFilterIcon size={14} /></FilterButton>
-        <FilterButton active={outcome === 'profit'} label="Profit" tone="positive" onClick={() => setOutcome('profit')}><TrendUpIcon size={14} /></FilterButton>
-        <FilterButton active={outcome === 'loss'} label="Loss" tone="negative" onClick={() => setOutcome('loss')}><TrendDownIcon size={14} /></FilterButton>
-        <FilterButton active={outcome === 'flat'} label="Flat" onClick={() => setOutcome('flat')} />
+        <FilterButton active={outcome === 'all'} label={tr("All")} onClick={() => setOutcome('all')}><ListFilterIcon size={14} /></FilterButton>
+        <FilterButton active={outcome === 'profit'} label={tr("Profit")} tone="positive" onClick={() => setOutcome('profit')}><TrendUpIcon size={14} /></FilterButton>
+        <FilterButton active={outcome === 'loss'} label={tr("Loss")} tone="negative" onClick={() => setOutcome('loss')}><TrendDownIcon size={14} /></FilterButton>
+        <FilterButton active={outcome === 'flat'} label={tr("Flat")} onClick={() => setOutcome('flat')} />
       </ListToolbar>
 
       <div className="table-wrap backtest-table-wrap">
         <table className="dashboard-table rotation-table backtest-sortable-table">
           <thead>
             <tr>
-              <SortableHeader label="Executed" field="executed_at" sort={sort} onSort={(key) => setSort((current) => toggleSort(current, key))} hint={ROTATION_HINTS.executed_at} />
-              <SortableHeader label="Sold" field="from_asset" sort={sort} onSort={(key) => setSort((current) => toggleSort(current, key))} hint={ROTATION_HINTS.from_asset} />
-              <SortableHeader label="Bought" field="to_asset" sort={sort} onSort={(key) => setSort((current) => toggleSort(current, key))} hint={ROTATION_HINTS.to_asset} />
-              <SortableHeader label="Holding" field="holding_days" sort={sort} onSort={(key) => setSort((current) => toggleSort(current, key))} hint={ROTATION_HINTS.holding_days} />
-              <SortableHeader label="Position Return" field="position_return" sort={sort} onSort={(key) => setSort((current) => toggleSort(current, key))} hint={ROTATION_HINTS.position_return} />
-              <SortableHeader label="Realized P/L" field="realized_pnl" sort={sort} onSort={(key) => setSort((current) => toggleSort(current, key))} hint={ROTATION_HINTS.realized_pnl} />
-              <SortableHeader label="Fees" field="transaction_fees" sort={sort} onSort={(key) => setSort((current) => toggleSort(current, key))} hint={ROTATION_HINTS.transaction_fees} />
+              <SortableHeader label={tr("Executed")} field="executed_at" sort={sort} onSort={(key) => setSort((current) => toggleSort(current, key))} hint={ROTATION_HINTS.executed_at} />
+              <SortableHeader label={tr("Sold")} field="from_asset" sort={sort} onSort={(key) => setSort((current) => toggleSort(current, key))} hint={ROTATION_HINTS.from_asset} />
+              <SortableHeader label={tr("Bought")} field="to_asset" sort={sort} onSort={(key) => setSort((current) => toggleSort(current, key))} hint={ROTATION_HINTS.to_asset} />
+              <SortableHeader label={tr("Holding")} field="holding_days" sort={sort} onSort={(key) => setSort((current) => toggleSort(current, key))} hint={ROTATION_HINTS.holding_days} />
+              <SortableHeader label={tr("Position Return")} field="position_return" sort={sort} onSort={(key) => setSort((current) => toggleSort(current, key))} hint={ROTATION_HINTS.position_return} />
+              <SortableHeader label={tr("Realized P/L")} field="realized_pnl" sort={sort} onSort={(key) => setSort((current) => toggleSort(current, key))} hint={ROTATION_HINTS.realized_pnl} />
+              <SortableHeader label={tr("Fees")} field="transaction_fees" sort={sort} onSort={(key) => setSort((current) => toggleSort(current, key))} hint={ROTATION_HINTS.transaction_fees} />
             </tr>
           </thead>
           <tbody>
@@ -383,12 +384,12 @@ function RotationPanel({ jobId, payload, loading, error }) {
                 <td>{shortDateTime(item.executed_at)}</td>
                 <td><span className="rotation-asset from">{item.from_asset || 'CASH'}</span></td>
                 <td><span className="rotation-asset to">{item.to_asset || 'CASH'}</span></td>
-                <td>{item.holding_days == null ? '—' : `${Number(item.holding_days).toFixed(0)} days`}</td>
+                <td>{item.holding_days == null ? '—' : tr('{count} days', { count: Number(item.holding_days).toFixed(0) })}</td>
                 <td className={item.position_return == null ? '' : Number(item.position_return) >= 0 ? 'positive' : 'negative'}>{percent(item.position_return)}</td>
                 <td className={item.realized_pnl == null ? '' : Number(item.realized_pnl) >= 0 ? 'positive' : 'negative'}>{money(item.realized_pnl)}</td>
                 <td>{money(item.transaction_fees)}</td>
               </tr>
-            )) : <tr><td colSpan="7" className="empty-cell">No capital rotations match the selected filters.</td></tr>}
+            )) : <tr><td colSpan="7" className="empty-cell">{tr("No capital rotations match the selected filters.")}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -424,7 +425,7 @@ export function BacktestPage({ workspace, canExportResults = false }) {
   const [historyStatus, setHistoryStatus] = useState('all')
   const [historySort, setHistorySort] = useState({ key: 'created_at', direction: 'desc' })
   const [historyPage, setHistoryPage] = useState(1)
-  const selectedStrategyName = dashboard?.selected_backtest_strategy_name || 'Not selected'
+  const selectedStrategyName = dashboard?.selected_backtest_strategy_name || tr('Not selected')
   const activeStrategyName = (running ? job?.strategy_profile_name : null) || selectedStrategyName
 
   useEffect(() => {
@@ -447,7 +448,7 @@ export function BacktestPage({ workspace, canExportResults = false }) {
       .catch((requestError) => {
         if (active) {
           setRotationPayload(null)
-          setRotationError(requestError.message || 'Unable to load capital rotations.')
+          setRotationError(tr(requestError.message || 'Unable to load capital rotations.'))
         }
       })
       .finally(() => {
@@ -705,61 +706,61 @@ export function BacktestPage({ workspace, canExportResults = false }) {
           <div className="backtest-workspace-title">
             <div className="page-title-icon"><BacktestIcon size={20} /></div>
             <div>
-              <h2>Backtest</h2>
-              <p>Execute and analyze protected historical simulations.</p>
+              <h2>{tr("Backtest")}</h2>
+              <p>{tr("Execute and analyze protected historical simulations.")}</p>
               <div className="backtest-context-line" aria-live="polite">
-                <span>{running ? 'Evaluating' : 'Selected test'}:</span>
+                <span>{tr(running ? 'Evaluating' : 'Selected test')}:</span>
                 <strong title={activeStrategyName}>{activeStrategyName}</strong>
-                {!running && detail?.strategy_profile_name ? <><i>·</i><span>Displayed:</span><strong title={detail.strategy_profile_name}>{detail.strategy_profile_name}</strong></> : null}
+                {!running && detail?.strategy_profile_name ? <><i>·</i><span>{tr("Displayed:")}</span><strong title={detail.strategy_profile_name}>{detail.strategy_profile_name}</strong></> : null}
               </div>
             </div>
           </div>
           <div className="backtest-workspace-actions">
             {canExportResults && detail?.metrics ? (
               <button type="button" className="secondary-action compact" onClick={exportResults} disabled={exporting}>
-                {exporting ? 'Exporting…' : 'Export Results'}
+                {tr(exporting ? 'Exporting…' : 'Export Results')}
               </button>
             ) : null}
             <button type="button" className="primary-action compact" onClick={runBacktest} disabled={startDisabled}>
-              <PlayIcon /> {restoringExecution ? 'Checking Execution' : startingBacktest ? 'Starting…' : running ? 'Simulation Running' : 'Start New Backtest'}
+              <PlayIcon /> {tr(restoringExecution ? 'Checking Execution' : startingBacktest ? 'Starting…' : running ? 'Simulation Running' : 'Start New Backtest')}
             </button>
           </div>
         </header>
 
         <ExecutionStatus workspace={workspace} />
-        {exportError ? <div className="global-inline-message error-inline backtest-workspace-message">{exportError}</div> : null}
-        {loadingDetail ? <div className="backtest-loading-row">Loading simulation result…</div> : null}
+        {exportError ? <div className="global-inline-message error-inline backtest-workspace-message">{tr(exportError)}</div> : null}
+        {loadingDetail ? <div className="backtest-loading-row">{tr("Loading simulation result…")}</div> : null}
 
         {detail?.metrics ? (
           <>
             <section className="backtest-workspace-metrics">
-              <Metric id="hint-final-capital" label="Final Capital" value={money(metrics.ending_capital)} note={`Initial ${money(metrics.starting_capital)}`} tone="green" hint={METRIC_HINTS.ending_capital} />
-              <Metric id="hint-reference-capital" label="Reference Capital" value={money(metrics.reference_ending_capital)} note={`${percent(metrics.reference_return)} total return`} tone="blue" hint={METRIC_HINTS.reference_ending_capital} />
-              <Metric id="hint-cagr" label="CAGR" value={percent(metrics.cagr)} note={`Reference ${percent(metrics.reference_cagr)}`} tone="purple" hint={METRIC_HINTS.cagr} />
-              <Metric id="hint-sharpe" label="Sharpe Ratio" value={metrics.sharpe == null ? '—' : Number(metrics.sharpe).toFixed(3)} note={`Reference ${metrics.reference_sharpe == null ? '—' : Number(metrics.reference_sharpe).toFixed(3)}`} tone="green" hint={METRIC_HINTS.sharpe} />
-              <Metric id="hint-max-drawdown" label="Max Drawdown" value={percent(metrics.maximum_drawdown)} note={`Reference ${percent(metrics.reference_maximum_drawdown)}`} tone="red" hint={METRIC_HINTS.maximum_drawdown} />
-              <Metric id="hint-session-win-rate" label="Session Win Rate" value={percent(metrics.session_win_rate)} note={`${percent(metrics.market_exposure)} market exposure`} tone="blue" hint={METRIC_HINTS.session_win_rate} />
+              <Metric id="hint-final-capital" label={tr("Final Capital")} value={money(metrics.ending_capital)} note={tr('Initial {value}', { value: money(metrics.starting_capital) })} tone="green" hint={METRIC_HINTS.ending_capital} />
+              <Metric id="hint-reference-capital" label={tr("Reference Capital")} value={money(metrics.reference_ending_capital)} note={tr('{value} total return', { value: percent(metrics.reference_return) })} tone="blue" hint={METRIC_HINTS.reference_ending_capital} />
+              <Metric id="hint-cagr" label={tr("CAGR")} value={percent(metrics.cagr)} note={tr('Reference {value}', { value: percent(metrics.reference_cagr) })} tone="purple" hint={METRIC_HINTS.cagr} />
+              <Metric id="hint-sharpe" label={tr("Sharpe Ratio")} value={metrics.sharpe == null ? '—' : Number(metrics.sharpe).toFixed(3)} note={tr('Reference {value}', { value: metrics.reference_sharpe == null ? '—' : Number(metrics.reference_sharpe).toFixed(3) })} tone="green" hint={METRIC_HINTS.sharpe} />
+              <Metric id="hint-max-drawdown" label={tr("Max Drawdown")} value={percent(metrics.maximum_drawdown)} note={tr('Reference {value}', { value: percent(metrics.reference_maximum_drawdown) })} tone="red" hint={METRIC_HINTS.maximum_drawdown} />
+              <Metric id="hint-session-win-rate" label={tr("Session Win Rate")} value={percent(metrics.session_win_rate)} note={tr('{value} market exposure', { value: percent(metrics.market_exposure) })} tone="blue" hint={METRIC_HINTS.session_win_rate} />
             </section>
 
             <section className="backtest-workspace-main">
               <article className="backtest-performance-section">
                 <div className="backtest-section-heading backtest-chart-heading">
-                  <div><span className="panel-kicker">Performance</span><h2>Simulation Comparison</h2></div>
+                  <div><span className="panel-kicker">{tr("Performance")}</span><h2>{tr("Simulation Comparison")}</h2></div>
                   <div className="backtest-chart-heading-right">
-                    <div className="trade-event-legend" aria-label="Backtest trade event legend">
-                      <span><i className="buy" />Buy</span>
-                      <span><i className="sell" />Sell</span>
+                    <div className="trade-event-legend" aria-label={tr("Backtest trade event legend")}>
+                      <span><i className="buy" />{tr("Buy")}</span>
+                      <span><i className="sell" />{tr("Sell")}</span>
                     </div>
                     <div className="backtest-chart-controls" aria-live="polite">
-                      <span>{zoomActive ? `Zoom ${zoomLevel >= 10 ? zoomLevel.toFixed(0) : zoomLevel.toFixed(1)}× · Drag to pan` : 'Wheel to zoom · Drag to pan'}</span>
-                      {zoomActive ? <button type="button" onClick={() => setZoomDomain(null)}>Reset zoom</button> : null}
+                      <span>{zoomActive ? tr('Zoom {level}× · Drag to pan', { level: zoomLevel >= 10 ? zoomLevel.toFixed(0) : zoomLevel.toFixed(1) }) : tr('Wheel to zoom · Drag to pan')}</span>
+                      {zoomActive ? <button type="button" onClick={() => setZoomDomain(null)}>{tr("Reset zoom")}</button> : null}
                     </div>
                   </div>
                 </div>
                 <div
                   ref={chartInteractionRef}
                   className={`performance-chart backtest-performance-chart backtest-interactive-chart ${zoomActive ? 'is-zoomed' : ''} ${isPanning ? 'is-panning' : ''}`}
-                  aria-label="Simulation comparison chart. Use the mouse wheel to zoom. When zoomed, hold the left mouse button and drag to pan through time. Buy and sell markers use a pointer cursor."
+                  aria-label={tr("Simulation comparison chart. Use the mouse wheel to zoom. When zoomed, hold the left mouse button and drag to pan through time. Buy and sell markers use a pointer cursor.")}
                   onPointerDown={beginChartPan}
                   onPointerMove={moveChartPan}
                   onPointerUp={endChartPan}
@@ -777,11 +778,11 @@ export function BacktestPage({ workspace, canExportResults = false }) {
                         minTickGap={38}
                         tickFormatter={(value) => backtestAxisLabel(value, visibleTimeSpan)}
                       />
-                      <YAxis domain={yDomain} tickFormatter={(value) => `$${Number(value).toLocaleString('en-US', { maximumFractionDigits: 0 })}`} />
+                      <YAxis domain={yDomain} tickFormatter={(value) => `$${Number(value).toLocaleString(getIntlLocale(), { maximumFractionDigits: 0 })}`} />
                       <Tooltip content={<BacktestChartTooltip />} cursor={{ stroke: 'rgba(157, 175, 195, .42)', strokeWidth: 1 }} />
                       <Legend />
-                      <Line type="monotone" dataKey="simulation_equity" name="Simulation" dot={<BacktestTradeEventDot />} activeDot={false} strokeWidth={2.4} stroke="var(--positive)" isAnimationActive={false} />
-                      <Line type="monotone" dataKey="reference_equity" name="Reference" dot={false} activeDot={false} strokeWidth={2.2} stroke="var(--accent)" isAnimationActive={false} />
+                      <Line type="monotone" dataKey="simulation_equity" name={tr("Simulation")} dot={<BacktestTradeEventDot />} activeDot={false} strokeWidth={2.4} stroke="var(--positive)" isAnimationActive={false} />
+                      <Line type="monotone" dataKey="reference_equity" name={tr("Reference")} dot={false} activeDot={false} strokeWidth={2.2} stroke="var(--accent)" isAnimationActive={false} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
@@ -789,16 +790,16 @@ export function BacktestPage({ workspace, canExportResults = false }) {
 
               <article className="backtest-results-section">
                 <div className="backtest-section-heading compact">
-                  <div><span className="panel-kicker">Summary</span><h2>Backtest Results</h2></div>
+                  <div><span className="panel-kicker">{tr("Summary")}</span><h2>{tr("Backtest Results")}</h2></div>
                 </div>
-                <div className="backtest-result-columns"><span>Metric</span><span>Simulation</span><span>Reference</span></div>
+                <div className="backtest-result-columns"><span>{tr("Metric")}</span><span>{tr("Simulation")}</span><span>{tr("Reference")}</span></div>
                 <dl className="result-comparison-list backtest-result-list">
-                  <div><dt><MetricLabel id="hint-total-return" label="Total return" hint="Total percentage change over the complete test period." /></dt><dd>{percent(metrics.simulation_return)}</dd><dd>{percent(metrics.reference_return)}</dd></div>
-                  <div><dt><MetricLabel id="hint-result-cagr" label="CAGR" hint={METRIC_HINTS.cagr} /></dt><dd>{percent(metrics.cagr)}</dd><dd>{percent(metrics.reference_cagr)}</dd></div>
-                  <div><dt><MetricLabel id="hint-result-sharpe" label="Sharpe ratio" hint={METRIC_HINTS.sharpe} /></dt><dd>{metrics.sharpe == null ? '—' : Number(metrics.sharpe).toFixed(3)}</dd><dd>{metrics.reference_sharpe == null ? '—' : Number(metrics.reference_sharpe).toFixed(3)}</dd></div>
-                  <div><dt><MetricLabel id="hint-result-drawdown" label="Max drawdown" hint={METRIC_HINTS.maximum_drawdown} /></dt><dd>{percent(metrics.maximum_drawdown)}</dd><dd>{percent(metrics.reference_maximum_drawdown)}</dd></div>
-                  <div><dt><MetricLabel id="hint-result-rotations" label="Capital rotations" hint={METRIC_HINTS.total_rotations} /></dt><dd>{metrics.position_changes == null ? '—' : Math.round(metrics.position_changes)}</dd><dd>—</dd></div>
-                  <div><dt><MetricLabel id="hint-result-holding" label="Avg. holding" hint={METRIC_HINTS.average_holding_days} /></dt><dd>{metrics.average_holding_days == null ? '—' : `${Number(metrics.average_holding_days).toFixed(1)} days`}</dd><dd>—</dd></div>
+                  <div><dt><MetricLabel id="hint-total-return" label={tr("Total return")} hint="Total percentage change over the complete test period." /></dt><dd>{percent(metrics.simulation_return)}</dd><dd>{percent(metrics.reference_return)}</dd></div>
+                  <div><dt><MetricLabel id="hint-result-cagr" label={tr("CAGR")} hint={METRIC_HINTS.cagr} /></dt><dd>{percent(metrics.cagr)}</dd><dd>{percent(metrics.reference_cagr)}</dd></div>
+                  <div><dt><MetricLabel id="hint-result-sharpe" label={tr("Sharpe ratio")} hint={METRIC_HINTS.sharpe} /></dt><dd>{metrics.sharpe == null ? '—' : Number(metrics.sharpe).toFixed(3)}</dd><dd>{metrics.reference_sharpe == null ? '—' : Number(metrics.reference_sharpe).toFixed(3)}</dd></div>
+                  <div><dt><MetricLabel id="hint-result-drawdown" label={tr("Max drawdown")} hint={METRIC_HINTS.maximum_drawdown} /></dt><dd>{percent(metrics.maximum_drawdown)}</dd><dd>{percent(metrics.reference_maximum_drawdown)}</dd></div>
+                  <div><dt><MetricLabel id="hint-result-rotations" label={tr("Capital rotations")} hint={METRIC_HINTS.total_rotations} /></dt><dd>{metrics.position_changes == null ? '—' : Math.round(metrics.position_changes)}</dd><dd>—</dd></div>
+                  <div><dt><MetricLabel id="hint-result-holding" label={tr("Avg. holding")} hint={METRIC_HINTS.average_holding_days} /></dt><dd>{metrics.average_holding_days == null ? '—' : tr('{count} days', { count: Number(metrics.average_holding_days).toFixed(1) })}</dd><dd>—</dd></div>
                 </dl>
               </article>
             </section>
@@ -808,49 +809,49 @@ export function BacktestPage({ workspace, canExportResults = false }) {
         ) : (
           <section className="backtest-workspace-section empty-result backtest-empty-result">
             <BacktestIcon size={32} />
-            <h2>No completed result selected</h2>
-            <p>Start a new backtest or review the available execution history below.</p>
+            <h2>{tr("No completed result selected")}</h2>
+            <p>{tr("Start a new backtest or review the available execution history below.")}</p>
           </section>
         )}
 
         <section className="backtest-workspace-section backtest-history-section">
           <div className="backtest-section-heading">
-            <div><span className="panel-kicker">History</span><h2>Backtest History</h2></div>
-            <span className="backtest-section-meta">Latest {dashboard?.recent_backtests?.length || 0} executions</span>
+            <div><span className="panel-kicker">{tr("History")}</span><h2>{tr("Backtest History")}</h2></div>
+            <span className="backtest-section-meta">{tr("Latest")}{' '}{dashboard?.recent_backtests?.length || 0} {tr("executions")}</span>
           </div>
 
           <ListToolbar
             query={historyQuery}
             onQueryChange={setHistoryQuery}
-            placeholder="Filter by test name"
+            placeholder={tr("Filter by test name")}
             resultCount={historyRows.length}
             resultLabel={historyRows.length === 1 ? 'execution' : 'executions'}
           >
-            <FilterButton active={historyStatus === 'all'} label="All" onClick={() => setHistoryStatus('all')}><ListFilterIcon size={14} /></FilterButton>
-            <FilterButton active={historyStatus === 'completed'} label="Completed" tone="positive" onClick={() => setHistoryStatus('completed')} />
-            <FilterButton active={historyStatus === 'failed'} label="Failed" tone="negative" onClick={() => setHistoryStatus('failed')} />
-            <FilterButton active={historyStatus === 'interrupted'} label="Interrupted" onClick={() => setHistoryStatus('interrupted')} />
+            <FilterButton active={historyStatus === 'all'} label={tr("All")} onClick={() => setHistoryStatus('all')}><ListFilterIcon size={14} /></FilterButton>
+            <FilterButton active={historyStatus === 'completed'} label={tr("Completed")} tone="positive" onClick={() => setHistoryStatus('completed')} />
+            <FilterButton active={historyStatus === 'failed'} label={tr("Failed")} tone="negative" onClick={() => setHistoryStatus('failed')} />
+            <FilterButton active={historyStatus === 'interrupted'} label={tr("Interrupted")} onClick={() => setHistoryStatus('interrupted')} />
           </ListToolbar>
 
           <div className="table-wrap backtest-table-wrap">
             <table className="dashboard-table backtest-sortable-table">
               <thead>
                 <tr>
-                  <SortableHeader label="Date" field="created_at" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.created_at} />
-                  <SortableHeader label="Test" field="strategy_profile_name" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.strategy_profile_name} />
-                  <SortableHeader label="Status" field="status" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.status} />
-                  <SortableHeader label="Total Return" field="simulation_return" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.simulation_return} />
-                  <SortableHeader label="Sharpe Ratio" field="sharpe" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.sharpe} />
-                  <SortableHeader label="Max Drawdown" field="maximum_drawdown" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.maximum_drawdown} />
-                  <SortableHeader label="Rotations" field="position_changes" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.position_changes} />
-                  <SortableHeader label="Duration" field="duration_seconds" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.duration_seconds} />
+                  <SortableHeader label={tr("Date")} field="created_at" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.created_at} />
+                  <SortableHeader label={tr("Test")} field="strategy_profile_name" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.strategy_profile_name} />
+                  <SortableHeader label={tr("Status")} field="status" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.status} />
+                  <SortableHeader label={tr("Total Return")} field="simulation_return" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.simulation_return} />
+                  <SortableHeader label={tr("Sharpe Ratio")} field="sharpe" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.sharpe} />
+                  <SortableHeader label={tr("Max Drawdown")} field="maximum_drawdown" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.maximum_drawdown} />
+                  <SortableHeader label={tr("Rotations")} field="position_changes" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.position_changes} />
+                  <SortableHeader label={tr("Duration")} field="duration_seconds" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.duration_seconds} />
                 </tr>
               </thead>
               <tbody>
                 {paginatedHistoryRows.length ? paginatedHistoryRows.map((item) => (
                   <tr key={item.id} className={detail?.id === item.id ? 'selected-row' : ''}>
                     <td>{shortDateTime(item.created_at)}</td>
-                    <td className="backtest-name-cell" title={item.strategy_profile_name || 'Unknown test'}>{item.strategy_profile_name || 'Unknown test'}</td>
+                    <td className="backtest-name-cell" title={item.strategy_profile_name || tr('Unknown test')}>{item.strategy_profile_name || tr('Unknown test')}</td>
                     <td><StatusBadge status={item.status} /></td>
                     <td className={item.metrics?.simulation_return == null ? '' : Number(item.metrics.simulation_return) >= 0 ? 'positive' : 'negative'}>{percent(item.metrics?.simulation_return)}</td>
                     <td>{item.metrics?.sharpe == null ? '—' : Number(item.metrics.sharpe).toFixed(3)}</td>
@@ -858,7 +859,7 @@ export function BacktestPage({ workspace, canExportResults = false }) {
                     <td>{item.metrics?.position_changes == null ? '—' : Math.round(item.metrics.position_changes)}</td>
                     <td>{durationLabel(item.duration_seconds)}</td>
                   </tr>
-                )) : <tr><td colSpan="8" className="empty-cell">No backtest history matches the selected filters.</td></tr>}
+                )) : <tr><td colSpan="8" className="empty-cell">{tr("No backtest history matches the selected filters.")}</td></tr>}
               </tbody>
             </table>
           </div>

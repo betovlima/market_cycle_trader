@@ -1,3 +1,4 @@
+import { tr } from '../../i18n/runtime'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -119,15 +120,15 @@ export function ParameterHint({
       onMouseEnter={cancelClose}
       onMouseLeave={scheduleClose}
     >
-      <strong>{title}</strong>
-      {description ? <span className="parameter-hint-description">{description}</span> : null}
+      <strong>{tr(title)}</strong>
+      {description ? <span className="parameter-hint-description">{tr(description)}</span> : null}
       {relationship ? (
         <>
-          <span className="parameter-hint-section-label">Details</span>
-          <code>{relationship}</code>
+          <span className="parameter-hint-section-label">{tr("Details")}</span>
+          <code>{tr(relationship)}</code>
         </>
       ) : null}
-      {example ? <span className="parameter-hint-example"><b>Example:</b> {example}</span> : null}
+      {example ? <span className="parameter-hint-example"><b>{tr("Example:")}</b> {tr(example)}</span> : null}
     </span>,
     document.body,
   ) : null
@@ -138,7 +139,7 @@ export function ParameterHint({
         ref={triggerRef}
         type="button"
         className="parameter-hint-trigger"
-        aria-label={`Help for ${title}`}
+        aria-label={tr("Help for {title}", { title: tr(title) })}
         aria-describedby={open ? id : undefined}
         aria-expanded={open}
         onMouseEnter={showHint}

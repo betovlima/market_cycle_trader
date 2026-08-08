@@ -1,4 +1,5 @@
-import { FRONT_VERSION } from '../../../config/env'
+import { tr } from '../../../i18n/runtime'
+import { LanguageSelector } from '../../../i18n/LanguageSelector'
 import { AnalyticsIcon, BacktestIcon, DashboardIcon, PortfolioIcon, SettingsIcon } from '../../../shared/components/Icons'
 import appLogoUrl from '../../../assets/market-cycle-trader-logo.png'
 
@@ -19,7 +20,7 @@ const ADMIN_NAV_ITEMS = [
   { id: 'system-settings', label: 'Settings', Icon: SettingsIcon },
 ]
 
-export function AppHeader({ workspace, activeTab, onTabChange, session, onLogout }) {
+export function AppHeader({ activeTab, onTabChange, session, onLogout }) {
   const navItems = session?.role === 'admin' ? ADMIN_NAV_ITEMS : session?.role === 'trader' ? TRADER_NAV_ITEMS : VIEWER_NAV_ITEMS
   return (
     <header className="app-header">
@@ -29,27 +30,25 @@ export function AppHeader({ workspace, activeTab, onTabChange, session, onLogout
         </div>
         <div className="brand-divider" />
         <div className="brand-copy">
-          <h1>Market Cycle Trader</h1>
-          <div className="brand-subtitle">Historical Market Simulation</div>
-          <p>Run protected simulations and review authorized performance results.</p>
+          <h1>{tr("Market Cycle Trader")}</h1>
+          <div className="brand-subtitle">{tr("Historical Market Simulation")}</div>
+          <p>{tr("Run protected simulations and review authorized performance results.")}</p>
         </div>
       </div>
 
       <div className="header-right">
-        <div className="environment-badges" aria-label="Application status">
-          <span>API v{workspace.apiVersion}</span>
-          <span>Front v{FRONT_VERSION}</span>
-          <span>Simulation only</span>
+        <div className="header-language-primary">
+          <LanguageSelector compact />
         </div>
-        <nav className="main-nav" aria-label="Main navigation">
+        <nav className="main-nav" aria-label={tr("Main navigation")}>
           {navItems.map(({ id, label, Icon }) => (
             <button key={id} type="button" className={activeTab === id ? 'active' : ''} onClick={() => onTabChange(id)}>
               <Icon size={16} />
-              <span>{label}</span>
+              <span>{tr(label)}</span>
             </button>
           ))}
         </nav>
-        <div className="session-controls"><span>{session?.display_name || session?.role}</span><button type="button" onClick={onLogout}>Sign out</button></div>
+        <div className="session-controls"><span>{session?.display_name || session?.role}</span><button type="button" onClick={onLogout}>{tr("Sign out")}</button></div>
       </div>
     </header>
   )

@@ -1,11 +1,17 @@
+import { getIntlLocale, tr } from '../i18n/runtime'
+
 export function percent(value, digits = 2) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return '—'
-  return `${(Number(value) * 100).toFixed(digits)}%`
+  return new Intl.NumberFormat(getIntlLocale(), {
+    style: 'percent',
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(Number(value))
 }
 
 export function money(value) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return '—'
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat(getIntlLocale(), {
     style: 'currency',
     currency: 'USD',
     maximumFractionDigits: 2,
@@ -14,7 +20,10 @@ export function money(value) {
 
 export function number(value, digits = 2) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return '—'
-  return Number(value).toFixed(digits)
+  return new Intl.NumberFormat(getIntlLocale(), {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(Number(value))
 }
 
 function parseDate(value) {
@@ -30,7 +39,7 @@ function parseDate(value) {
 export function compactDate(value) {
   const date = parseDate(value)
   if (!date) return ''
-  return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit', timeZone: 'UTC' })
+  return date.toLocaleDateString(getIntlLocale(), { month: 'short', year: '2-digit', timeZone: 'UTC' })
 }
 
 export function tradeDate(value) {
@@ -41,11 +50,10 @@ export function tradeDate(value) {
   return date ? date.toISOString().slice(0, 10) : '—'
 }
 
-
 export function shortDateTime(value) {
   const date = parseDate(value)
   if (!date) return '—'
-  return date.toLocaleString('en-US', {
+  return date.toLocaleString(getIntlLocale(), {
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', hour12: false,
   })
@@ -54,27 +62,31 @@ export function shortDateTime(value) {
 export function shortDate(value) {
   const date = parseDate(value)
   if (!date) return '—'
-  return date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', timeZone: 'UTC' })
+  return date.toLocaleDateString(getIntlLocale(), { month: 'short', day: '2-digit', timeZone: 'UTC' })
 }
 
 export function durationLabel(seconds) {
   const value = Number(seconds)
   if (!Number.isFinite(value) || value < 0) return '—'
-  if (value < 60) return `${Math.round(value)} sec`
-  if (value < 3600) return `${Math.floor(value / 60)}m ${Math.round(value % 60)}s`
-  const hours = Math.floor(value / 3600)
-  const minutes = Math.round((value % 3600) / 60)
-  return `${hours}h ${minutes}m`
+  if (value < 60) return tr('{count} sec', { count: Math.round(value) })
+  if (value < 3600) return tr('{minutes}m {seconds}s', {
+    minutes: Math.floor(value / 60),
+    seconds: Math.round(value % 60),
+  })
+  return tr('{hours}h {minutes}m', {
+    hours: Math.floor(value / 3600),
+    minutes: Math.round((value % 3600) / 60),
+  })
 }
 
 export function relativeTime(value) {
   const date = parseDate(value)
   if (!date) return '—'
-  const seconds = Math.round((Date.now() - date.getTime()) / 1000)
+  const seconds = Math.round((date.getTime() - Date.now()) / 1000)
   const absolute = Math.abs(seconds)
-  if (absolute < 60) return 'just now'
-  if (absolute < 3600) return `${Math.round(absolute / 60)} minutes ago`
-  if (absolute < 86400) return `${Math.round(absolute / 3600)} hours ago`
-  const days = Math.round(absolute / 86400)
-  return `${days} day${days === 1 ? '' : 's'} ago`
+  const formatter = new Intl.RelativeTimeFormat(getIntlLocale(), { numeric: 'auto' })
+  if (absolute < 60) return formatter.format(seconds, 'second')
+  if (absolute < 3600) return formatter.format(Math.round(seconds / 60), 'minute')
+  if (absolute < 86400) return formatter.format(Math.round(seconds / 3600), 'hour')
+  return formatter.format(Math.round(seconds / 86400), 'day')
 }

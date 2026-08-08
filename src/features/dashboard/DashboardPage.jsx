@@ -1,3 +1,4 @@
+import { getIntlLocale, tr } from '../../i18n/runtime'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   CartesianGrid,
@@ -108,9 +109,9 @@ function minimumZoomSpan(points) {
 function dashboardAxisLabel(value, visibleSpan) {
   const date = new Date(Number(value))
   if (Number.isNaN(date.getTime())) return ''
-  if (visibleSpan <= DAY_MS * 2) return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-  if (visibleSpan <= DAY_MS * 60) return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+  if (visibleSpan <= DAY_MS * 2) return date.toLocaleTimeString(getIntlLocale(), { hour: '2-digit', minute: '2-digit', hour12: false })
+  if (visibleSpan <= DAY_MS * 60) return date.toLocaleDateString(getIntlLocale(), { month: 'short', day: 'numeric' })
+  return date.toLocaleDateString(getIntlLocale(), { month: 'short', year: '2-digit' })
 }
 
 function nearestChartIndex(points, targetTimestamp) {
@@ -150,11 +151,11 @@ function DashboardMetric({ id, label, value, note, tone = '', hint }) {
   return (
     <div className={`dashboard-workspace-metric ${tone}`}>
       <div className="dashboard-metric-label">
-        <span>{label}</span>
+        <span>{tr(label)}</span>
         <ParameterHint id={id} title={label} description={hint?.description || ''} relationship={hint?.relationship || ''} />
       </div>
       <strong>{value}</strong>
-      <small>{note}</small>
+      <small>{typeof note === 'string' ? tr(note) : note}</small>
     </div>
   )
 }
@@ -184,18 +185,18 @@ function MarketUpdateMetric() {
       <div className="dashboard-market-dial" style={{ '--clock-progress': `${progress * 360}deg` }} aria-hidden="true"><span>{countdownLabel(remaining)}</span></div>
       <div className="dashboard-market-copy">
         <div className="dashboard-metric-label">
-          <span>Next Market Update</span>
-          <ParameterHint id="dashboard-hint-market-update" title="Next Market Update" description={DASHBOARD_HINTS.nextMarketUpdate.description} relationship={DASHBOARD_HINTS.nextMarketUpdate.relationship} />
+          <span>{tr("Next Market Update")}</span>
+          <ParameterHint id="dashboard-hint-market-update" title={tr("Next Market Update")} description={DASHBOARD_HINTS.nextMarketUpdate.description} relationship={DASHBOARD_HINTS.nextMarketUpdate.relationship} />
         </div>
         <strong>{countdownLabel(remaining)}</strong>
-        <small>Scheduled for {nextUpdateLabel(nextUpdateAt)}</small>
+        <small>{tr("Scheduled for")}{' '}{nextUpdateLabel(nextUpdateAt)}</small>
       </div>
     </div>
   )
 }
 
 function StatusBadge({ status }) {
-  return <span className={`table-status ${status || 'unknown'}`}>{String(status || 'unknown').replace('_', ' ')}</span>
+  return <span className={`table-status ${status || 'unknown'}`}>{tr(String(status || 'unknown').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()))}</span>
 }
 
 function DashboardSortHeader({ label, sortKey, sort, onSort, hint }) {
@@ -203,8 +204,8 @@ function DashboardSortHeader({ label, sortKey, sort, onSort, hint }) {
   return (
     <th>
       <div className="dashboard-sort-header">
-        <button type="button" className={active ? 'active' : ''} onClick={() => onSort(sortKey)} title={`Sort by ${label}`}>
-          <span>{label}</span><SortIcon size={14} descending={active ? sort.direction === 'desc' : true} />
+        <button type="button" className={active ? 'active' : ''} onClick={() => onSort(sortKey)} title={tr("Sort by {label}", { label: tr(label) })}>
+          <span>{tr(label)}</span><SortIcon size={14} descending={active ? sort.direction === 'desc' : true} />
         </button>
         <ParameterHint id={`dashboard-column-${sortKey}`} title={label} description={hint} />
       </div>
@@ -217,11 +218,11 @@ function DashboardPagination({ page, pages, total, onPageChange }) {
   const to = Math.min(page * DASHBOARD_PAGE_SIZE, total)
   return (
     <div className="dashboard-pagination">
-      <span>{total ? `${from}–${to} of ${total}` : '0 results'}</span>
+      <span>{total ? tr("{from}–{to} of {total}", { from, to, total }) : tr("0 results")}</span>
       <div>
-        <button type="button" onClick={() => onPageChange(page - 1)} disabled={page <= 1} aria-label="Previous page" title="Previous page"><ChevronLeftIcon size={16} /></button>
-        <strong>Page {page} of {pages}</strong>
-        <button type="button" onClick={() => onPageChange(page + 1)} disabled={page >= pages} aria-label="Next page" title="Next page"><ChevronRightIcon size={16} /></button>
+        <button type="button" onClick={() => onPageChange(page - 1)} disabled={page <= 1} aria-label={tr("Previous page")} title={tr("Previous page")}><ChevronLeftIcon size={16} /></button>
+        <strong>{tr("Page")}{' '}{page} {tr("of")}{' '}{pages}</strong>
+        <button type="button" onClick={() => onPageChange(page + 1)} disabled={page >= pages} aria-label={tr("Next page")} title={tr("Next page")}><ChevronRightIcon size={16} /></button>
       </div>
     </div>
   )
@@ -235,13 +236,13 @@ function StoryTooltip({ active, payload }) {
   return (
     <div className="dashboard-story-tooltip">
       <strong>{shortDateTime(point.timestamp)}</strong>
-      <div><span>Simulation</span><b>{money(point.simulation_equity)}</b></div>
-      <div><span>Reference</span><b>{money(point.reference_equity)}</b></div>
+      <div><span>{tr("Simulation")}</span><b>{money(point.simulation_equity)}</b></div>
+      <div><span>{tr("Reference")}</span><b>{money(point.reference_equity)}</b></div>
       {events.length ? <div className="dashboard-story-tooltip-events">
         {events.slice(0, 6).map((event) => event.grouped ? (
-          <p key={event.key}><b>{event.count} executions</b><span>{event.buyCount} buy · {event.sellCount} sell</span></p>
+          <p key={event.key}><b>{event.count} {tr("executions")}</b><span>{event.buyCount} {tr("buy ·")}{' '}{event.sellCount} {tr("sell")}</span></p>
         ) : (
-          <p key={event.key} className={event.side}><b>{event.side.toUpperCase()} · {event.asset}</b><span>Trade #{event.tradeNumber}</span></p>
+          <p key={event.key} className={event.side}><b>{event.side.toUpperCase()} · {event.asset}</b><span>{tr("Trade #")}{event.tradeNumber}</span></p>
         ))}
       </div> : null}
     </div>
@@ -276,12 +277,12 @@ function SelectedTradeTooltip({ active, payload, selectedTrade, viewMode }) {
   const strategyDisplay = viewMode === 'indexed' ? (Number.isFinite(Number(point.strategy_index)) ? Number(point.strategy_index).toFixed(2) : '—') : money(point.simulation_equity)
   const referenceDisplay = viewMode === 'indexed' ? (Number.isFinite(Number(point.reference_index)) ? Number(point.reference_index).toFixed(2) : '—') : money(point.reference_equity)
   return <div className="dashboard-story-tooltip dashboard-trade-comparison-tooltip">
-    <strong>{selectedTrade?.asset || 'Position'} · {shortDateTime(point.timestamp)}</strong>
-    <div><span>Strategy</span><b>{strategyDisplay}</b></div>
-    <div><span>Buy & Hold</span><b>{referenceDisplay}</b></div>
-    <div className="dashboard-tooltip-divider"><span>Strategy change</span><b className={Number(point.strategy_change) >= 0 ? 'positive' : 'negative'}>{percent(point.strategy_change)}</b></div>
-    <div><span>Buy & Hold change</span><b className={Number(point.reference_change) >= 0 ? 'positive' : 'negative'}>{percent(point.reference_change)}</b></div>
-    <div><span>Excess</span><b className={Number(point.excess_change) >= 0 ? 'positive' : 'negative'}>{Number.isFinite(Number(point.excess_change)) ? `${Number(point.excess_change).toFixed(2)} pp` : '—'}</b></div>
+    <strong>{selectedTrade?.asset || tr('Position')} · {shortDateTime(point.timestamp)}</strong>
+    <div><span>{tr("Strategy")}</span><b>{strategyDisplay}</b></div>
+    <div><span>{tr("Buy & Hold")}</span><b>{referenceDisplay}</b></div>
+    <div className="dashboard-tooltip-divider"><span>{tr("Strategy change")}</span><b className={Number(point.strategy_change) >= 0 ? 'positive' : 'negative'}>{percent(point.strategy_change)}</b></div>
+    <div><span>{tr("Buy & Hold change")}</span><b className={Number(point.reference_change) >= 0 ? 'positive' : 'negative'}>{percent(point.reference_change)}</b></div>
+    <div><span>{tr("Excess")}</span><b className={Number(point.excess_change) >= 0 ? 'positive' : 'negative'}>{Number.isFinite(Number(point.excess_change)) ? `${Number(point.excess_change).toFixed(2)} pp` : '—'}</b></div>
   </div>
 }
 
@@ -660,65 +661,65 @@ export function DashboardPage({ workspace, onOpenBacktest, canRunBacktest = fals
         <div className="dashboard-workspace-header">
           <div className="dashboard-workspace-title">
             <div className="page-title-icon"><DashboardIcon size={21} /></div>
-            <div><h2>Dashboard</h2><p>Portfolio growth, trade-by-trade storytelling and recent simulation history.</p></div>
+            <div><h2>{tr("Dashboard")}</h2><p>{tr("Portfolio growth, trade-by-trade storytelling and recent simulation history.")}</p></div>
           </div>
           <div className="dashboard-header-actions">
-            <span className="dashboard-protected-badge"><ShieldIcon size={15} />Protected configuration</span>
-            {canRunBacktest ? <button className="primary-action compact dashboard-start-action" type="button" disabled={startDisabled} onClick={startBacktest}><PlayIcon size={14} />{restoringExecution ? 'Checking Execution' : startingBacktest ? 'Starting…' : running ? 'Simulation Running' : 'Start New Backtest'}</button> : null}
+            <span className="dashboard-protected-badge"><ShieldIcon size={15} />{tr("Protected configuration")}</span>
+            {canRunBacktest ? <button className="primary-action compact dashboard-start-action" type="button" disabled={startDisabled} onClick={startBacktest}><PlayIcon size={14} />{tr(restoringExecution ? 'Checking Execution' : startingBacktest ? 'Starting…' : running ? 'Simulation Running' : 'Start New Backtest')}</button> : null}
           </div>
         </div>
 
         <div className="dashboard-workspace-metrics">
-          <DashboardMetric id="dashboard-hint-total-backtests" label="Total Backtests" value={loadingDashboard ? '…' : String(dashboard?.total_backtests ?? 0)} note={`${dashboard?.completed_backtests ?? 0} completed`} tone="green" hint={DASHBOARD_HINTS.totalBacktests} />
-          <DashboardMetric id="dashboard-hint-best-performance" label="Best Performance" value={best?.metrics?.simulation_return == null ? '—' : percent(best.metrics.simulation_return)} note={best?.metrics?.ending_capital == null ? 'No completed result' : `Ending capital ${money(best.metrics.ending_capital)}`} tone="gold" hint={DASHBOARD_HINTS.bestPerformance} />
-          <DashboardMetric id="dashboard-hint-last-backtest" label="Last Backtest" value={last?.created_at ? relativeTime(last.created_at) : '—'} note={last?.created_at ? shortDateTime(last.created_at) : 'No execution yet'} tone="blue" hint={DASHBOARD_HINTS.lastBacktest} />
+          <DashboardMetric id="dashboard-hint-total-backtests" label={tr("Total Backtests")} value={loadingDashboard ? '…' : String(dashboard?.total_backtests ?? 0)} note={tr('{count} completed', { count: dashboard?.completed_backtests ?? 0 })} tone="green" hint={DASHBOARD_HINTS.totalBacktests} />
+          <DashboardMetric id="dashboard-hint-best-performance" label={tr("Best Performance")} value={best?.metrics?.simulation_return == null ? '—' : percent(best.metrics.simulation_return)} note={best?.metrics?.ending_capital == null ? tr('No completed result') : tr('Ending capital {value}', { value: money(best.metrics.ending_capital) })} tone="gold" hint={DASHBOARD_HINTS.bestPerformance} />
+          <DashboardMetric id="dashboard-hint-last-backtest" label={tr("Last Backtest")} value={last?.created_at ? relativeTime(last.created_at) : '—'} note={last?.created_at ? shortDateTime(last.created_at) : tr('No execution yet')} tone="blue" hint={DASHBOARD_HINTS.lastBacktest} />
           <MarketUpdateMetric />
         </div>
 
         <section className="dashboard-story-section">
           <div className="dashboard-story-heading">
             <div>
-              <div className="dashboard-heading-title"><span className="panel-kicker">Trade Story</span><ParameterHint id="dashboard-hint-portfolio-growth" title="Portfolio Growth" description={DASHBOARD_HINTS.portfolioGrowth} /></div>
-              <h2>Portfolio Growth</h2>
-              <p>Start with a clean equity curve, then inspect executions only when you need them.</p>
+              <div className="dashboard-heading-title"><span className="panel-kicker">{tr("Trade Story")}</span><ParameterHint id="dashboard-hint-portfolio-growth" title={tr("Portfolio Growth")} description={DASHBOARD_HINTS.portfolioGrowth} /></div>
+              <h2>{tr("Portfolio Growth")}</h2>
+              <p>{tr("Start with a clean equity curve, then inspect executions only when you need them.")}</p>
             </div>
-            <label className="dashboard-story-select"><span>Completed backtest</span><select value={storyJobId} onChange={(event) => setStoryJobId(event.target.value)}>{completedStoryJobs.length ? completedStoryJobs.map((item) => <option key={item.id} value={item.id}>{shortDateTime(item.created_at)}</option>) : <option value="">No completed backtest</option>}</select></label>
+            <label className="dashboard-story-select"><span>{tr("Completed backtest")}</span><select value={storyJobId} onChange={(event) => setStoryJobId(event.target.value)}>{completedStoryJobs.length ? completedStoryJobs.map((item) => <option key={item.id} value={item.id}>{shortDateTime(item.created_at)}</option>) : <option value="">{tr("No completed backtest")}</option>}</select></label>
           </div>
 
-          {storyError ? <div className="global-inline-message error-inline dashboard-story-message">{storyError}</div> : null}
-          {storyLoading ? <div className="dashboard-story-loading"><span className="loading-ring" />Loading trade story…</div> : null}
+          {storyError ? <div className="global-inline-message error-inline dashboard-story-message">{tr(storyError)}</div> : null}
+          {storyLoading ? <div className="dashboard-story-loading"><span className="loading-ring" />{tr("Loading trade story…")}</div> : null}
 
           {!storyLoading && storyData ? <>
             <div className="dashboard-growth-toolbar">
-              <div className="dashboard-marker-modes" role="group" aria-label="Execution marker display">
-                <span>Executions</span>
-                {['off', 'grouped', 'all'].map((mode) => <button key={mode} type="button" className={markerMode === mode ? 'active' : ''} onClick={() => setMarkerMode(mode)}>{mode === 'off' ? 'Off' : mode === 'grouped' ? 'Grouped' : 'All'}</button>)}
+              <div className="dashboard-marker-modes" role="group" aria-label={tr("Execution marker display")}>
+                <span>{tr("Executions")}</span>
+                {['off', 'grouped', 'all'].map((mode) => <button key={mode} type="button" className={markerMode === mode ? 'active' : ''} onClick={() => setMarkerMode(mode)}>{tr(mode === 'off' ? 'Off' : mode === 'grouped' ? 'Grouped' : 'All')}</button>)}
               </div>
-              <div className="dashboard-growth-zoom"><span>{zoomActive ? `Zoom ${zoomLevel >= 10 ? zoomLevel.toFixed(0) : zoomLevel.toFixed(1)}× · drag to pan` : 'Wheel to zoom · drag to pan after zoom'}</span>{zoomActive ? <button type="button" onClick={() => setZoomDomain(null)}>Reset zoom</button> : null}</div>
+              <div className="dashboard-growth-zoom"><span>{zoomActive ? tr('Zoom {level}× · drag to pan', { level: zoomLevel >= 10 ? zoomLevel.toFixed(0) : zoomLevel.toFixed(1) }) : tr('Wheel to zoom · drag to pan after zoom')}</span>{zoomActive ? <button type="button" onClick={() => setZoomDomain(null)}>{tr("Reset zoom")}</button> : null}</div>
             </div>
 
             <div ref={chartInteractionRef} className={`dashboard-growth-chart dashboard-story-interactive ${zoomActive ? 'is-zoomed' : ''} ${isPanning ? 'is-panning' : ''}`} onPointerDown={beginChartPan} onPointerMove={moveChartPan} onPointerUp={endChartPan} onPointerCancel={endChartPan}>
               {chartRows.length ? <ResponsiveContainer width="100%" height="100%"><ComposedChart data={visibleChartRows} margin={{ top: 16, right: 16, left: 8, bottom: 6 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="timestamp_value" type="number" scale="time" domain={effectiveZoomDomain ? [effectiveZoomDomain.start, effectiveZoomDomain.end] : ['dataMin', 'dataMax']} allowDataOverflow minTickGap={38} tickFormatter={(value) => dashboardAxisLabel(value, visibleTimeSpan)} />
-                <YAxis domain={yDomain} tickFormatter={(value) => `$${Number(value).toLocaleString('en-US', { maximumFractionDigits: 0 })}`} />
+                <YAxis domain={yDomain} tickFormatter={(value) => `$${Number(value).toLocaleString(getIntlLocale(), { maximumFractionDigits: 0 })}`} />
                 <Tooltip content={<StoryTooltip />} cursor={{ stroke: 'rgba(157, 175, 195, .42)', strokeWidth: 1 }} />
                 <Legend />
                 {selectedTradeStart !== null && selectedTradeEnd !== null ? <ReferenceArea x1={selectedTradeStart} x2={selectedTradeEnd} className="dashboard-selected-trade-area" ifOverflow="extendDomain" /> : null}
                 <Line type="monotone" dataKey="simulation_equity" name="Simulation" dot={markerMode === 'off' ? false : <StoryTradeDot />} activeDot={false} strokeWidth={2.5} stroke="var(--positive)" isAnimationActive={false} />
                 <Line type="monotone" dataKey="reference_equity" name="Reference" dot={false} activeDot={false} strokeWidth={2.1} stroke="var(--accent)" isAnimationActive={false} />
-              </ComposedChart></ResponsiveContainer> : <div className="dashboard-story-empty">No equity history is available for this completed backtest.</div>}
+              </ComposedChart></ResponsiveContainer> : <div className="dashboard-story-empty">{tr("No equity history is available for this completed backtest.")}</div>}
             </div>
 
             <div className="dashboard-navigator-header">
               <div>
-                <div className="dashboard-heading-title"><span className="panel-kicker">Sequence</span><ParameterHint id="dashboard-hint-trade-navigator" title="Trade Navigator" description={DASHBOARD_HINTS.navigator} /></div>
-                <h2>Trade Navigator</h2>
+                <div className="dashboard-heading-title"><span className="panel-kicker">{tr("Sequence")}</span><ParameterHint id="dashboard-hint-trade-navigator" title={tr("Trade Navigator")} description={DASHBOARD_HINTS.navigator} /></div>
+                <h2>{tr("Trade Navigator")}</h2>
               </div>
               <div className="dashboard-navigator-actions">
-                <button type="button" onClick={selectPreviousTrade} disabled={!trades.length || safeTradeIndex <= 0}><ChevronLeftIcon size={16} />Previous</button>
-                <strong>{trades.length ? `Trade ${safeTradeIndex + 1} of ${trades.length}` : 'No completed positions'}</strong>
-                <button type="button" onClick={selectNextTrade} disabled={!trades.length || safeTradeIndex >= trades.length - 1}>Next<ChevronRightIcon size={16} /></button>
+                <button type="button" onClick={selectPreviousTrade} disabled={!trades.length || safeTradeIndex <= 0}><ChevronLeftIcon size={16} />{tr("Previous")}</button>
+                <strong>{trades.length ? tr('Trade {current} of {total}', { current: safeTradeIndex + 1, total: trades.length }) : tr('No completed positions')}</strong>
+                <button type="button" onClick={selectNextTrade} disabled={!trades.length || safeTradeIndex >= trades.length - 1}>{tr("Next")}<ChevronRightIcon size={16} /></button>
               </div>
             </div>
 
@@ -729,54 +730,54 @@ export function DashboardPage({ workspace, onOpenBacktest, canRunBacktest = fals
                 return <button key={`${trade.trade_number}-${trade.asset}-${trade.exit_at}`} type="button" className={`dashboard-trade-chip ${tone} ${absoluteIndex === safeTradeIndex ? 'active' : ''}`} onClick={() => setSelectedTradeIndex(absoluteIndex)}>
                   <small>#{trade.trade_number}</small><strong>{trade.asset}</strong><span>{percent(trade.position_return)}</span><i>{trade.holding_days == null ? '—' : `${Number(trade.holding_days).toFixed(0)}d`}</i>
                 </button>
-              }) : <div className="dashboard-story-empty compact">No completed positions are available for this backtest.</div>}
+              }) : <div className="dashboard-story-empty compact">{tr("No completed positions are available for this backtest.")}</div>}
             </div>
 
             {selectedTrade ? <section className="dashboard-selected-trade-section">
               <article className="dashboard-selected-trade-chart-panel">
                 <div className="dashboard-selected-trade-heading">
-                  <div><div className="dashboard-heading-title"><span className="panel-kicker">Trade Evolution</span><ParameterHint id="dashboard-hint-selected-position" title="Trade Evolution" description={DASHBOARD_HINTS.selectedPosition} /></div><h2>{selectedTrade.asset} · Trade #{selectedTrade.trade_number}</h2></div>
+                  <div><div className="dashboard-heading-title"><span className="panel-kicker">{tr("Trade Evolution")}</span><ParameterHint id="dashboard-hint-selected-position" title={tr("Trade Evolution")} description={DASHBOARD_HINTS.selectedPosition} /></div><h2>{selectedTrade.asset} {tr("· Trade #")}{selectedTrade.trade_number}</h2></div>
                   <div className="dashboard-selected-trade-actions">
-                    <div className="dashboard-trade-view-toggle" role="group" aria-label="Trade evolution view">
-                      <button type="button" className={selectedTradeView === 'value' ? 'active' : ''} onClick={() => setSelectedTradeView('value')}>Portfolio Value</button>
-                      <button type="button" className={selectedTradeView === 'indexed' ? 'active' : ''} onClick={() => setSelectedTradeView('indexed')}>Indexed 100</button>
+                    <div className="dashboard-trade-view-toggle" role="group" aria-label={tr("Trade evolution view")}>
+                      <button type="button" className={selectedTradeView === 'value' ? 'active' : ''} onClick={() => setSelectedTradeView('value')}>{tr("Portfolio Value")}</button>
+                      <button type="button" className={selectedTradeView === 'indexed' ? 'active' : ''} onClick={() => setSelectedTradeView('indexed')}>{tr("Indexed 100")}</button>
                     </div>
-                    <button type="button" className="dashboard-focus-trade-button" onClick={focusSelectedTrade}>Focus on Portfolio Growth</button>
+                    <button type="button" className="dashboard-focus-trade-button" onClick={focusSelectedTrade}>{tr("Focus on Portfolio Growth")}</button>
                   </div>
                 </div>
                 <div className="dashboard-trade-comparison-strip">
-                  <div><span>Strategy period</span><strong className={(selectedTradeComparison?.strategy ?? 0) >= 0 ? 'positive' : 'negative'}>{selectedTradeComparison ? percent(selectedTradeComparison.strategy) : '—'}</strong></div>
-                  <div><span>Buy & Hold</span><strong className={(selectedTradeComparison?.reference ?? 0) >= 0 ? 'positive' : 'negative'}>{selectedTradeComparison ? percent(selectedTradeComparison.reference) : '—'}</strong></div>
-                  <div><span>Excess</span><strong className={(selectedTradeComparison?.excess ?? 0) >= 0 ? 'positive' : 'negative'}>{selectedTradeComparison ? `${selectedTradeComparison.excess.toFixed(2)} pp` : '—'}</strong></div>
-                  <div><span>Holding</span><strong>{selectedTrade.holding_days == null ? '—' : `${Number(selectedTrade.holding_days).toFixed(1)} days`}</strong></div>
+                  <div><span>{tr("Strategy period")}</span><strong className={(selectedTradeComparison?.strategy ?? 0) >= 0 ? 'positive' : 'negative'}>{selectedTradeComparison ? percent(selectedTradeComparison.strategy) : '—'}</strong></div>
+                  <div><span>{tr("Buy & Hold")}</span><strong className={(selectedTradeComparison?.reference ?? 0) >= 0 ? 'positive' : 'negative'}>{selectedTradeComparison ? percent(selectedTradeComparison.reference) : '—'}</strong></div>
+                  <div><span>{tr("Excess")}</span><strong className={(selectedTradeComparison?.excess ?? 0) >= 0 ? 'positive' : 'negative'}>{selectedTradeComparison ? `${selectedTradeComparison.excess.toFixed(2)} pp` : '—'}</strong></div>
+                  <div><span>{tr("Holding")}</span><strong>{selectedTrade.holding_days == null ? '—' : tr('{count} days', { count: Number(selectedTrade.holding_days).toFixed(1) })}</strong></div>
                 </div>
                 <div className="dashboard-selected-trade-chart">
                   {selectedTradeChartRows.length ? <ResponsiveContainer width="100%" height="100%"><LineChart data={selectedTradeChartRows} margin={{ top: 14, right: 18, left: 8, bottom: 6 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="timestamp_value" type="number" scale="time" domain={['dataMin', 'dataMax']} minTickGap={34} tickFormatter={(value) => dashboardAxisLabel(value, Math.max(0, (selectedTradeEnd || 0) - (selectedTradeStart || 0)))} />
-                    <YAxis domain={selectedTradeYDomain} tickFormatter={(value) => selectedTradeView === 'indexed' ? Number(value).toFixed(1) : `$${Number(value).toLocaleString('en-US', { maximumFractionDigits: 0 })}`} />
+                    <YAxis domain={selectedTradeYDomain} tickFormatter={(value) => selectedTradeView === 'indexed' ? Number(value).toFixed(1) : `$${Number(value).toLocaleString(getIntlLocale(), { maximumFractionDigits: 0 })}`} />
                     <Tooltip content={<SelectedTradeTooltip selectedTrade={selectedTrade} viewMode={selectedTradeView} />} />
                     <Legend verticalAlign="top" height={24} />
                     {selectedTradeStart !== null && selectedTradeEnd !== null ? <ReferenceArea x1={selectedTradeStart} x2={selectedTradeEnd} className="dashboard-trade-holding-area" ifOverflow="extendDomain" /> : null}
-                    <Line type="monotone" dataKey={selectedTradeView === 'indexed' ? 'strategy_index' : 'simulation_equity'} name="Strategy" dot={false} activeDot={{ r: 4 }} strokeWidth={2.6} stroke="var(--positive)" isAnimationActive={false} />
-                    <Line type="monotone" dataKey={selectedTradeView === 'indexed' ? 'reference_index' : 'reference_equity'} name="Buy & Hold" dot={false} activeDot={{ r: 4 }} strokeWidth={2.2} stroke="var(--accent)" isAnimationActive={false} />
+                    <Line type="monotone" dataKey={selectedTradeView === 'indexed' ? 'strategy_index' : 'simulation_equity'} name={tr("Strategy")} dot={false} activeDot={{ r: 4 }} strokeWidth={2.6} stroke="var(--positive)" isAnimationActive={false} />
+                    <Line type="monotone" dataKey={selectedTradeView === 'indexed' ? 'reference_index' : 'reference_equity'} name={tr("Buy & Hold")} dot={false} activeDot={{ r: 4 }} strokeWidth={2.2} stroke="var(--accent)" isAnimationActive={false} />
                     {selectedTradeStart !== null ? <ReferenceDot x={selectedTradeStart} y={selectedTradeChartRows[nearestChartIndex(selectedTradeChartRows, selectedTradeStart)]?.[selectedTradeView === 'indexed' ? 'strategy_index' : 'simulation_equity']} r={5} className="dashboard-entry-dot" ifOverflow="visible" /> : null}
                     {selectedTradeEnd !== null ? <ReferenceDot x={selectedTradeEnd} y={selectedTradeChartRows[nearestChartIndex(selectedTradeChartRows, selectedTradeEnd)]?.[selectedTradeView === 'indexed' ? 'strategy_index' : 'simulation_equity']} r={5} className="dashboard-exit-dot" ifOverflow="visible" /> : null}
-                  </LineChart></ResponsiveContainer> : <div className="dashboard-story-empty">No portfolio or reference points were stored inside this holding interval.</div>}
+                  </LineChart></ResponsiveContainer> : <div className="dashboard-story-empty">{tr("No portfolio or reference points were stored inside this holding interval.")}</div>}
                 </div>
               </article>
 
               <aside className="dashboard-selected-trade-details">
-                <div className="dashboard-trade-detail-hero"><span>{selectedTrade.asset}</span><strong className={tradeTone(selectedTrade.position_return)}>{percent(selectedTrade.position_return)}</strong><small>{money(selectedTrade.realized_pnl)} realized P/L</small></div>
+                <div className="dashboard-trade-detail-hero"><span>{selectedTrade.asset}</span><strong className={tradeTone(selectedTrade.position_return)}>{percent(selectedTrade.position_return)}</strong><small>{money(selectedTrade.realized_pnl)} {tr("realized P/L")}</small></div>
                 <dl>
-                  <div><dt>Entry</dt><dd>{shortDateTime(selectedTrade.entry_at)}</dd></div>
-                  <div><dt>Exit</dt><dd>{shortDateTime(selectedTrade.exit_at)}</dd></div>
-                  <div><dt>Holding</dt><dd>{selectedTrade.holding_days == null ? '—' : `${Number(selectedTrade.holding_days).toFixed(1)} days`}</dd></div>
-                  <div><dt>Entry price</dt><dd>{selectedTrade.entry_price == null ? '—' : money(selectedTrade.entry_price)}</dd></div>
-                  <div><dt>Exit price</dt><dd>{selectedTrade.exit_price == null ? '—' : money(selectedTrade.exit_price)}</dd></div>
-                  <div><dt>Quantity</dt><dd>{selectedTrade.quantity == null ? '—' : Number(selectedTrade.quantity).toLocaleString('en-US', { maximumFractionDigits: 6 })}</dd></div>
-                  <div><dt>Fees</dt><dd>{money(selectedTrade.transaction_fees)}</dd></div>
-                  <div><dt>Next asset</dt><dd>{selectedTrade.final_liquidation ? 'Final liquidation' : selectedTrade.next_asset || 'CASH'}</dd></div>
+                  <div><dt>{tr("Entry")}</dt><dd>{shortDateTime(selectedTrade.entry_at)}</dd></div>
+                  <div><dt>{tr("Exit")}</dt><dd>{shortDateTime(selectedTrade.exit_at)}</dd></div>
+                  <div><dt>{tr("Holding")}</dt><dd>{selectedTrade.holding_days == null ? '—' : tr('{count} days', { count: Number(selectedTrade.holding_days).toFixed(1) })}</dd></div>
+                  <div><dt>{tr("Entry price")}</dt><dd>{selectedTrade.entry_price == null ? '—' : money(selectedTrade.entry_price)}</dd></div>
+                  <div><dt>{tr("Exit price")}</dt><dd>{selectedTrade.exit_price == null ? '—' : money(selectedTrade.exit_price)}</dd></div>
+                  <div><dt>{tr("Quantity")}</dt><dd>{selectedTrade.quantity == null ? '—' : Number(selectedTrade.quantity).toLocaleString(getIntlLocale(), { maximumFractionDigits: 6 })}</dd></div>
+                  <div><dt>{tr("Fees")}</dt><dd>{money(selectedTrade.transaction_fees)}</dd></div>
+                  <div><dt>{tr("Next asset")}</dt><dd>{selectedTrade.final_liquidation ? tr('Final liquidation') : selectedTrade.next_asset || 'CASH'}</dd></div>
                 </dl>
               </aside>
             </section> : null}
@@ -784,27 +785,27 @@ export function DashboardPage({ workspace, onOpenBacktest, canRunBacktest = fals
         </section>
 
         <section className="dashboard-history-section">
-          <div className="dashboard-section-heading"><div><span className="panel-kicker">History</span><h2>Recent Backtests</h2><p>Filter, sort and review recent simulation executions without expanding the page vertically.</p></div><span className="panel-count">{filteredRows.length} result{filteredRows.length === 1 ? '' : 's'}</span></div>
+          <div className="dashboard-section-heading"><div><span className="panel-kicker">{tr("History")}</span><h2>{tr("Recent Backtests")}</h2><p>{tr("Filter, sort and review recent simulation executions without expanding the page vertically.")}</p></div><span className="panel-count">{filteredRows.length} {tr(filteredRows.length === 1 ? "result" : "results")}</span></div>
           <div className="dashboard-history-toolbar">
-            <label className="dashboard-list-search"><SearchIcon size={15} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter execution history" aria-label="Filter execution history" /></label>
-            <div className="dashboard-status-filters" role="group" aria-label="Backtest status filter">
-              {[['all', 'All'], ['completed', 'Completed'], ['interrupted', 'Interrupted'], ['failed', 'Failed'], ['active', 'Active']].map(([value, label]) => <button key={value} type="button" className={statusFilter === value ? 'active' : ''} onClick={() => setStatusFilter(value)}>{label}<span>{statusCounts[value]}</span></button>)}
+            <label className="dashboard-list-search"><SearchIcon size={15} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={tr("Filter execution history")} aria-label={tr("Filter execution history")} /></label>
+            <div className="dashboard-status-filters" role="group" aria-label={tr("Backtest status filter")}>
+              {[['all', 'All'], ['completed', 'Completed'], ['interrupted', 'Interrupted'], ['failed', 'Failed'], ['active', 'Active']].map(([value, label]) => <button key={value} type="button" className={statusFilter === value ? 'active' : ''} onClick={() => setStatusFilter(value)}>{tr(label)}<span>{statusCounts[value]}</span></button>)}
             </div>
           </div>
           <div className="table-wrap dashboard-history-table-wrap">
             <table className="dashboard-table dashboard-sortable-table">
               <thead><tr>
-                <DashboardSortHeader label="Date" sortKey="date" sort={sort} onSort={updateSort} hint={DASHBOARD_HINTS.date} />
-                <DashboardSortHeader label="Status" sortKey="status" sort={sort} onSort={updateSort} hint={DASHBOARD_HINTS.status} />
-                <DashboardSortHeader label="Total Return" sortKey="return" sort={sort} onSort={updateSort} hint={DASHBOARD_HINTS.totalReturn} />
-                <DashboardSortHeader label="Sharpe Ratio" sortKey="sharpe" sort={sort} onSort={updateSort} hint={DASHBOARD_HINTS.sharpe} />
-                <DashboardSortHeader label="Max Drawdown" sortKey="drawdown" sort={sort} onSort={updateSort} hint={DASHBOARD_HINTS.drawdown} />
-                <DashboardSortHeader label="Rotations" sortKey="rotations" sort={sort} onSort={updateSort} hint={DASHBOARD_HINTS.rotations} />
-                <DashboardSortHeader label="Duration" sortKey="duration" sort={sort} onSort={updateSort} hint={DASHBOARD_HINTS.duration} />
+                <DashboardSortHeader label={tr("Date")} sortKey="date" sort={sort} onSort={updateSort} hint={DASHBOARD_HINTS.date} />
+                <DashboardSortHeader label={tr("Status")} sortKey="status" sort={sort} onSort={updateSort} hint={DASHBOARD_HINTS.status} />
+                <DashboardSortHeader label={tr("Total Return")} sortKey="return" sort={sort} onSort={updateSort} hint={DASHBOARD_HINTS.totalReturn} />
+                <DashboardSortHeader label={tr("Sharpe Ratio")} sortKey="sharpe" sort={sort} onSort={updateSort} hint={DASHBOARD_HINTS.sharpe} />
+                <DashboardSortHeader label={tr("Max Drawdown")} sortKey="drawdown" sort={sort} onSort={updateSort} hint={DASHBOARD_HINTS.drawdown} />
+                <DashboardSortHeader label={tr("Rotations")} sortKey="rotations" sort={sort} onSort={updateSort} hint={DASHBOARD_HINTS.rotations} />
+                <DashboardSortHeader label={tr("Duration")} sortKey="duration" sort={sort} onSort={updateSort} hint={DASHBOARD_HINTS.duration} />
               </tr></thead>
-              <tbody>{visibleRows.length ? visibleRows.map((item) => <tr key={item.id} className={item.id === storyJobId ? 'selected-row' : ''} onDoubleClick={() => { if (String(item.status || '').toLowerCase() === 'completed') setStoryJobId(item.id) }} title={String(item.status || '').toLowerCase() === 'completed' ? 'Double-click to load this backtest in Trade Story' : ''}>
+              <tbody>{visibleRows.length ? visibleRows.map((item) => <tr key={item.id} className={item.id === storyJobId ? 'selected-row' : ''} onDoubleClick={() => { if (String(item.status || '').toLowerCase() === 'completed') setStoryJobId(item.id) }} title={String(item.status || '').toLowerCase() === 'completed' ? tr('Double-click to load this backtest in Trade Story') : ''}>
                 <td>{shortDateTime(item.created_at)}</td><td><StatusBadge status={item.status} /></td><td className={item.metrics?.simulation_return == null ? '' : Number(item.metrics.simulation_return) >= 0 ? 'positive' : 'negative'}>{percent(item.metrics?.simulation_return)}</td><td>{item.metrics?.sharpe == null ? '—' : Number(item.metrics.sharpe).toFixed(3)}</td><td className={item.metrics?.maximum_drawdown == null ? '' : 'negative'}>{percent(item.metrics?.maximum_drawdown)}</td><td>{item.metrics?.position_changes == null ? '—' : Math.round(item.metrics.position_changes)}</td><td>{durationLabel(item.duration_seconds)}</td>
-              </tr>) : <tr><td colSpan="7" className="empty-cell">No backtests match the current filters.</td></tr>}</tbody>
+              </tr>) : <tr><td colSpan="7" className="empty-cell">{tr("No backtests match the current filters.")}</td></tr>}</tbody>
             </table>
           </div>
           <DashboardPagination page={safePage} pages={pages} total={filteredRows.length} onPageChange={setPage} />

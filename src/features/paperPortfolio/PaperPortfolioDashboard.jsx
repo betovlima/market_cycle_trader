@@ -1,3 +1,4 @@
+import { getIntlLocale, tr } from '../../i18n/runtime'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
@@ -27,11 +28,11 @@ function timestampValue(value) {
 }
 
 function scheduleValue(targetAt, now, running = false) {
-  if (running) return 'Running now'
+  if (running) return tr('Running now')
   const target = timestampValue(targetAt)
-  if (target === null) return 'Pending'
+  if (target === null) return tr('Pending')
   const remaining = Math.max(0, Math.ceil((target - now) / 1000))
-  return remaining === 0 ? 'Due now' : countdownLabel(remaining)
+  return remaining === 0 ? tr('Due now') : countdownLabel(remaining)
 }
 
 function TradingSessionStrip({ connection, marketClock, robot, now, refreshing, nextRefreshAt }) {
@@ -46,12 +47,12 @@ function TradingSessionStrip({ connection, marketClock, robot, now, refreshing, 
   const robotLoaded = Boolean(robot)
   const robotReady = robotLoaded && enabled && schedulerAlive && !blocked && !unavailable
   const robotTone = robotReady ? 'ready' : blocked || unavailable || (enabled && !schedulerAlive) ? 'unavailable' : 'checking'
-  const robotLabel = !robotLoaded ? 'Checking' : robotReady ? 'Active' : blocked ? 'Review' : enabled ? 'Degraded' : 'Stopped'
+  const robotLabel = tr(!robotLoaded ? 'Checking' : robotReady ? 'Active' : blocked ? 'Review' : enabled ? 'Degraded' : 'Stopped')
 
   const marketLoaded = Boolean(marketClock)
   const marketOpen = marketLoaded && Boolean(marketClock.is_open)
   const marketTone = !marketLoaded ? 'checking' : marketOpen ? 'ready' : 'closed'
-  const marketLabel = !marketLoaded ? 'Market checking' : marketOpen ? 'Market open' : 'Market closed'
+  const marketLabel = tr(!marketLoaded ? 'Market checking' : marketOpen ? 'Market open' : 'Market closed')
 
   const phaseRaw = String(robot?.active_run?.phase || robot?.phase || 'stopped')
   const phase = phaseRaw.replaceAll('_', ' ')
@@ -61,37 +62,37 @@ function TradingSessionStrip({ connection, marketClock, robot, now, refreshing, 
   const analysisAt = robot?.next_premarket_analysis_at || robot?.active_run?.premarket_analysis_at
   const nextOpenAt = robot?.next_market_open || robot?.active_run?.expected_market_open
   const nextCloseAt = marketClock?.next_close
-  const session = robot?.next_execution_session || 'No session scheduled'
+  const session = robot?.next_execution_session || tr('No session scheduled')
   const checkedLabel = connection.checkedAt
-    ? `Broker ${connection.checkedAt.toLocaleTimeString()}`
-    : 'Broker check pending'
+    ? tr('Broker {time}', { time: connection.checkedAt.toLocaleTimeString(getIntlLocale()) })
+    : tr('Broker check pending')
 
   const schedule = [
     { label: 'Analysis', value: scheduleValue(analysisAt, now, analysisRunning), tone: analysisRunning ? 'green' : 'blue' },
     { label: 'Execution', value: scheduleValue(nextOpenAt, now, executionRunning), tone: executionRunning ? 'green' : 'purple' },
     { label: 'Daily close', value: scheduleValue(nextCloseAt, now), tone: 'gold' },
-    { label: 'Portfolio update', value: refreshing ? 'Running now' : scheduleValue(nextRefreshAt, now), tone: refreshing ? 'green' : 'cyan' },
+    { label: 'Portfolio update', value: refreshing ? tr('Running now') : scheduleValue(nextRefreshAt, now), tone: refreshing ? 'green' : 'cyan' },
   ]
 
   return (
-    <div className="portfolio-session-strip" aria-label="Trading session status" aria-live="polite">
+    <div className="portfolio-session-strip" aria-label={tr("Trading session status")} aria-live="polite">
       <div className="portfolio-session-main">
-        <div className="portfolio-session-title" title={`Robot phase: ${phase}. Next execution: ${session}. ${checkedLabel}.`}>
+        <div className="portfolio-session-title" title={tr('Robot phase: {phase}. Next execution: {session}. {broker}.', { phase: tr(phase.replace(/\b\w/g, (letter) => letter.toUpperCase())), session, broker: checkedLabel })}>
           <span className="portfolio-session-icon"><ActivityIcon size={16} /></span>
-          <span>Trading Session</span>
+          <span>{tr("Trading Session")}</span>
         </div>
         <div className="trading-session-statuses portfolio-session-statuses">
           <span className={`session-status-chip ${connectionReady ? 'ready' : connectionStatus === 'checking' ? 'checking' : 'unavailable'}`}>
-            <span className="connection-dot" />Alpaca {connectionReady ? 'Connected' : connectionStatus === 'checking' ? 'Checking' : 'Unavailable'}
+            <span className="connection-dot" />{tr("Alpaca")}{' '}{tr(connectionReady ? 'Connected' : connectionStatus === 'checking' ? 'Checking' : 'Unavailable')}
           </span>
-          <span className={`session-status-chip ${robotTone}`}><span className="connection-dot" />Robot {robotLabel}</span>
+          <span className={`session-status-chip ${robotTone}`}><span className="connection-dot" />{tr("Robot")}{' '}{robotLabel}</span>
           <span className={`session-status-chip ${marketTone}`}><span className="connection-dot" />{marketLabel}</span>
         </div>
       </div>
-      <div className="portfolio-session-schedule" aria-label={`Robot phase ${phase}. Next execution ${session}.`}>
+      <div className="portfolio-session-schedule" aria-label={tr('Robot phase {phase}. Next execution {session}.', { phase: tr(phase.replace(/\b\w/g, (letter) => letter.toUpperCase())), session })}>
         {schedule.map((item) => (
           <div key={item.label} className={`portfolio-session-step ${item.tone}`}>
-            <span>{item.label}</span>
+            <span>{tr(item.label)}</span>
             <strong>{item.value}</strong>
           </div>
         ))}
@@ -103,9 +104,9 @@ function TradingSessionStrip({ connection, marketClock, robot, now, refreshing, 
 function PortfolioMetric({ label, value, detail, tone = '' }) {
   return (
     <div className={`portfolio-workspace-metric ${tone}`}>
-      <span>{label}</span>
+      <span>{tr(label)}</span>
       <strong>{value}</strong>
-      {detail ? <small>{detail}</small> : null}
+      {detail ? <small>{tr(detail)}</small> : null}
     </div>
   )
 }
@@ -115,12 +116,12 @@ function PortfolioMetricsStrip({ data, position }) {
   const returnTone = Number(data.total_return) >= 0 ? 'positive' : 'negative'
 
   return (
-    <div className="portfolio-workspace-metrics" aria-label="Portfolio summary">
-      <PortfolioMetric label="Starting Capital" value={money(data.initial_capital)} tone="blue" />
-      <PortfolioMetric label="Portfolio Value" value={money(data.portfolio_value)} tone="blue" />
-      <PortfolioMetric label="Total P/L" value={money(data.total_pnl)} detail={percent(data.total_return)} tone={returnTone} />
-      <PortfolioMetric label="Cash" value={money(data.strategy_cash)} tone="purple" />
-      <PortfolioMetric label="Position" value={String(activePositions)} detail={position ? position.symbol : 'Cash'} tone="gold" />
+    <div className="portfolio-workspace-metrics" aria-label={tr("Portfolio summary")}>
+      <PortfolioMetric label={tr("Starting Capital")} value={money(data.initial_capital)} tone="blue" />
+      <PortfolioMetric label={tr("Portfolio Value")} value={money(data.portfolio_value)} tone="blue" />
+      <PortfolioMetric label={tr("Total P/L")} value={money(data.total_pnl)} detail={percent(data.total_return)} tone={returnTone} />
+      <PortfolioMetric label={tr("Cash")} value={money(data.strategy_cash)} tone="purple" />
+      <PortfolioMetric label={tr("Position")} value={String(activePositions)} detail={position ? position.symbol : tr('Cash')} tone="gold" />
     </div>
   )
 }
@@ -130,9 +131,9 @@ function CurrentPosition({ position, cash }) {
     return (
       <aside className="current-position-section">
         <div className="portfolio-section-heading compact">
-          <div><span className="panel-kicker">Position</span><h2>Current Position</h2></div>
+          <div><span className="panel-kicker">{tr("Position")}</span><h2>{tr("Current Position")}</h2></div>
         </div>
-        <div className="cash-state current-position-cash"><strong>{money(cash)}</strong><span>Cash</span><p>No open position.</p></div>
+        <div className="cash-state current-position-cash"><strong>{money(cash)}</strong><span>{tr("Cash")}</span><p>{tr("No open position.")}</p></div>
       </aside>
     )
   }
@@ -147,24 +148,24 @@ function CurrentPosition({ position, cash }) {
   return (
     <aside className="current-position-section">
       <div className="portfolio-section-heading compact current-position-heading">
-        <div><span className="panel-kicker">Position</span><h2>Current Position</h2></div>
-        <span className="current-trade-open">Open</span>
+        <div><span className="panel-kicker">{tr("Position")}</span><h2>{tr("Current Position")}</h2></div>
+        <span className="current-trade-open">{tr("Open")}</span>
       </div>
 
       <div className="current-trade-asset current-position-asset">
         <strong>{position.symbol}</strong>
-        <span>{number(position.quantity, 6)} shares</span>
+        <span>{number(position.quantity, 6)} {tr("shares")}</span>
       </div>
 
       <div className="current-position-stats">
-        <div><span>Entry</span><strong>{money(position.average_entry_price)}</strong></div>
-        <div><span>Current</span><strong>{money(position.current_price)}</strong></div>
-        <div><span>Market value</span><strong>{money(position.market_value)}</strong></div>
-        <div><span>Trade P/L</span><strong className={returnPositive ? 'positive' : 'negative'}>{unrealizedPnl === null ? '—' : money(unrealizedPnl)}</strong></div>
+        <div><span>{tr("Entry")}</span><strong>{money(position.average_entry_price)}</strong></div>
+        <div><span>{tr("Current")}</span><strong>{money(position.current_price)}</strong></div>
+        <div><span>{tr("Market value")}</span><strong>{money(position.market_value)}</strong></div>
+        <div><span>{tr("Trade P/L")}</span><strong className={returnPositive ? 'positive' : 'negative'}>{unrealizedPnl === null ? '—' : money(unrealizedPnl)}</strong></div>
       </div>
 
       <div className={`current-trade-return current-position-return ${returnPositive ? 'positive' : 'negative'}`}>
-        <span>Unrealized return</span>
+        <span>{tr("Unrealized return")}</span>
         <strong>{percent(position.unrealized_return)}</strong>
       </div>
     </aside>
@@ -223,10 +224,10 @@ function PortfolioChartTooltip({ active, payload }) {
                 </div>
               ) : null}
               <div className="portfolio-tooltip-grid">
-                <span>Executed</span><strong>{shortDateTime(trade.orderTime)}</strong>
-                <span>Quantity</span><strong>{trade.quantity ?? '—'}</strong>
-                <span>Average fill</span><strong>{trade.price == null ? '—' : money(trade.price)}</strong>
-                <span>Portfolio</span><strong>{money(pointPayload.portfolio_value)}</strong>
+                <span>{tr("Executed")}</span><strong>{shortDateTime(trade.orderTime)}</strong>
+                <span>{tr("Quantity")}</span><strong>{trade.quantity ?? '—'}</strong>
+                <span>{tr("Average fill")}</span><strong>{trade.price == null ? '—' : money(trade.price)}</strong>
+                <span>{tr("Portfolio")}</span><strong>{money(pointPayload.portfolio_value)}</strong>
               </div>
             </div>
           ))}
@@ -238,7 +239,7 @@ function PortfolioChartTooltip({ active, payload }) {
   return (
     <div className="portfolio-chart-tooltip">
       <span>{shortDateTime(pointPayload.recorded_at)}</span>
-      <strong>Portfolio · {money(pointPayload.portfolio_value)}</strong>
+      <strong>{tr("Portfolio ·")}{' '}{money(pointPayload.portfolio_value)}</strong>
     </div>
   )
 }
@@ -279,11 +280,11 @@ function portfolioAxisLabel(value, visibleSpan) {
   const date = new Date(Number(value))
   if (Number.isNaN(date.getTime())) return ''
   if (visibleSpan <= DAY_MS * 2) {
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    return date.toLocaleTimeString(getIntlLocale(), { hour: '2-digit', minute: '2-digit', hour12: false })
   }
   if (visibleSpan <= DAY_MS * 14) {
-    const day = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    const time = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    const day = date.toLocaleDateString(getIntlLocale(), { month: 'short', day: 'numeric' })
+    const time = date.toLocaleTimeString(getIntlLocale(), { hour: '2-digit', minute: '2-digit', hour12: false })
     return `${day} ${time}`
   }
   return compactDate(date)
@@ -588,26 +589,26 @@ export function PaperPortfolioDashboard() {
 
   return (
     <section className="page-stack portfolio-page portfolio-single-workspace" aria-busy={refreshing}>
-      {error ? <div className="inline-error"><strong>Portfolio unavailable</strong><span>{error}</span><button type="button" onClick={() => setError('')}>×</button></div> : null}
+      {error ? <div className="inline-error"><strong>{tr("Portfolio unavailable")}</strong><span>{tr(error)}</span><button type="button" onClick={() => setError('')}>×</button></div> : null}
 
       {!data ? (
         <section className="data-panel portfolio-locked portfolio-tab-loader" role="status" aria-live="polite">
           <div className="portfolio-tab-loader-visual"><span className="loading-ring" aria-hidden="true" /></div>
-          <h2>Loading simulated portfolio</h2>
-          <p>Connecting to Alpaca Paper and requesting the latest read-only portfolio snapshot.</p>
+          <h2>{tr("Loading simulated portfolio")}</h2>
+          <p>{tr("Connecting to Alpaca Paper and requesting the latest read-only portfolio snapshot.")}</p>
         </section>
       ) : (
         <section className="data-panel portfolio-workspace-panel">
           <header className="portfolio-workspace-header">
             <div className="portfolio-workspace-title">
               <div className="page-title-icon"><PortfolioIcon size={18} /></div>
-              <div><h2>Portfolio</h2><p>Account evolution, current position and recent Paper executions.</p></div>
+              <div><h2>{tr("Portfolio")}</h2><p>{tr("Account evolution, current position and recent Paper executions.")}</p></div>
             </div>
             <div className="portfolio-workspace-actions">
-              <span>{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Read-only snapshot'}</span>
+              <span>{lastUpdated ? tr('Updated {time}', { time: lastUpdated.toLocaleTimeString(getIntlLocale()) }) : tr('Read-only snapshot')}</span>
               <button type="button" className="secondary-action portfolio-refresh-button compact" disabled={refreshing} onClick={() => refreshPortfolio({ includeRobot: true })}>
                 {refreshing ? <span className="portfolio-button-spinner" aria-hidden="true" /> : null}
-                {refreshing ? 'Refreshing…' : 'Refresh'}
+                {tr(refreshing ? 'Refreshing…' : 'Refresh')}
               </button>
             </div>
           </header>
@@ -626,23 +627,23 @@ export function PaperPortfolioDashboard() {
           <div className="portfolio-workspace-main">
             <section className="portfolio-evolution-section">
               <div className="portfolio-section-heading portfolio-chart-heading">
-                <div><span className="panel-kicker">Performance</span><h2>Portfolio Evolution</h2></div>
+                <div><span className="panel-kicker">{tr("Performance")}</span><h2>{tr("Portfolio Evolution")}</h2></div>
                 <div className="portfolio-chart-heading-right">
-                  <div className="trade-event-legend" aria-label="Trade event legend">
-                    <span><i className="buy" />Buy</span>
-                    <span><i className="sell" />Sell</span>
+                  <div className="trade-event-legend" aria-label={tr("Trade event legend")}>
+                    <span><i className="buy" />{tr("Buy")}</span>
+                    <span><i className="sell" />{tr("Sell")}</span>
                   </div>
                   <div className="portfolio-chart-zoom-controls" aria-live="polite">
-                    <span>{zoomActive ? `Zoom ${zoomLevel >= 10 ? zoomLevel.toFixed(0) : zoomLevel.toFixed(1)}× · Drag to pan` : 'Wheel to zoom · Drag to pan'}</span>
-                    {zoomActive ? <button type="button" onClick={() => setZoomDomain(null)}>Reset zoom</button> : null}
+                    <span>{zoomActive ? tr('Zoom {level}× · Drag to pan', { level: zoomLevel >= 10 ? zoomLevel.toFixed(0) : zoomLevel.toFixed(1) }) : tr('Wheel to zoom · Drag to pan')}</span>
+                    {zoomActive ? <button type="button" onClick={() => setZoomDomain(null)}>{tr("Reset zoom")}</button> : null}
                   </div>
-                  <div className="portfolio-monitor"><span className={data.market_clock?.is_open ? 'positive' : 'muted'}>{data.market_clock?.is_open ? 'Market open' : 'Market closed'}</span></div>
+                  <div className="portfolio-monitor"><span className={data.market_clock?.is_open ? 'positive' : 'muted'}>{tr(data.market_clock?.is_open ? 'Market open' : 'Market closed')}</span></div>
                 </div>
               </div>
               <div
                 ref={chartWheelTargetRef}
                 className={`performance-chart portfolio-chart portfolio-chart-events portfolio-interactive-chart ${zoomActive ? 'is-zoomed' : ''} ${isPanning ? 'is-panning' : ''}`}
-                aria-label="Portfolio evolution chart. Use the mouse wheel to zoom. When zoomed, hold the left mouse button and drag to pan through time. Buy and sell markers use a pointer cursor."
+                aria-label={tr("Portfolio evolution chart. Use the mouse wheel to zoom. When zoomed, hold the left mouse button and drag to pan through time. Buy and sell markers use a pointer cursor.")}
                 onPointerDown={beginChartPan}
                 onPointerMove={moveChartPan}
                 onPointerUp={endChartPan}
@@ -660,9 +661,9 @@ export function PaperPortfolioDashboard() {
                       minTickGap={42}
                       tickFormatter={(value) => portfolioAxisLabel(value, visibleTimeSpan)}
                     />
-                    <YAxis domain={yDomain} tickFormatter={(value) => `$${Number(value).toLocaleString('en-US', { maximumFractionDigits: 0 })}`} />
+                    <YAxis domain={yDomain} tickFormatter={(value) => `$${Number(value).toLocaleString(getIntlLocale(), { maximumFractionDigits: 0 })}`} />
                     <Tooltip content={<PortfolioChartTooltip />} cursor={{ stroke: 'rgba(157, 175, 195, .45)', strokeWidth: 1 }} />
-                    <Line type="monotone" dataKey="portfolio_value" name="Portfolio" dot={<TradeEventDot />} activeDot={false} strokeWidth={2.5} stroke="var(--positive)" isAnimationActive={false} />
+                    <Line type="monotone" dataKey="portfolio_value" name={tr("Portfolio")} dot={<TradeEventDot />} activeDot={false} strokeWidth={2.5} stroke="var(--positive)" isAnimationActive={false} />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
@@ -673,20 +674,20 @@ export function PaperPortfolioDashboard() {
 
           <section className="portfolio-orders-section">
             <div className="portfolio-section-heading portfolio-orders-heading">
-              <div><span className="panel-kicker">Activity</span><h2>Recent Paper Orders</h2></div>
-              <span className="panel-count">{data.recent_orders?.length || 0} records</span>
+              <div><span className="panel-kicker">{tr("Activity")}</span><h2>{tr("Recent Paper Orders")}</h2></div>
+              <span className="panel-count">{data.recent_orders?.length || 0} {tr("records")}</span>
             </div>
             <div className="table-wrap portfolio-orders-table-wrap compact-order-scroll">
               <table className="dashboard-table portfolio-orders-table">
-                <thead><tr><th>Created</th><th>Asset</th><th>Side</th><th>Status</th><th>Quantity</th><th>Average Fill</th></tr></thead>
+                <thead><tr><th>{tr("Created")}</th><th>{tr("Asset")}</th><th>{tr("Side")}</th><th>{tr("Status")}</th><th>{tr("Quantity")}</th><th>{tr("Average Fill")}</th></tr></thead>
                 <tbody>
                   {data.recent_orders?.length ? data.recent_orders.map((order, index) => (
                     <tr key={`${order.created_at || 'order'}-${order.symbol || 'asset'}-${index}`}>
                       <td>{shortDateTime(order.created_at)}</td><td>{order.symbol || '—'}</td>
-                      <td><span className={`order-side ${order.side}`}>{String(order.side || '—').toUpperCase()}</span></td>
-                      <td>{order.status || '—'}</td><td>{order.filled_quantity ?? order.quantity ?? '—'}</td><td>{order.filled_average_price ? money(order.filled_average_price) : '—'}</td>
+                      <td><span className={`order-side ${order.side}`}>{order.side === 'buy' ? tr('Buy') : order.side === 'sell' ? tr('Sell') : String(order.side || '—').toUpperCase()}</span></td>
+                      <td>{order.status ? tr(String(order.status).replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())) : '—'}</td><td>{order.filled_quantity ?? order.quantity ?? '—'}</td><td>{order.filled_average_price ? money(order.filled_average_price) : '—'}</td>
                     </tr>
-                  )) : <tr><td colSpan="6" className="empty-cell">No paper orders have been submitted yet.</td></tr>}
+                  )) : <tr><td colSpan="6" className="empty-cell">{tr("No paper orders have been submitted yet.")}</td></tr>}
                 </tbody>
               </table>
             </div>

@@ -1,3 +1,4 @@
+import { tr } from '../../../i18n/runtime'
 import { useEffect, useRef } from 'react'
 
 export function ExecutionStatus({ workspace }) {
@@ -31,24 +32,24 @@ export function ExecutionStatus({ workspace }) {
       <div className="execution-status-row">
         <div>
           <span className={`status-dot ${job.status}`} />
-          <strong>{job.stage || 'Preparing simulation'}</strong>
-          <small>{job.completed_runs ?? 0} of {job.total_runs ?? 0} runs</small>
+          <strong>{tr(job.stage || 'Preparing simulation')}</strong>
+          <small>{job.completed_runs ?? 0} {tr("of")}{' '}{job.total_runs ?? 0} {tr("runs")}</small>
         </div>
         <span>{progressLabel}%</span>
       </div>
       {(runCount > 0 || foldCount > 0 || phase) ? (
-        <div className="execution-detail-grid" aria-label="Detailed training progress">
-          {runCount > 0 ? <span><small>Run</small><strong>{Math.max(0, runIndex)}/{runCount}</strong></span> : null}
-          {foldCount > 0 ? <span><small>Fold</small><strong>{Math.max(0, foldIndex)}/{foldCount}</strong></span> : null}
-          {phase ? <span className="phase"><small>Phase</small><strong>{phase}</strong></span> : null}
-          {totalModels > 0 ? <span><small>Models</small><strong>{trainedModels}/{totalModels}</strong></span> : null}
-          {device ? <span><small>Device</small><strong>{device}</strong></span> : null}
+        <div className="execution-detail-grid" aria-label={tr("Detailed training progress")}>
+          {runCount > 0 ? <span><small>{tr("Run")}</small><strong>{Math.max(0, runIndex)}/{runCount}</strong></span> : null}
+          {foldCount > 0 ? <span><small>{tr("Fold")}</small><strong>{Math.max(0, foldIndex)}/{foldCount}</strong></span> : null}
+          {phase ? <span className="phase"><small>{tr("Phase")}</small><strong>{tr(phase)}</strong></span> : null}
+          {totalModels > 0 ? <span><small>{tr("Models")}</small><strong>{trainedModels}/{totalModels}</strong></span> : null}
+          {device ? <span><small>{tr("Device")}</small><strong>{device}</strong></span> : null}
         </div>
       ) : null}
       <div
         className="progress-track"
         role="progressbar"
-        aria-label="Backtest execution progress"
+        aria-label={tr("Backtest execution progress")}
         aria-valuemin="0"
         aria-valuemax="100"
         aria-valuenow={progress}
@@ -56,8 +57,8 @@ export function ExecutionStatus({ workspace }) {
         <span style={{ width: `${progress}%` }} />
       </div>
       <div className="execution-log">
-        <div className="execution-log-title">Execution log</div>
-        <pre ref={logRef}>{logs.length ? logs.slice(-120).join('\n') : 'Waiting for execution messages…'}</pre>
+        <div className="execution-log-title">{tr("Execution log")}</div>
+        <pre ref={logRef}>{logs.length ? logs.slice(-120).join('\n') : tr('Waiting for execution messages…')}</pre>
       </div>
     </section>
   )
