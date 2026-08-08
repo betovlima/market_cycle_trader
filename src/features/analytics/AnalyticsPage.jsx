@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
-  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -28,6 +25,8 @@ import {
 } from '../../shared/components/Icons'
 import { ParameterHint } from '../../shared/components/ParameterHint'
 import { money, number, percent, shortDate, shortDateTime } from '../../shared/formatters'
+import { BacktestPerformanceExplorer } from './components/BacktestPerformanceExplorer'
+import { AnalyticsMetric, ChartCell, ChartEmpty, SectionHeading } from './components/AnalyticsPrimitives'
 
 const ASSET_PAGE_SIZE = 10
 const ROTATION_PAGE_SIZE = 10
@@ -77,39 +76,6 @@ function sortRows(rows, key, direction, valueGetter = null) {
     const rightValue = valueGetter ? valueGetter(right, key) : right?.[key]
     return compareValues(leftValue, rightValue) * multiplier
   })
-}
-
-function AnalyticsMetric({ label, value, note, tone: metricTone = '', description = '' }) {
-  return <article className={`analytics-workspace-metric ${metricTone}`}>
-    <div className="analytics-metric-label">
-      <span>{label}</span>
-      {description ? <ParameterHint id={`analytics-metric-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} title={label} description={description} /> : null}
-    </div>
-    <strong>{value}</strong>
-    <small>{note}</small>
-  </article>
-}
-
-function SectionHeading({ kicker, title, description = '', action = null }) {
-  return <div className="analytics-section-heading">
-    <div>
-      <span className="panel-kicker">{kicker}</span>
-      <h2>{title}</h2>
-      {description ? <p>{description}</p> : null}
-    </div>
-    {action}
-  </div>
-}
-
-function ChartCell({ kicker, title, children, className = '' }) {
-  return <div className={`analytics-chart-cell ${className}`}>
-    <div className="analytics-chart-cell-heading"><span>{kicker}</span><strong>{title}</strong></div>
-    {children}
-  </div>
-}
-
-function ChartEmpty({ children = 'Not enough observations for this chart.' }) {
-  return <div className="analytics-empty">{children}</div>
 }
 
 function FilterIconButton({ active = false, label, onClick, toneClass = '', children }) {
@@ -194,6 +160,7 @@ function AnalyticsTableTabs({ value, onChange, items }) {
     {items.map((item) => <button key={item.value} type="button" role="tab" aria-selected={value === item.value} className={value === item.value ? 'active' : ''} onClick={() => onChange(item.value)}>{item.label}<span>{item.count}</span></button>)}
   </div>
 }
+
 
 function BacktestAnalytics({ dashboard }) {
   const recentCompleted = useMemo(() => (dashboard?.recent_backtests || []).filter((item) => item.status === 'completed'), [dashboard])
@@ -298,20 +265,7 @@ function BacktestAnalytics({ dashboard }) {
         <AnalyticsMetric label="Average holding" value={rotation.average_holding_days == null ? '—' : `${number(rotation.average_holding_days, 1)} days`} note="Closed positions" description={BACKTEST_METRIC_HINTS['Average holding']} />
       </section>
 
-      <section className="analytics-workspace-section">
-        <SectionHeading kicker="PERFORMANCE" title="Return, risk and consistency" description="Capital evolution, drawdown and monthly behavior for the selected completed simulation." />
-        <div className="analytics-performance-grid">
-          <ChartCell kicker="CAPITAL CURVE" title="Simulation versus reference" className="analytics-chart-primary">
-            {data.equity?.length ? <div className="analytics-chart analytics-chart-large"><ResponsiveContainer width="100%" height="100%"><LineChart data={data.equity}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="timestamp" tickFormatter={shortDate} minTickGap={38} /><YAxis tickFormatter={(value) => `$${Math.round(value / 1000)}k`} /><Tooltip labelFormatter={shortDateTime} formatter={(value) => money(value)} /><Legend /><Line type="monotone" dataKey="simulation_equity" name="Simulation" dot={false} strokeWidth={2} stroke="var(--positive)" /><Line type="monotone" dataKey="reference_equity" name="Reference" dot={false} strokeWidth={2} stroke="var(--accent)" /></LineChart></ResponsiveContainer></div> : <ChartEmpty />}
-          </ChartCell>
-          <ChartCell kicker="RISK" title="Drawdown through time">
-            {data.equity?.length ? <div className="analytics-chart analytics-chart-compact"><ResponsiveContainer width="100%" height="100%"><LineChart data={data.equity}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="timestamp" tickFormatter={shortDate} minTickGap={38} /><YAxis tickFormatter={(value) => `${Math.round(value * 100)}%`} /><Tooltip labelFormatter={shortDateTime} formatter={(value) => percent(value)} /><Line type="monotone" dataKey="drawdown" name="Drawdown" dot={false} strokeWidth={2} stroke="var(--negative)" /></LineChart></ResponsiveContainer></div> : <ChartEmpty />}
-          </ChartCell>
-          <ChartCell kicker="CONSISTENCY" title="Monthly returns">
-            {data.monthly_returns?.length ? <div className="analytics-chart analytics-chart-compact"><ResponsiveContainer width="100%" height="100%"><BarChart data={data.monthly_returns}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="month" /><YAxis tickFormatter={(value) => `${Math.round(value * 100)}%`} /><Tooltip formatter={(value) => percent(value)} /><Legend /><Bar dataKey="simulation_return" name="Simulation" fill="var(--positive)" /><Bar dataKey="reference_return" name="Reference" fill="var(--accent)" /></BarChart></ResponsiveContainer></div> : <ChartEmpty />}
-          </ChartCell>
-        </div>
-      </section>
+      <BacktestPerformanceExplorer data={data} jobId={jobId} />
 
       <section className="analytics-workspace-section analytics-data-section">
         <SectionHeading
