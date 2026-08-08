@@ -1,7 +1,9 @@
+import { tr } from './i18n/runtime'
 import { useCallback, useEffect, useState } from 'react'
 
 import { apiFetch } from './api/http'
-import { API } from './config/env'
+import { API, FRONT_VERSION } from './config/env'
+import { useI18n } from './i18n/I18nProvider'
 import { AppHeader } from './features/backtest/components/AppHeader'
 import { BacktestPage } from './features/backtest/components/BacktestPage'
 import { useBacktestWorkspace } from './features/backtest/hooks/useBacktestWorkspace'
@@ -50,9 +52,9 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
   }, [activeTab, session.role])
 
   return <div className="app-frame">
-    <AppHeader workspace={workspace} activeTab={activeTab} onTabChange={setActiveTab} session={session} onLogout={onLogout} />
-    {idleRemaining !== null && idleRemaining <= 300 ? <div className="session-expiration-warning">Your session will expire soon.</div> : null}
-    {workspace.error ? <div className="global-error"><strong>Unable to load data</strong><span>{workspace.error}</span><button type="button" onClick={() => workspace.setError('')}>×</button></div> : null}
+    <AppHeader activeTab={activeTab} onTabChange={setActiveTab} session={session} onLogout={onLogout} />
+    {idleRemaining !== null && idleRemaining <= 300 ? <div className="session-expiration-warning">{tr("Your session will expire soon.")}</div> : null}
+    {workspace.error ? <div className="global-error"><strong>{tr("Unable to load data")}</strong><span>{tr(workspace.error)}</span><button type="button" onClick={() => workspace.setError('')}>×</button></div> : null}
     <main className="workspace-main">
       {activeTab === 'dashboard' ? <DashboardPage workspace={workspace} onOpenBacktest={() => setActiveTab('backtest')} canRunBacktest /> : null}
       {activeTab === 'backtest' ? <BacktestPage workspace={workspace} canExportResults={session.role === 'admin'} /> : null}
@@ -61,11 +63,19 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
       {activeTab === 'administration' && session.role === 'admin' ? <AdministrationPage onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'system-settings' && session.role === 'admin' ? <SystemSettingsPage onSessionExpired={onSessionExpired} /> : null}
     </main>
-    <footer className="app-footer">All activity is simulated. Private configuration remains server-side.</footer>
+    <footer className="app-footer">
+      <span>{tr("All activity is simulated. Private configuration remains server-side.")}</span>
+      <span className="app-footer-divider" aria-hidden="true">•</span>
+      <span className="app-footer-versions">
+        <span>{tr("API v")}{workspace.apiVersion}</span>
+        <span>{tr("Front v")}{FRONT_VERSION}</span>
+      </span>
+    </footer>
   </div>
 }
 
 export default function App() {
+  useI18n()
   const [state, setState] = useState('checking')
   const [session, setSession] = useState(null)
   const [error, setError] = useState('')
@@ -99,7 +109,7 @@ export default function App() {
     setState('authenticated')
   }, [])
 
-  if (state === 'checking') return <div className="app-loading">Checking private session…</div>
-  if (state !== 'authenticated' || !session) return <><LoginPage onAuthenticated={authenticated} />{error ? <div className="startup-error">{error}</div> : null}</>
+  if (state === 'checking') return <div className="app-loading">{tr("Checking private session…")}</div>
+  if (state !== 'authenticated' || !session) return <><LoginPage onAuthenticated={authenticated} />{error ? <div className="startup-error">{tr(error)}</div> : null}</>
   return <AuthenticatedApp session={session} onLogout={logout} onSessionExpired={expired} onSessionRefresh={setSession} />
 }

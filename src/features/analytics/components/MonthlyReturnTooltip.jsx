@@ -1,3 +1,4 @@
+import { tr } from '../../../i18n/runtime'
 import { createPortal } from 'react-dom'
 
 import { percent } from '../../../shared/formatters'
@@ -14,7 +15,7 @@ export function MonthlyReturnTooltip({ tooltip }) {
       <div className="analytics-heatmap-tooltip-header">
         <div>
           <strong>{tooltip.month} {tooltip.year}</strong>
-          <span>Monthly performance</span>
+          <span>{tr("Monthly performance")}</span>
         </div>
         <b className={tooltip.selectedValue >= 0 ? 'positive' : 'negative'}>
           {percent(tooltip.selectedValue)}
@@ -22,19 +23,19 @@ export function MonthlyReturnTooltip({ tooltip }) {
       </div>
 
       <div className="analytics-heatmap-tooltip-selected">
-        <span>Current view</span>
-        <strong>{tooltip.selectedModeLabel}</strong>
+        <span>{tr("Current view")}</span>
+        <strong>{tr(tooltip.selectedModeLabel)}</strong>
       </div>
 
       <div className="analytics-heatmap-tooltip-grid">
-        <Metric label="Simulation" value={tooltip.simulation} />
-        <Metric label="Reference" value={tooltip.reference} />
-        <Metric label="Excess" value={tooltip.excess} signed />
+        <Metric label={tr("Simulation")} value={tooltip.simulation} />
+        <Metric label={tr("Reference")} value={tooltip.reference} />
+        <Metric label={tr("Excess")} value={tooltip.excess} signed />
       </div>
 
       <div className="analytics-heatmap-tooltip-result">
         <span className={`analytics-heatmap-tooltip-dot ${tooltip.excess >= 0 ? 'positive' : 'negative'}`} />
-        <span>{tooltip.relativeResult}</span>
+        <span>{tr(tooltip.relativeResult)}</span>
       </div>
     </div>,
     document.body,
@@ -43,7 +44,7 @@ export function MonthlyReturnTooltip({ tooltip }) {
 
 function Metric({ label, value, signed = false }) {
   return <div>
-    <span>{label}</span>
+    <span>{tr(label)}</span>
     <strong className={value >= 0 ? 'positive' : 'negative'}>
       {signed && value > 0 ? '+' : ''}{percent(value)}
     </strong>

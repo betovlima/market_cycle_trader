@@ -1,8 +1,11 @@
+import { tr } from '../i18n/runtime'
 import { useEffect, useRef, useState } from 'react'
 
 import { apiFetch } from '../api/http'
 import { API, GOOGLE_CLIENT_ID } from '../config/env'
 import appLogoUrl from '../assets/market-cycle-trader-logo.png'
+import { LanguageSelector } from '../i18n/LanguageSelector'
+import { getIntlLocale } from '../i18n/runtime'
 
 function accessFromLocation() {
   if (typeof window === 'undefined') return { invitation_id: '', token: '' }
@@ -29,7 +32,7 @@ function roleLabel(role) {
     trader: 'Trader',
     viewer: 'Viewer',
   }
-  return labels[role] || 'Authorized'
+  return tr(labels[role] || 'Authorized')
 }
 
 function GoogleIdentityButton({ disabled, onCredential, onError }) {
@@ -52,7 +55,7 @@ function GoogleIdentityButton({ disabled, onCredential, onError }) {
       if (!googleIdentity) {
         attempts += 1
         if (attempts > 80) {
-          errorHandlerRef.current('Google Sign-In could not be loaded. Refresh the page and try again.')
+          errorHandlerRef.current(tr('Google Sign-In could not be loaded. Refresh the page and try again.'))
           return
         }
         timer = window.setTimeout(render, 100)
@@ -61,7 +64,7 @@ function GoogleIdentityButton({ disabled, onCredential, onError }) {
       try {
         window.__marketCycleGoogleCredentialHandler = (response) => {
           if (response?.credential) credentialHandlerRef.current(response.credential)
-          else errorHandlerRef.current('Google did not return a verified identity credential.')
+          else errorHandlerRef.current(tr('Google did not return a verified identity credential.'))
         }
         if (!window.__marketCycleGoogleInitialized) {
           googleIdentity.initialize({
@@ -86,7 +89,7 @@ function GoogleIdentityButton({ disabled, onCredential, onError }) {
           })
         }
       } catch (error) {
-        errorHandlerRef.current(error?.message || 'Unable to initialize Google Sign-In.')
+        errorHandlerRef.current(tr(error?.message || 'Unable to initialize Google Sign-In.'))
       }
     }
 
@@ -98,7 +101,7 @@ function GoogleIdentityButton({ disabled, onCredential, onError }) {
   }, [disabled])
 
   if (!GOOGLE_CLIENT_ID) {
-    return <div className="auth-error">Google access is not configured for this frontend.</div>
+    return <div className="auth-error">{tr("Google access is not configured for this frontend.")}</div>
   }
   return <div className={`google-identity-button ${disabled ? 'disabled' : ''}`} ref={buttonRef} />
 }
@@ -116,7 +119,7 @@ export function LoginPage({ onAuthenticated }) {
       setPreview(null)
       setCheckingInvitation(false)
       if (nextLocator.token) {
-        setError('This invitation link is incomplete. Ask the administrator for a new link.')
+        setError(tr('This invitation link is incomplete. Ask the administrator for a new link.'))
       }
       keepInvitationAndRemoveToken('')
       return
@@ -137,7 +140,7 @@ export function LoginPage({ onAuthenticated }) {
       keepInvitationAndRemoveToken(value.invitation_id)
     } catch (requestError) {
       setPreview(null)
-      setError(requestError.message || 'Unable to open this invitation.')
+      setError(tr(requestError.message || 'Unable to open this invitation.'))
       keepInvitationAndRemoveToken(nextLocator.invitation_id || '')
     } finally {
       setCheckingInvitation(false)
@@ -164,7 +167,7 @@ export function LoginPage({ onAuthenticated }) {
       keepInvitationAndRemoveToken('')
       onAuthenticated(session)
     } catch (requestError) {
-      setError(requestError.message || 'Unable to verify the Google account.')
+      setError(tr(requestError.message || 'Unable to verify the Google account.'))
     } finally {
       setBusy(false)
     }
@@ -174,38 +177,38 @@ export function LoginPage({ onAuthenticated }) {
 
   return (
     <main className="auth-page">
+      <div className="auth-language-selector"><LanguageSelector /></div>
       <section className="auth-card unified-auth-card">
         <div className="auth-brand">
           <img src={appLogoUrl} alt="" />
           <div>
-            <span>PRIVATE SIMULATION</span>
-            <h1>Market Cycle Trader</h1>
-            <p>Sign in with an authorized Google account.</p>
+            <span>{tr("PRIVATE SIMULATION")}</span>
+            <h1>{tr("Market Cycle Trader")}</h1>
+            <p>{tr("Sign in with an authorized Google account.")}</p>
           </div>
         </div>
 
         {preview ? (
           <div className="verified-access-panel">
             <div className="verified-access-heading">
-              <span>{roleLabel(preview.role)} invitation</span>
+              <span>{roleLabel(preview.role)} {tr("invitation")}</span>
               <strong>{preview.guest_name}</strong>
             </div>
             <dl className="verified-access-details">
-              <div><dt>Authorized Google email</dt><dd>{preview.masked_email}</dd></div>
-              <div><dt>Access profile</dt><dd>{roleLabel(preview.role)}</dd></div>
-              <div><dt>Invitation status</dt><dd>{preview.status.replaceAll('_', ' ')}</dd></div>
-              <div><dt>Expires</dt><dd>{new Date(preview.expires_at).toLocaleString()}</dd></div>
+              <div><dt>{tr("Authorized Google email")}</dt><dd>{preview.masked_email}</dd></div>
+              <div><dt>{tr("Access profile")}</dt><dd>{roleLabel(preview.role)}</dd></div>
+              <div><dt>{tr("Invitation status")}</dt><dd>{tr(preview.status.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()))}</dd></div>
+              <div><dt>{tr("Expires")}</dt><dd>{new Date(preview.expires_at).toLocaleString(getIntlLocale())}</dd></div>
             </dl>
             <p className="verified-access-note">
-              Continue with the Google account that owns the authorized email. A different account will be rejected.
-            </p>
+              {tr("Continue with the Google account that owns the authorized email. A different account will be rejected.")}</p>
           </div>
         ) : null}
 
-        {error ? <div className="auth-error">{error}</div> : null}
+        {error ? <div className="auth-error">{tr(error)}</div> : null}
         <GoogleIdentityButton disabled={disabled} onCredential={authenticateGoogle} onError={setError} />
-        {checkingInvitation ? <div className="google-verification-progress"><span className="loading-ring" />Checking invitation…</div> : null}
-        {busy ? <div className="google-verification-progress"><span className="loading-ring" />Verifying identity…</div> : null}
+        {checkingInvitation ? <div className="google-verification-progress"><span className="loading-ring" />{tr("Checking invitation…")}</div> : null}
+        {busy ? <div className="google-verification-progress"><span className="loading-ring" />{tr("Verifying identity…")}</div> : null}
 
       </section>
     </main>

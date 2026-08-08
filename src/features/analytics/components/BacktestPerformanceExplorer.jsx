@@ -1,3 +1,4 @@
+import { tr } from '../../../i18n/runtime'
 import { useMemo, useState } from 'react'
 import {
   CartesianGrid,
@@ -38,11 +39,11 @@ function PerformanceTooltip({ active, payload }) {
 
   return <div className="analytics-performance-tooltip">
     <strong>{shortDateTime(point.timestamp)}</strong>
-    <div><span>Simulation</span><b>{money(point.simulation_equity)}</b></div>
-    <div><span>Reference</span><b>{money(point.reference_equity)}</b></div>
-    <div><span>Simulation change</span><b className={tone(point.simulation_change)}>{percent(point.simulation_change)}</b></div>
-    <div><span>Reference change</span><b className={tone(point.reference_change)}>{percent(point.reference_change)}</b></div>
-    <div><span>Excess</span><b className={tone(point.excess_change)}>{percent(point.excess_change)}</b></div>
+    <div><span>{tr("Simulation")}</span><b>{money(point.simulation_equity)}</b></div>
+    <div><span>{tr("Reference")}</span><b>{money(point.reference_equity)}</b></div>
+    <div><span>{tr("Simulation change")}</span><b className={tone(point.simulation_change)}>{percent(point.simulation_change)}</b></div>
+    <div><span>{tr("Reference change")}</span><b className={tone(point.reference_change)}>{percent(point.reference_change)}</b></div>
+    <div><span>{tr("Excess")}</span><b className={tone(point.excess_change)}>{percent(point.excess_change)}</b></div>
   </div>
 }
 
@@ -147,7 +148,7 @@ export function BacktestPerformanceExplorer({ data, jobId }) {
     <AnalyticsModeTabs
       value={performanceMode}
       onChange={setPerformanceMode}
-      label="Performance chart view"
+      label={tr("Performance chart view")}
       items={[
         { value: 'value', label: 'Value' },
         { value: 'indexed', label: 'Indexed 100' },
@@ -156,16 +157,16 @@ export function BacktestPerformanceExplorer({ data, jobId }) {
     />
     <span className="analytics-zoom-status">
       {zoomActive
-        ? `${zoomLevel >= 10 ? zoomLevel.toFixed(0) : zoomLevel.toFixed(1)}× · drag to pan`
-        : 'Wheel to zoom'}
+        ? tr('{level}× · drag to pan', { level: zoomLevel >= 10 ? zoomLevel.toFixed(0) : zoomLevel.toFixed(1) })
+        : tr('Wheel to zoom')}
     </span>
-    {zoomActive ? <button type="button" className="analytics-reset-zoom" onClick={resetZoom}>Reset</button> : null}
+    {zoomActive ? <button type="button" className="analytics-reset-zoom" onClick={resetZoom}>{tr("Reset")}</button> : null}
   </div>
 
   const performanceCards = {
     performance: <ChartCell
-      kicker="PERFORMANCE EXPLORER"
-      title="Simulation versus reference"
+      kicker={tr("PERFORMANCE EXPLORER")}
+      title={tr("Simulation versus reference")}
       className="analytics-chart-primary analytics-performance-main"
       action={<div className="analytics-card-heading-actions">
         {performanceAction}
@@ -203,15 +204,15 @@ export function BacktestPerformanceExplorer({ data, jobId }) {
               cursor={{ stroke: 'rgba(147, 177, 210, .45)', strokeDasharray: '4 4' }}
             />
             {performanceMode === 'value' ? <>
-              <Line type="monotone" dataKey="simulation_equity" name="Simulation" dot={false} strokeWidth={2.3} stroke="var(--positive)" />
-              <Line type="monotone" dataKey="reference_equity" name="Reference" dot={false} strokeWidth={2} stroke="var(--accent)" />
+              <Line type="monotone" dataKey="simulation_equity" name={tr("Simulation")} dot={false} strokeWidth={2.3} stroke="var(--positive)" />
+              <Line type="monotone" dataKey="reference_equity" name={tr("Reference")} dot={false} strokeWidth={2} stroke="var(--accent)" />
             </> : performanceMode === 'indexed' ? <>
               <ReferenceLine y={100} stroke="rgba(145, 169, 198, .35)" strokeDasharray="3 4" />
-              <Line type="monotone" dataKey="simulation_index" name="Simulation" dot={false} strokeWidth={2.3} stroke="var(--positive)" />
-              <Line type="monotone" dataKey="reference_index" name="Reference" dot={false} strokeWidth={2} stroke="var(--accent)" />
+              <Line type="monotone" dataKey="simulation_index" name={tr("Simulation")} dot={false} strokeWidth={2.3} stroke="var(--positive)" />
+              <Line type="monotone" dataKey="reference_index" name={tr("Reference")} dot={false} strokeWidth={2} stroke="var(--accent)" />
             </> : <>
               <ReferenceLine y={0} stroke="rgba(145, 169, 198, .45)" strokeDasharray="3 4" />
-              <Line type="monotone" dataKey="excess_change" name="Excess return" dot={false} strokeWidth={2.3} stroke="var(--positive)" />
+              <Line type="monotone" dataKey="excess_change" name={tr("Excess return")} dot={false} strokeWidth={2.3} stroke="var(--positive)" />
             </>}
           </LineChart>
         </ResponsiveContainer>
@@ -219,14 +220,14 @@ export function BacktestPerformanceExplorer({ data, jobId }) {
     </ChartCell>,
 
     heatmap: <ChartCell
-      kicker="CONSISTENCY"
-      title="Monthly return heatmap"
+      kicker={tr("CONSISTENCY")}
+      title={tr("Monthly return heatmap")}
       className="analytics-heatmap-feature-cell"
       action={<div className="analytics-card-heading-actions">
         <AnalyticsModeTabs
           value={monthlyMode}
           onChange={setMonthlyMode}
-          label="Monthly heatmap view"
+          label={tr("Monthly heatmap view")}
           items={[
             { value: 'simulation', label: 'Simulation' },
             { value: 'reference', label: 'Reference' },
@@ -242,12 +243,12 @@ export function BacktestPerformanceExplorer({ data, jobId }) {
 
   return <section className="analytics-workspace-section analytics-performance-explorer-section">
     <SectionHeading
-      kicker="PERFORMANCE"
-      title="Return and consistency"
-      description="Interactive performance explorer. Zoom or pan the capital curve and the monthly return heatmap follows the same time window."
+      kicker={tr("PERFORMANCE")}
+      title={tr("Return and consistency")}
+      description={tr("Interactive performance explorer. Zoom or pan the capital curve and the monthly return heatmap follows the same time window.")}
       action={<div className="analytics-layout-toolbar">
-        <span><b aria-hidden="true">⋮⋮</b> Drag chart headers to reorder</span>
-        {reorderable.customized ? <button type="button" onClick={reorderable.reset}>Reset layout</button> : null}
+        <span><b aria-hidden="true">⋮⋮</b> {tr("Drag chart headers to reorder")}</span>
+        {reorderable.customized ? <button type="button" onClick={reorderable.reset}>{tr("Reset layout")}</button> : null}
       </div>}
     />
 

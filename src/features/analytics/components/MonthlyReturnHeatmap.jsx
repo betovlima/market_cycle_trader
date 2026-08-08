@@ -1,3 +1,4 @@
+import { getIntlLocale, tr } from '../../../i18n/runtime'
 import { useCallback, useMemo, useState } from 'react'
 
 import { percent } from '../../../shared/formatters'
@@ -6,14 +7,17 @@ import { ChartEmpty } from './AnalyticsPrimitives'
 import { MonthlyReturnTooltip } from './MonthlyReturnTooltip'
 import './monthlyReturnHeatmap.css'
 
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+function monthNames() {
+  const formatter = new Intl.DateTimeFormat(getIntlLocale(), { month: 'short', timeZone: 'UTC' })
+  return Array.from({ length: 12 }, (_, index) => formatter.format(new Date(Date.UTC(2024, index, 1))).replace('.', ''))
+}
 const TOOLTIP_WIDTH = 248
 const TOOLTIP_PADDING = 12
 
 function selectedModeLabel(mode) {
-  if (mode === 'reference') return 'Reference'
-  if (mode === 'excess') return 'Excess'
-  return 'Simulation'
+  if (mode === 'reference') return tr('Reference')
+  if (mode === 'excess') return tr('Excess')
+  return tr('Simulation')
 }
 
 function mapMonthlyReturns(rows, mode) {
@@ -64,23 +68,24 @@ export function MonthlyReturnHeatmap({ rows, mode }) {
     })
   }, [])
 
-  if (!years.length) return <ChartEmpty>No monthly return observations in the selected range.</ChartEmpty>
+  if (!years.length) return <ChartEmpty>{tr("No monthly return observations in the selected range.")}</ChartEmpty>
 
   const modeLabel = selectedModeLabel(mode)
+  const months = monthNames()
 
   return <>
-    <div className="analytics-return-heatmap" role="grid" aria-label="Monthly return heatmap" onMouseLeave={hideTooltip}>
+    <div className="analytics-return-heatmap" role="grid" aria-label={tr("Monthly return heatmap")} onMouseLeave={hideTooltip}>
       <div className="analytics-heatmap-head" aria-hidden="true">
         <span />
-        {MONTH_NAMES.map((name) => <span key={name}>{name}</span>)}
+        {months.map((name) => <span key={name}>{name}</span>)}
       </div>
 
       {years.map((year) => <div className="analytics-heatmap-row" key={year}>
         <strong>{year}</strong>
-        {MONTH_NAMES.map((monthName, index) => {
+        {months.map((monthName, index) => {
           const data = mapped.values.get(`${year}-${index + 1}`)
           const present = Boolean(data && Number.isFinite(data.selectedValue))
-          if (!present) return <span key={`${year}-${index}`} role="gridcell" className="analytics-heatmap-cell empty" aria-label={`${monthName} ${year}. No observation.`}>—</span>
+          if (!present) return <span key={`${year}-${index}`} role="gridcell" className="analytics-heatmap-cell empty" aria-label={tr('{month} {year}. No observation.', { month: monthName, year })}>—</span>
 
           const alpha = Math.min(.78, .16 + (mapped.maxAbs ? Math.abs(data.selectedValue) / mapped.maxAbs : 0) * .62)
           const relativeResult = data.excess > 0 ? 'Simulation outperformed' : data.excess < 0 ? 'Reference outperformed' : 'Same performance'
@@ -98,7 +103,7 @@ export function MonthlyReturnHeatmap({ rows, mode }) {
             tabIndex={0}
             className={`analytics-heatmap-cell ${data.selectedValue >= 0 ? 'positive' : 'negative'}`}
             style={{ '--heat-alpha': alpha }}
-            aria-label={`${monthName} ${year}. ${modeLabel} ${percent(data.selectedValue)}. Simulation ${percent(data.simulation)}. Reference ${percent(data.reference)}. Excess ${percent(data.excess)}.`}
+            aria-label={tr('{month} {year}. {mode} {selected}. Simulation {simulation}. Reference {reference}. Excess {excess}.', { month: monthName, year, mode: modeLabel, selected: percent(data.selectedValue), simulation: percent(data.simulation), reference: percent(data.reference), excess: percent(data.excess) })}
             onMouseEnter={(event) => showTooltip(event, tooltipData)}
             onFocus={(event) => showTooltip(event, tooltipData)}
             onBlur={hideTooltip}

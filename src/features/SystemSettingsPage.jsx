@@ -1,3 +1,4 @@
+import { getIntlLocale, tr, translatedStatus } from '../i18n/runtime'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { ApiError, apiFetch } from '../api/http'
@@ -85,20 +86,20 @@ const TRADER_FIELD_HINTS = {
 
 function dateTime(value) {
   if (!value) return '—'
-  return new Date(value).toLocaleString()
+  return new Date(value).toLocaleString(getIntlLocale())
 }
 
 function modeLabel(value) {
-  return String(value || 'stopped').replaceAll('_', ' ')
+  return translatedStatus(value || 'stopped')
 }
 
 function historySummary(item) {
   const training = item.training || {}
   return [
-    training.enabled ? 'Training on' : 'Training off',
-    training.automatic_training_enabled ? 'Automatic on' : 'Automatic off',
-    'Strategy catalog separated from runtime controls',
-    'Single backtest queue',
+    tr(training.enabled ? 'Training on' : 'Training off'),
+    tr(training.automatic_training_enabled ? 'Automatic on' : 'Automatic off'),
+    tr('Strategy catalog separated from runtime controls'),
+    tr('Single backtest queue'),
   ].join(' · ')
 }
 
@@ -120,7 +121,7 @@ export function SystemSettingsPage({ onSessionExpired }) {
       onSessionExpired()
       return
     }
-    setError(requestError.message || 'Unable to update system settings.')
+    setError(tr(requestError.message || 'Unable to update system settings.'))
   }, [onSessionExpired])
 
   const loadData = useCallback(async () => {
@@ -175,7 +176,7 @@ export function SystemSettingsPage({ onSessionExpired }) {
     event.preventDefault()
     const reason = form.reason.trim()
     if (reason.length < 3) {
-      setError('Enter a reason for this change.')
+      setError(tr('Enter a reason for this change.'))
       return
     }
     setSaving(true)
@@ -197,7 +198,7 @@ export function SystemSettingsPage({ onSessionExpired }) {
       })
       setSettings(response)
       setForm((current) => ({ ...current, reason: '' }))
-      setNotice('System settings saved.')
+      setNotice(tr('System settings saved.'))
       const historyResponse = await apiFetch(`${API}/admin/system-settings/history?limit=20`)
       setHistory(historyResponse.items || [])
     } catch (requestError) {
@@ -218,7 +219,7 @@ export function SystemSettingsPage({ onSessionExpired }) {
       stopped: 'Stop Trader',
     }
     const destructive = mode === 'stopped'
-    if (destructive && !window.confirm('Stop the Trader and cancel a pending non-executing run?')) return
+    if (destructive && !window.confirm(tr('Stop the Trader and cancel a pending non-executing run?'))) return
     setTraderBusy(true)
     setError('')
     setNotice('')
@@ -232,7 +233,7 @@ export function SystemSettingsPage({ onSessionExpired }) {
         },
       })
       setTraderControl(response)
-      setNotice(`Trader mode changed to ${modeLabel(mode)}.`)
+      setNotice(tr('Trader mode changed to {mode}.', { mode: modeLabel(mode) }))
       const historyResponse = await apiFetch(`${API}/admin/trader-control/history?limit=20`)
       setTraderHistory(historyResponse.items || [])
     } catch (requestError) {
@@ -245,11 +246,11 @@ export function SystemSettingsPage({ onSessionExpired }) {
   const timeoutHours = useMemo(() => Number(form.timeout_minutes || 0) / 60, [form.timeout_minutes])
 
   if (loading) {
-    return <div className="settings-loading"><span className="loading-ring" />Loading system settings…</div>
+    return <div className="settings-loading"><span className="loading-ring" />{tr("Loading system settings…")}</div>
   }
 
   if (!settings) {
-    return <div className="page-stack system-settings-page"><div className="global-inline-message error-inline">{error || 'System settings are unavailable.'}</div><button type="button" className="secondary-action" onClick={loadData}>Retry</button></div>
+    return <div className="page-stack system-settings-page"><div className="global-inline-message error-inline">{tr(error || 'System settings are unavailable.')}</div><button type="button" className="secondary-action" onClick={loadData}>{tr("Retry")}</button></div>
   }
 
   return (
@@ -259,32 +260,32 @@ export function SystemSettingsPage({ onSessionExpired }) {
           <div className="settings-workspace-title">
             <div className="page-title-icon"><SettingsIcon size={22} /></div>
             <div>
-              <h2>System Settings</h2>
-              <p>Runtime controls, research strategies, Trader operation and audit history in one workspace.</p>
+              <h2>{tr("System Settings")}</h2>
+              <p>{tr("Runtime controls, research strategies, Trader operation and audit history in one workspace.")}</p>
             </div>
           </div>
           <div className="settings-workspace-actions">
-            <span className="settings-revision-badge">Revision {settings?.revision || 1}</span>
-            <button type="button" className="secondary-action settings-refresh-button" onClick={loadData} disabled={loading}>Refresh</button>
+            <span className="settings-revision-badge">{tr("Revision")}{' '}{settings?.revision || 1}</span>
+            <button type="button" className="secondary-action settings-refresh-button" onClick={loadData} disabled={loading}>{tr("Refresh")}</button>
           </div>
         </div>
 
         {error ? <div className="global-inline-message error-inline settings-workspace-message">{error}</div> : null}
         {notice ? <div className="global-inline-message success-inline settings-workspace-message">{notice}</div> : null}
 
-        <div className="settings-runtime-overview" aria-label="Runtime summary">
-          <RuntimeFact label="CPU" value={settings?.runtime?.detected_cpu_count || '—'} hint={RUNTIME_HINTS.detectedCpu} hintId="hint-runtime-cpu" />
-          <RuntimeFact label="Trader" value={modeLabel(traderControl?.control_mode)} tone={traderControl?.control_mode === 'active' ? 'positive' : 'warning'} hint={RUNTIME_HINTS.traderMode} hintId="hint-runtime-trader" />
-          <RuntimeFact label="Backtest limit" value={timeoutHours >= 1 ? `${timeoutHours.toFixed(timeoutHours % 1 ? 1 : 0)} h` : `${form.timeout_minutes} min`} hint={PARAMETER_HINTS.timeoutMinutes} hintId="hint-runtime-timeout" />
-          <RuntimeFact label="Queue" value="Single" hint={RUNTIME_HINTS.queue} hintId="hint-runtime-queue" />
-          <RuntimeFact label="Strategy parameters" value="Separated" hint={RUNTIME_HINTS.strategySeparation} hintId="hint-runtime-strategy-separation" />
+        <div className="settings-runtime-overview" aria-label={tr("Runtime summary")}>
+          <RuntimeFact label={tr("CPU")} value={settings?.runtime?.detected_cpu_count || '—'} hint={RUNTIME_HINTS.detectedCpu} hintId="hint-runtime-cpu" />
+          <RuntimeFact label={tr("Trader")} value={modeLabel(traderControl?.control_mode)} tone={traderControl?.control_mode === 'active' ? 'positive' : 'warning'} hint={RUNTIME_HINTS.traderMode} hintId="hint-runtime-trader" />
+          <RuntimeFact label={tr("Backtest limit")} value={timeoutHours >= 1 ? `${timeoutHours.toFixed(timeoutHours % 1 ? 1 : 0)} h` : `${form.timeout_minutes} min`} hint={PARAMETER_HINTS.timeoutMinutes} hintId="hint-runtime-timeout" />
+          <RuntimeFact label={tr("Queue")} value={tr("Single")} hint={RUNTIME_HINTS.queue} hintId="hint-runtime-queue" />
+          <RuntimeFact label={tr("Strategy parameters")} value={tr("Separated")} hint={RUNTIME_HINTS.strategySeparation} hintId="hint-runtime-strategy-separation" />
         </div>
 
         <section className="settings-workspace-section settings-training-section">
           <div className="settings-section-heading settings-compact-heading">
             <div>
-              <span className="panel-kicker">TRAINING</span>
-              <h2>Model execution</h2>
+              <span className="panel-kicker">{tr("TRAINING")}</span>
+              <h2>{tr("Model execution")}</h2>
             </div>
           </div>
 
@@ -292,14 +293,14 @@ export function SystemSettingsPage({ onSessionExpired }) {
             <div className="settings-model-execution-grid">
               <ToggleField
                 id="training-enabled"
-                label="Training enabled"
+                label={tr("Training enabled")}
                 hint={PARAMETER_HINTS.trainingEnabled}
                 checked={form.enabled}
                 onChange={(checked) => setForm({ ...form, enabled: checked })}
               />
               <ToggleField
                 id="automatic-training-enabled"
-                label="Automatic pre-market training"
+                label={tr("Automatic pre-market training")}
                 hint={PARAMETER_HINTS.automaticTraining}
                 checked={form.automatic_training_enabled}
                 disabled={!form.enabled}
@@ -307,7 +308,7 @@ export function SystemSettingsPage({ onSessionExpired }) {
               />
               <NumberField
                 id="backtest-timeout-minutes"
-                label="Timeout (minutes)"
+                label={tr("Timeout (minutes)")}
                 hint={PARAMETER_HINTS.timeoutMinutes}
                 value={form.timeout_minutes}
                 min="5"
@@ -316,10 +317,10 @@ export function SystemSettingsPage({ onSessionExpired }) {
                 onChange={(value) => setForm({ ...form, timeout_minutes: value })}
               />
               <div className="settings-reason-field settings-inline-reason">
-                <FieldLabel label="Change reason" hint={PARAMETER_HINTS.changeReason} hintId="hint-change-reason" align="right" />
+                <FieldLabel label={tr("Change reason")} hint={PARAMETER_HINTS.changeReason} hintId="hint-change-reason" align="right" />
                 <input id="settings-change-reason" value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} maxLength={500} required />
               </div>
-              <button type="submit" className="admin-primary-button settings-inline-save" disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button>
+              <button type="submit" className="admin-primary-button settings-inline-save" disabled={saving}>{tr(saving ? 'Saving…' : 'Save settings')}</button>
             </div>
           </form>
         </section>
@@ -333,31 +334,31 @@ export function SystemSettingsPage({ onSessionExpired }) {
         <section className="settings-workspace-section trader-control-panel settings-trader-section">
           <div className="settings-section-heading">
             <div>
-              <span className="panel-kicker">TRADER</span>
-              <h2>Trader operation</h2>
+              <span className="panel-kicker">{tr("TRADER")}</span>
+              <h2>{tr("Trader operation")}</h2>
             </div>
             <span className={`trader-mode-badge mode-${traderControl?.control_mode || 'stopped'}`}>{modeLabel(traderControl?.control_mode)}</span>
           </div>
 
           <div className="trader-control-grid settings-trader-grid">
             <div className="trader-control-status">
-              <div><FieldLabel label="Status" hint={TRADER_FIELD_HINTS.status} hintId="hint-trader-status" /><strong>{traderControl?.status || 'Unknown'}</strong></div>
-              <div><FieldLabel label="Phase" hint={TRADER_FIELD_HINTS.phase} hintId="hint-trader-phase" /><strong>{modeLabel(traderControl?.phase || '—')}</strong></div>
-              <div><FieldLabel label="Scheduler" hint={TRADER_FIELD_HINTS.scheduler} hintId="hint-trader-scheduler" /><strong>{traderControl?.scheduler_alive ? 'Online' : 'Offline'}</strong></div>
-              <div><FieldLabel label="Next session" hint={TRADER_FIELD_HINTS.nextSession} hintId="hint-trader-next-session" /><strong>{traderControl?.next_execution_session || '—'}</strong></div>
-              <div><FieldLabel label="Trader winner" hint={TRADER_FIELD_HINTS.traderWinner} hintId="hint-trader-winner" align="right" /><strong>{traderControl?.trader_winner?.name || '—'}</strong></div>
+              <div><FieldLabel label={tr("Status")} hint={TRADER_FIELD_HINTS.status} hintId="hint-trader-status" /><strong>{tr(traderControl?.status || 'Unknown')}</strong></div>
+              <div><FieldLabel label={tr("Phase")} hint={TRADER_FIELD_HINTS.phase} hintId="hint-trader-phase" /><strong>{modeLabel(traderControl?.phase || '—')}</strong></div>
+              <div><FieldLabel label={tr("Scheduler")} hint={TRADER_FIELD_HINTS.scheduler} hintId="hint-trader-scheduler" /><strong>{tr(traderControl?.scheduler_alive ? 'Online' : 'Offline')}</strong></div>
+              <div><FieldLabel label={tr("Next session")} hint={TRADER_FIELD_HINTS.nextSession} hintId="hint-trader-next-session" /><strong>{traderControl?.next_execution_session || '—'}</strong></div>
+              <div><FieldLabel label={tr("Trader winner")} hint={TRADER_FIELD_HINTS.traderWinner} hintId="hint-trader-winner" align="right" /><strong>{traderControl?.trader_winner?.name || '—'}</strong></div>
             </div>
             <div className="trader-control-actions">
-              <button type="button" title="Allow the Trader to execute its normal scheduled Paper workflow." onClick={() => changeTraderMode('active')} disabled={traderBusy || traderControl?.control_mode === 'active'}>Start</button>
-              <button type="button" title="Pause new Trader actions while preserving the current operational state." onClick={() => changeTraderMode('paused')} disabled={traderBusy || traderControl?.control_mode === 'paused'}>Pause</button>
-              <button type="button" title="Allow exits from existing positions but do not open new positions." onClick={() => changeTraderMode('exit_only')} disabled={traderBusy || traderControl?.control_mode === 'exit_only'}>Exit only</button>
-              <button type="button" className="danger" title="Stop Trader operation and cancel a pending non-executing run after confirmation." onClick={() => changeTraderMode('stopped')} disabled={traderBusy || traderControl?.control_mode === 'stopped'}>Stop</button>
+              <button type="button" title={tr("Allow the Trader to execute its normal scheduled Paper workflow.")} onClick={() => changeTraderMode('active')} disabled={traderBusy || traderControl?.control_mode === 'active'}>{tr("Start")}</button>
+              <button type="button" title={tr("Pause new Trader actions while preserving the current operational state.")} onClick={() => changeTraderMode('paused')} disabled={traderBusy || traderControl?.control_mode === 'paused'}>{tr("Pause")}</button>
+              <button type="button" title={tr("Allow exits from existing positions but do not open new positions.")} onClick={() => changeTraderMode('exit_only')} disabled={traderBusy || traderControl?.control_mode === 'exit_only'}>{tr("Exit only")}</button>
+              <button type="button" className="danger" title={tr("Stop Trader operation and cancel a pending non-executing run after confirmation.")} onClick={() => changeTraderMode('stopped')} disabled={traderBusy || traderControl?.control_mode === 'stopped'}>{tr("Stop")}</button>
             </div>
           </div>
 
           {traderHistory.length ? (
             <div className="trader-control-history">
-              <span>Recent changes</span>
+              <span>{tr("Recent changes")}</span>
               {traderHistory.slice(0, 5).map((item, index) => (
                 <div key={`${item.created_at || 'event'}-${index}`}>
                   <strong>{modeLabel(item.new_mode)}</strong>
@@ -371,24 +372,24 @@ export function SystemSettingsPage({ onSessionExpired }) {
         <section className="settings-workspace-section settings-history-section">
           <div className="settings-section-heading">
             <div>
-              <span className="panel-kicker">HISTORY</span>
-              <h2>Configuration history</h2>
+              <span className="panel-kicker">{tr("HISTORY")}</span>
+              <h2>{tr("Configuration history")}</h2>
             </div>
-            <span className="settings-section-meta">{history.length} revisions loaded</span>
+            <span className="settings-section-meta">{tr(history.length === 1 ? '{count} revision loaded' : '{count} revisions loaded', { count: history.length })}</span>
           </div>
           <div className="settings-history-list">
             {history.length ? history.map((item) => (
               <article key={`${item.revision}-${item.updated_at}`} className="settings-history-item">
                 <div>
-                  <strong>Revision {item.revision}</strong>
+                  <strong>{tr("Revision")}{' '}{item.revision}</strong>
                   <span>{historySummary(item)}</span>
                 </div>
                 <div>
                   <strong>{item.reason}</strong>
-                  <span>{item.updated_by || 'Administrator'} · {dateTime(item.updated_at)}</span>
+                  <span>{tr(item.updated_by || 'Administrator')} · {dateTime(item.updated_at)}</span>
                 </div>
               </article>
-            )) : <div className="settings-empty-history">No settings changes recorded.</div>}
+            )) : <div className="settings-empty-history">{tr("No settings changes recorded.")}</div>}
           </div>
         </section>
       </section>
@@ -401,7 +402,7 @@ function ToggleField({ id, label, hint, hintAlign = 'left', checked, disabled = 
     <div className={`settings-toggle ${disabled ? 'disabled' : ''}`}>
       <FieldLabel label={label} hint={hint} hintId={`hint-${id}`} align={hintAlign} />
       <label className="settings-toggle-switch" htmlFor={id}>
-        <input id={id} type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} aria-label={label} />
+        <input id={id} type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} aria-label={tr(label)} />
         <i aria-hidden="true" />
       </label>
     </div>
@@ -420,7 +421,7 @@ function NumberField({ id, label, hint, hintAlign = 'left', value, onChange, ...
 function FieldLabel({ label, hint, hintId, align = 'left' }) {
   return (
     <div className="settings-control-label">
-      <span className="settings-control-label-text">{label}</span>
+      <span className="settings-control-label-text">{tr(label)}</span>
       {hint ? <ParameterHint id={hintId} title={label} align={align} {...hint} /> : null}
     </div>
   )

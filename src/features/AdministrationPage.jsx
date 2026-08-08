@@ -1,3 +1,4 @@
+import { getIntlLocale, tr } from '../i18n/runtime'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ApiError, apiFetch } from '../api/http'
@@ -56,7 +57,7 @@ const ADMIN_HINTS = {
 
 function dateTime(value) {
   if (!value) return '—'
-  return new Date(value).toLocaleString()
+  return new Date(value).toLocaleString(getIntlLocale())
 }
 
 function statusClass(status) {
@@ -76,12 +77,12 @@ function statusLabel(status) {
     revoked: 'Revoked',
     blocked: 'Blocked',
   }
-  return labels[status] || String(status || 'Unknown').replaceAll('_', ' ')
+  return tr(labels[status] || String(status || 'Unknown').replaceAll('_', ' '))
 }
 
 function roleLabel(value) {
-  if (!value) return 'Viewer'
-  return value.charAt(0).toUpperCase() + value.slice(1)
+  if (!value) return tr('Viewer')
+  return tr(value.charAt(0).toUpperCase() + value.slice(1))
 }
 
 function defaultSessions(role) {
@@ -132,7 +133,7 @@ async function copyText(value) {
   textarea.select()
   const copied = document.execCommand('copy')
   textarea.remove()
-  if (!copied) throw new Error('The browser did not allow copying the link.')
+  if (!copied) throw new Error(tr('The browser did not allow copying the link.'))
 }
 
 export function AdministrationPage({ onSessionExpired }) {
@@ -169,7 +170,7 @@ export function AdministrationPage({ onSessionExpired }) {
       onSessionExpired()
       return
     }
-    setError(requestError.message || 'Unable to update access control.')
+    setError(tr(requestError.message || 'Unable to update access control.'))
   }, [onSessionExpired])
 
   const loadData = useCallback(async () => {
@@ -204,7 +205,7 @@ export function AdministrationPage({ onSessionExpired }) {
   async function createInvitation(event) {
     event.preventDefault()
     if (!form.duration_seconds) {
-      setError('Select an access duration.')
+      setError(tr('Select an access duration.'))
       return
     }
 
@@ -230,7 +231,7 @@ export function AdministrationPage({ onSessionExpired }) {
         max_active_sessions: defaultSessions('viewer'),
       })
       setGeneratedAccess(created)
-      setNotice(`Identity-verified access link generated for ${created.guest_name}.`)
+      setNotice(tr('Identity-verified access link generated for {name}.', { name: created.guest_name }))
       await loadData()
     } catch (requestError) {
       handleError(requestError)
@@ -247,7 +248,7 @@ export function AdministrationPage({ onSessionExpired }) {
       await apiFetch(`${API}/admin/invitations/${encodeURIComponent(id)}/${action}`, {
         method: 'POST',
       })
-      setNotice(message)
+      setNotice(tr(message))
       await loadData()
     } catch (requestError) {
       handleError(requestError)
@@ -270,7 +271,7 @@ export function AdministrationPage({ onSessionExpired }) {
         },
       )
       setGeneratedAccess(generated)
-      setNotice(`A new identity claim link was generated for ${invitation.guest_name}. Existing sessions were ended.`)
+      setNotice(tr('A new identity claim link was generated for {name}. Existing sessions were ended.', { name: invitation.guest_name }))
       setExtendDurations((current) => ({
         ...current,
         [invitation.id]: DEFAULT_DURATION_SECONDS,
@@ -292,7 +293,7 @@ export function AdministrationPage({ onSessionExpired }) {
         method: 'PATCH',
         body,
       })
-      setNotice(message)
+      setNotice(tr(message))
       await loadData()
     } catch (requestError) {
       handleError(requestError)
@@ -306,7 +307,7 @@ export function AdministrationPage({ onSessionExpired }) {
     await updateInvitation(
       invitation,
       { duration_seconds: Number(selectedDuration) },
-      `Access extended for ${invitation.guest_name}.`,
+      tr('Access extended for {name}.', { name: invitation.guest_name }),
       'extend',
     )
     setExtendDurations((current) => ({ ...current, [invitation.id]: DEFAULT_DURATION_SECONDS }))
@@ -317,13 +318,13 @@ export function AdministrationPage({ onSessionExpired }) {
     await updateInvitation(
       invitation,
       { max_active_sessions: limit },
-      `Session limit updated for ${invitation.guest_name}.`,
+      tr('Session limit updated for {name}.', { name: invitation.guest_name }),
       'session-limit',
     )
   }
 
   async function deleteInvitation(invitation) {
-    if (!window.confirm(`Delete the access record for ${invitation.guest_name}?`)) return
+    if (!window.confirm(tr('Delete the access record for {name}?', { name: invitation.guest_name }))) return
 
     setBusyId(`${invitation.id}:delete`)
     setError('')
@@ -332,7 +333,7 @@ export function AdministrationPage({ onSessionExpired }) {
       await apiFetch(`${API}/admin/invitations/${encodeURIComponent(invitation.id)}`, {
         method: 'DELETE',
       })
-      setNotice(`Access record deleted for ${invitation.guest_name}.`)
+      setNotice(tr('Access record deleted for {name}.', { name: invitation.guest_name }))
       await loadData()
     } catch (requestError) {
       handleError(requestError)
@@ -423,39 +424,39 @@ export function AdministrationPage({ onSessionExpired }) {
           <div className="administration-workspace-title">
             <div className="page-title-icon"><ShieldIcon size={22} /></div>
             <div>
-              <h2>Administration</h2>
-              <p>Generate identity-bound access, manage active records and inspect audited access activity.</p>
+              <h2>{tr("Administration")}</h2>
+              <p>{tr("Generate identity-bound access, manage active records and inspect audited access activity.")}</p>
             </div>
           </div>
           <div className="administration-workspace-actions">
-            <span>{invitations.length} access record{invitations.length === 1 ? '' : 's'}</span>
-            <button type="button" className="secondary-button compact admin-refresh-button" onClick={loadData} disabled={loading || Boolean(busyId)}>Refresh</button>
+            <span>{tr(invitations.length === 1 ? '{count} access record' : '{count} access records', { count: invitations.length })}</span>
+            <button type="button" className="secondary-button compact admin-refresh-button" onClick={loadData} disabled={loading || Boolean(busyId)}>{tr("Refresh")}</button>
           </div>
         </header>
 
         {error ? <div className="global-inline-message error-inline administration-workspace-message">{error}</div> : null}
         {notice ? <div className="global-inline-message success-inline administration-workspace-message">{notice}</div> : null}
 
-        <section className="admin-workspace-metrics" aria-label="Access summary">
-          <AdminSummary icon={<AccessUsersIcon size={19} />} label="Access records" value={invitations.length} hint={ADMIN_HINTS.accessRecords} />
-          <AdminSummary icon={<AccessLinkIcon size={19} />} label="Pending" value={counts.pending} hint={ADMIN_HINTS.pending} />
-          <AdminSummary icon={<ClockIcon size={19} />} label="Claimed / Active" value={counts.active} tone="positive" hint={ADMIN_HINTS.active} />
-          <AdminSummary icon={<AccessLockIcon size={19} />} label="Expired / Restricted" value={counts.expired + counts.restricted} tone="negative" hint={ADMIN_HINTS.restricted} />
+        <section className="admin-workspace-metrics" aria-label={tr("Access summary")}>
+          <AdminSummary icon={<AccessUsersIcon size={19} />} label={tr("Access records")} value={invitations.length} hint={ADMIN_HINTS.accessRecords} />
+          <AdminSummary icon={<AccessLinkIcon size={19} />} label={tr("Pending")} value={counts.pending} hint={ADMIN_HINTS.pending} />
+          <AdminSummary icon={<ClockIcon size={19} />} label={tr("Claimed / Active")} value={counts.active} tone="positive" hint={ADMIN_HINTS.active} />
+          <AdminSummary icon={<AccessLockIcon size={19} />} label={tr("Expired / Restricted")} value={counts.expired + counts.restricted} tone="negative" hint={ADMIN_HINTS.restricted} />
         </section>
 
         <section className="admin-workspace-section admin-create-section">
           <div className="admin-section-heading">
             <div>
-              <span className="panel-kicker">IDENTITY-VERIFIED ACCESS</span>
-              <h2>Generate access invitation</h2>
-              <p>Create one Google-identity-bound invitation without exposing any application strategy details.</p>
+              <span className="panel-kicker">{tr("IDENTITY-VERIFIED ACCESS")}</span>
+              <h2>{tr("Generate access invitation")}</h2>
+              <p>{tr("Create one Google-identity-bound invitation without exposing any application strategy details.")}</p>
             </div>
-            <span className="admin-readonly-badge"><EyeIcon size={14} /> Google account required</span>
+            <span className="admin-readonly-badge"><EyeIcon size={14} /> {tr("Google account required")}</span>
           </div>
 
           <form className="admin-invite-form identity-invite-form admin-workspace-invite-form" onSubmit={createInvitation}>
             <label>
-              <AdminFieldLabel id="admin-hint-user-name" label="User name" hint={ADMIN_HINTS.guestName} />
+              <AdminFieldLabel id="admin-hint-user-name" label={tr("User name")} hint={ADMIN_HINTS.guestName} />
               <input
                 value={form.guest_name}
                 onChange={(event) => setForm({ ...form, guest_name: event.target.value })}
@@ -464,7 +465,7 @@ export function AdministrationPage({ onSessionExpired }) {
               />
             </label>
             <label>
-              <AdminFieldLabel id="admin-hint-authorized-email" label="Authorized Google email" hint={ADMIN_HINTS.authorizedEmail} />
+              <AdminFieldLabel id="admin-hint-authorized-email" label={tr("Authorized Google email")} hint={ADMIN_HINTS.authorizedEmail} />
               <input
                 type="email"
                 value={form.authorized_email}
@@ -475,7 +476,7 @@ export function AdministrationPage({ onSessionExpired }) {
               />
             </label>
             <label>
-              <AdminFieldLabel id="admin-hint-role" label="Role" hint={ADMIN_HINTS.role} />
+              <AdminFieldLabel id="admin-hint-role" label={tr("Role")} hint={ADMIN_HINTS.role} />
               <select
                 value={form.role}
                 onChange={(event) => {
@@ -484,25 +485,25 @@ export function AdministrationPage({ onSessionExpired }) {
                 }}
                 required
               >
-                <option value="viewer">Viewer · Backtest only</option>
-                <option value="trader">Trader · Backtest and Portfolio</option>
-                <option value="admin">Administrator · Full administration</option>
+                <option value="viewer">{tr("Viewer · Backtest only")}</option>
+                <option value="trader">{tr("Trader · Backtest and Portfolio")}</option>
+                <option value="admin">{tr("Administrator · Full administration")}</option>
               </select>
             </label>
             <label>
-              <AdminFieldLabel id="admin-hint-access-duration" label="Access duration" hint={ADMIN_HINTS.duration} />
+              <AdminFieldLabel id="admin-hint-access-duration" label={tr("Access duration")} hint={ADMIN_HINTS.duration} />
               <select
                 value={form.duration_seconds}
                 onChange={(event) => setForm({ ...form, duration_seconds: event.target.value })}
                 required
               >
                 {DURATION_OPTIONS.map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
+                  <option key={value} value={value}>{tr(label)}</option>
                 ))}
               </select>
             </label>
             <label>
-              <AdminFieldLabel id="admin-hint-maximum-sessions" label="Maximum active sessions" hint={ADMIN_HINTS.sessions} />
+              <AdminFieldLabel id="admin-hint-maximum-sessions" label={tr("Maximum active sessions")} hint={ADMIN_HINTS.sessions} />
               <select
                 value={form.max_active_sessions}
                 onChange={(event) => setForm({ ...form, max_active_sessions: event.target.value })}
@@ -517,7 +518,7 @@ export function AdministrationPage({ onSessionExpired }) {
               disabled={busyId === 'create' || !form.duration_seconds}
             >
               <AccessLinkIcon size={17} />
-              {busyId === 'create' ? 'Generating…' : 'Generate verified link'}
+              {tr(busyId === 'create' ? 'Generating…' : 'Generate verified link')}
             </button>
           </form>
         </section>
@@ -525,38 +526,38 @@ export function AdministrationPage({ onSessionExpired }) {
         <section className="admin-workspace-section admin-access-section">
           <div className="admin-section-heading admin-access-heading">
             <div>
-              <span className="panel-kicker">ACCESS CONTROL & AUDIT</span>
-              <h2>Access records</h2>
-              <p>Filter, sort and review identity-bound access records or the corresponding audit history.</p>
+              <span className="panel-kicker">{tr("ACCESS CONTROL & AUDIT")}</span>
+              <h2>{tr("Access records")}</h2>
+              <p>{tr("Filter, sort and review identity-bound access records or the corresponding audit history.")}</p>
             </div>
-            <div className="admin-data-tabs" role="tablist" aria-label="Administration data view">
-              <button type="button" role="tab" aria-selected={dataView === 'invitations'} className={dataView === 'invitations' ? 'active' : ''} onClick={() => setDataView('invitations')}>Invitations <span>{invitations.length}</span></button>
-              <button type="button" role="tab" aria-selected={dataView === 'audit'} className={dataView === 'audit' ? 'active' : ''} onClick={() => setDataView('audit')}>Audit history <span>{logs.length}</span></button>
+            <div className="admin-data-tabs" role="tablist" aria-label={tr("Administration data view")}>
+              <button type="button" role="tab" aria-selected={dataView === 'invitations'} className={dataView === 'invitations' ? 'active' : ''} onClick={() => setDataView('invitations')}>{tr("Invitations")}{' '}<span>{invitations.length}</span></button>
+              <button type="button" role="tab" aria-selected={dataView === 'audit'} className={dataView === 'audit' ? 'active' : ''} onClick={() => setDataView('audit')}>{tr("Audit history")}{' '}<span>{logs.length}</span></button>
             </div>
           </div>
 
           {loading ? (
-            <div className="admin-loading"><span className="loading-ring" />Loading administration…</div>
+            <div className="admin-loading"><span className="loading-ring" />{tr("Loading administration…")}</div>
           ) : dataView === 'invitations' ? (
             <>
               <AdminListToolbar
                 query={invitationQuery}
                 onQueryChange={setInvitationQuery}
-                placeholder="Search user or Google identity"
+                placeholder={tr("Search user or Google identity")}
                 count={filteredInvitations.length}
               >
-                <select value={invitationStatus} onChange={(event) => setInvitationStatus(event.target.value)} aria-label="Filter invitation status">
-                  <option value="all">All statuses</option>
-                  <option value="active">Claimed / Active</option>
-                  <option value="pending">Pending</option>
-                  <option value="expired">Expired</option>
-                  <option value="restricted">Restricted</option>
+                <select value={invitationStatus} onChange={(event) => setInvitationStatus(event.target.value)} aria-label={tr("Filter invitation status")}>
+                  <option value="all">{tr("All statuses")}</option>
+                  <option value="active">{tr("Claimed / Active")}</option>
+                  <option value="pending">{tr("Pending")}</option>
+                  <option value="expired">{tr("Expired")}</option>
+                  <option value="restricted">{tr("Restricted")}</option>
                 </select>
-                <select value={invitationRole} onChange={(event) => setInvitationRole(event.target.value)} aria-label="Filter invitation role">
-                  <option value="all">All roles</option>
-                  <option value="viewer">Viewer</option>
-                  <option value="trader">Trader</option>
-                  <option value="admin">Administrator</option>
+                <select value={invitationRole} onChange={(event) => setInvitationRole(event.target.value)} aria-label={tr("Filter invitation role")}>
+                  <option value="all">{tr("All roles")}</option>
+                  <option value="viewer">{tr("Viewer")}</option>
+                  <option value="trader">{tr("Trader")}</option>
+                  <option value="admin">{tr("Administrator")}</option>
                 </select>
               </AdminListToolbar>
 
@@ -564,19 +565,19 @@ export function AdministrationPage({ onSessionExpired }) {
                 <table className="market-table admin-table identity-admin-table admin-sortable-table">
                   <thead>
                     <tr>
-                      <AdminSortableTh label="User" field="guest_name" sort={invitationSort} onSort={(key) => setInvitationSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.guestName} />
-                      <AdminSortableTh label="Role" field="role" sort={invitationSort} onSort={(key) => setInvitationSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.role} />
-                      <AdminSortableTh label="Status" field="status" sort={invitationSort} onSort={(key) => setInvitationSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.status} />
-                      <AdminSortableTh label="Sessions" field="sessions" sort={invitationSort} onSort={(key) => setInvitationSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.sessions} />
-                      <AdminSortableTh label="Claimed identity" field="claimed_identity" sort={invitationSort} onSort={(key) => setInvitationSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.claimedIdentity} />
-                      <AdminSortableTh label="Expires" field="expires_at" sort={invitationSort} onSort={(key) => setInvitationSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.expires} />
-                      <AdminSortableTh label="Last access" field="last_access_at" sort={invitationSort} onSort={(key) => setInvitationSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.lastAccess} />
-                      <th>Actions</th>
+                      <AdminSortableTh label={tr("User")} field="guest_name" sort={invitationSort} onSort={(key) => setInvitationSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.guestName} />
+                      <AdminSortableTh label={tr("Role")} field="role" sort={invitationSort} onSort={(key) => setInvitationSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.role} />
+                      <AdminSortableTh label={tr("Status")} field="status" sort={invitationSort} onSort={(key) => setInvitationSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.status} />
+                      <AdminSortableTh label={tr("Sessions")} field="sessions" sort={invitationSort} onSort={(key) => setInvitationSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.sessions} />
+                      <AdminSortableTh label={tr("Claimed identity")} field="claimed_identity" sort={invitationSort} onSort={(key) => setInvitationSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.claimedIdentity} />
+                      <AdminSortableTh label={tr("Expires")} field="expires_at" sort={invitationSort} onSort={(key) => setInvitationSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.expires} />
+                      <AdminSortableTh label={tr("Last access")} field="last_access_at" sort={invitationSort} onSort={(key) => setInvitationSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.lastAccess} />
+                      <th>{tr("Actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {visibleInvitations.length === 0 ? (
-                      <tr><td colSpan="8" className="empty-table-cell">No access records match the selected filters.</td></tr>
+                      <tr><td colSpan="8" className="empty-table-cell">{tr("No access records match the selected filters.")}</td></tr>
                     ) : visibleInvitations.map((item) => {
                       const legacy = item.status === 'legacy_unverified'
                       const primaryAdministrator = Boolean(item.primary_administrator)
@@ -584,17 +585,17 @@ export function AdministrationPage({ onSessionExpired }) {
                       const cannotDelete = primaryAdministrator || ['pending_verification', 'claimed', 'active'].includes(item.status)
                       return (
                         <tr key={item.id}>
-                          <td data-label="User">
+                          <td data-label={tr('User')}>
                             <strong>{item.guest_name}</strong>
-                            <small className="admin-identity-email">{item.authorized_email || 'No verified email'}</small>
-                            {primaryAdministrator ? <small className="primary-administrator-label">Primary Google administrator</small> : null}
+                            <small className="admin-identity-email">{item.authorized_email || tr('No verified email')}</small>
+                            {primaryAdministrator ? <small className="primary-administrator-label">{tr("Primary Google administrator")}</small> : null}
                           </td>
-                          <td data-label="Role">{roleLabel(item.role)}</td>
-                          <td data-label="Status"><span className={`admin-status ${statusClass(item.status)}`}>{statusLabel(item.status)}</span></td>
-                          <td data-label="Sessions">
+                          <td data-label={tr('Role')}>{roleLabel(item.role)}</td>
+                          <td data-label={tr('Status')}><span className={`admin-status ${statusClass(item.status)}`}>{statusLabel(item.status)}</span></td>
+                          <td data-label={tr('Sessions')}>
                             <div className="session-limit-control">
                               <strong>{item.active_sessions || 0}</strong>
-                              <span>of</span>
+                              <span>{tr("of")}</span>
                               <select
                                 value={sessionLimits[item.id] ?? String(item.max_active_sessions || 1)}
                                 onChange={(event) => setSessionLimits({ ...sessionLimits, [item.id]: event.target.value })}
@@ -603,57 +604,53 @@ export function AdministrationPage({ onSessionExpired }) {
                               >
                                 {SESSION_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
                               </select>
-                              <button type="button" onClick={() => saveSessionLimit(item)} disabled={Boolean(busyId) || locked}>Save</button>
+                              <button type="button" onClick={() => saveSessionLimit(item)} disabled={Boolean(busyId) || locked}>{tr("Save")}</button>
                             </div>
                           </td>
-                          <td data-label="Claimed identity">
-                            <span className="claimed-identity">{item.claimed_email || (legacy ? 'New invitation required' : 'Not claimed')}</span>
+                          <td data-label={tr('Claimed identity')}>
+                            <span className="claimed-identity">{item.claimed_email || tr(legacy ? 'New invitation required' : 'Not claimed')}</span>
                             {item.claimed_at ? <small>{dateTime(item.claimed_at)}</small> : null}
                           </td>
-                          <td data-label="Expires">{dateTime(item.expires_at)}</td>
-                          <td data-label="Last access">{dateTime(item.last_access_at)}</td>
-                          <td data-label="Actions">
+                          <td data-label={tr('Expires')}>{dateTime(item.expires_at)}</td>
+                          <td data-label={tr('Last access')}>{dateTime(item.last_access_at)}</td>
+                          <td data-label={tr('Actions')}>
                             <div className="admin-row-actions identity-row-actions">
                               <button
                                 type="button"
-                                title="End sessions, rotate the token and require a fresh Google identity claim."
+                                title={tr("End sessions, rotate the token and require a fresh Google identity claim.")}
                                 onClick={() => regenerateAccessLink(item)}
                                 disabled={Boolean(busyId) || locked || primaryAdministrator}
                               >
-                                Generate new claim link
-                              </button>
+                                {tr("Generate new claim link")}</button>
                               <select
                                 value={extendDurations[item.id] ?? DEFAULT_DURATION_SECONDS}
                                 onChange={(event) => setExtendDurations({ ...extendDurations, [item.id]: event.target.value })}
                                 disabled={locked || primaryAdministrator}
                                 aria-label={`Duration for ${item.guest_name}`}
                               >
-                                {DURATION_OPTIONS.map(([value, label]) => <option key={value} value={value}>+{label}</option>)}
+                                {DURATION_OPTIONS.map(([value, label]) => <option key={value} value={value}>+{tr(label)}</option>)}
                               </select>
-                              <button type="button" onClick={() => extendInvitation(item)} disabled={Boolean(busyId) || locked || primaryAdministrator}>Extend</button>
+                              <button type="button" onClick={() => extendInvitation(item)} disabled={Boolean(busyId) || locked || primaryAdministrator}>{tr("Extend")}</button>
                               <button
                                 type="button"
-                                onClick={() => runAction(item.id, 'terminate-sessions', `Sessions terminated for ${item.guest_name}.`)}
+                                onClick={() => runAction(item.id, 'terminate-sessions', tr('Sessions terminated for {name}.', { name: item.guest_name }))}
                                 disabled={Boolean(busyId) || legacy}
                               >
-                                End sessions
-                              </button>
+                                {tr("End sessions")}</button>
                               <button
                                 type="button"
                                 className="danger"
-                                onClick={() => runAction(item.id, 'revoke', `Access revoked for ${item.guest_name}.`)}
+                                onClick={() => runAction(item.id, 'revoke', tr('Access revoked for {name}.', { name: item.guest_name }))}
                                 disabled={Boolean(busyId) || item.status === 'revoked' || legacy || primaryAdministrator}
                               >
-                                Revoke
-                              </button>
+                                {tr("Revoke")}</button>
                               <button
                                 type="button"
                                 className="danger ghost"
                                 onClick={() => deleteInvitation(item)}
                                 disabled={Boolean(busyId) || cannotDelete}
                               >
-                                Delete
-                              </button>
+                                {tr("Delete")}</button>
                             </div>
                           </td>
                         </tr>
@@ -669,19 +666,19 @@ export function AdministrationPage({ onSessionExpired }) {
               <AdminListToolbar
                 query={logQuery}
                 onQueryChange={setLogQuery}
-                placeholder="Search event, user, identity or client"
+                placeholder={tr("Search event, user, identity or client")}
                 count={filteredLogs.length}
               >
-                <div className="admin-result-filters" aria-label="Audit result filter">
-                  <button type="button" className={logResult === 'all' ? 'active' : ''} onClick={() => setLogResult('all')} title="Show all audit results"><ListFilterIcon size={15} /> All</button>
-                  <button type="button" className={`positive ${logResult === 'success' ? 'active' : ''}`} onClick={() => setLogResult('success')}>Success</button>
-                  <button type="button" className={`negative ${logResult === 'denied' ? 'active' : ''}`} onClick={() => setLogResult('denied')}>Denied</button>
+                <div className="admin-result-filters" aria-label={tr("Audit result filter")}>
+                  <button type="button" className={logResult === 'all' ? 'active' : ''} onClick={() => setLogResult('all')} title={tr("Show all audit results")}><ListFilterIcon size={15} /> {tr("All")}</button>
+                  <button type="button" className={`positive ${logResult === 'success' ? 'active' : ''}`} onClick={() => setLogResult('success')}>{tr("Success")}</button>
+                  <button type="button" className={`negative ${logResult === 'denied' ? 'active' : ''}`} onClick={() => setLogResult('denied')}>{tr("Denied")}</button>
                 </div>
-                <select value={logRole} onChange={(event) => setLogRole(event.target.value)} aria-label="Filter audit role">
-                  <option value="all">All roles</option>
-                  <option value="viewer">Viewer</option>
-                  <option value="trader">Trader</option>
-                  <option value="admin">Administrator</option>
+                <select value={logRole} onChange={(event) => setLogRole(event.target.value)} aria-label={tr("Filter audit role")}>
+                  <option value="all">{tr("All roles")}</option>
+                  <option value="viewer">{tr("Viewer")}</option>
+                  <option value="trader">{tr("Trader")}</option>
+                  <option value="admin">{tr("Administrator")}</option>
                 </select>
               </AdminListToolbar>
 
@@ -689,26 +686,26 @@ export function AdministrationPage({ onSessionExpired }) {
                 <table className="market-table access-log-table admin-sortable-table">
                   <thead>
                     <tr>
-                      <AdminSortableTh label="Time" field="created_at" sort={logSort} onSort={(key) => setLogSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.auditTime} />
-                      <AdminSortableTh label="Event" field="event" sort={logSort} onSort={(key) => setLogSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.auditEvent} />
-                      <AdminSortableTh label="User" field="guest_name" sort={logSort} onSort={(key) => setLogSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.auditUser} />
-                      <AdminSortableTh label="Google identity" field="identity_email" sort={logSort} onSort={(key) => setLogSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.auditIdentity} />
-                      <AdminSortableTh label="Role" field="role" sort={logSort} onSort={(key) => setLogSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.auditRole} />
-                      <AdminSortableTh label="Result" field="success" sort={logSort} onSort={(key) => setLogSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.auditResult} />
-                      <AdminSortableTh label="Client" field="client_ip" sort={logSort} onSort={(key) => setLogSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.auditClient} />
+                      <AdminSortableTh label={tr("Time")} field="created_at" sort={logSort} onSort={(key) => setLogSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.auditTime} />
+                      <AdminSortableTh label={tr("Event")} field="event" sort={logSort} onSort={(key) => setLogSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.auditEvent} />
+                      <AdminSortableTh label={tr("User")} field="guest_name" sort={logSort} onSort={(key) => setLogSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.auditUser} />
+                      <AdminSortableTh label={tr("Google identity")} field="identity_email" sort={logSort} onSort={(key) => setLogSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.auditIdentity} />
+                      <AdminSortableTh label={tr("Role")} field="role" sort={logSort} onSort={(key) => setLogSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.auditRole} />
+                      <AdminSortableTh label={tr("Result")} field="success" sort={logSort} onSort={(key) => setLogSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.auditResult} />
+                      <AdminSortableTh label={tr("Client")} field="client_ip" sort={logSort} onSort={(key) => setLogSort((current) => toggledSort(current, key))} hint={ADMIN_HINTS.auditClient} />
                     </tr>
                   </thead>
                   <tbody>
                     {visibleLogs.length === 0 ? (
-                      <tr><td colSpan="7" className="empty-table-cell">No access events match the selected filters.</td></tr>
+                      <tr><td colSpan="7" className="empty-table-cell">{tr("No access events match the selected filters.")}</td></tr>
                     ) : visibleLogs.map((item) => (
                       <tr key={item.id}>
                         <td>{dateTime(item.created_at)}</td>
-                        <td>{String(item.event || '').replaceAll('_', ' ')}</td>
+                        <td>{tr(String(item.event || '').replaceAll('_', ' '))}</td>
                         <td>{item.guest_name || '—'}</td>
                         <td>{item.identity_email || '—'}</td>
                         <td>{item.role ? roleLabel(item.role) : '—'}</td>
-                        <td className={item.success ? 'positive' : 'negative'}>{item.success ? 'Success' : 'Denied'}</td>
+                        <td className={item.success ? 'positive' : 'negative'}>{tr(item.success ? 'Success' : 'Denied')}</td>
                         <td>{item.client_ip}</td>
                       </tr>
                     ))}
@@ -731,7 +728,7 @@ export function AdministrationPage({ onSessionExpired }) {
 function AdminFieldLabel({ id, label, hint }) {
   return (
     <span className="admin-field-label">
-      <span>{label}</span>
+      <span>{tr(label)}</span>
       <ParameterHint id={id} title={label} description={hint} />
     </span>
   )
@@ -741,8 +738,8 @@ function AdminSortableTh({ label, field, sort, onSort, hint = '' }) {
   const active = sort.key === field
   return (
     <th>
-      <button type="button" className={`admin-sort-header ${active ? 'active' : ''}`} onClick={() => onSort(field)} title={`Sort by ${label}`}>
-        <span>{label}</span>
+      <button type="button" className={`admin-sort-header ${active ? 'active' : ''}`} onClick={() => onSort(field)} title={tr("Sort by {label}", { label: tr(label) })}>
+        <span>{tr(label)}</span>
         {hint ? <ParameterHint id={`admin-column-${field}`} title={label} description={hint} /> : null}
         <SortIcon size={14} descending={active ? sort.direction === 'desc' : true} />
       </button>
@@ -755,10 +752,10 @@ function AdminListToolbar({ query, onQueryChange, placeholder, count, children }
     <div className="admin-list-toolbar">
       <label className="admin-list-search">
         <SearchIcon size={15} />
-        <input type="search" value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={placeholder} aria-label={placeholder} />
+        <input type="search" value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={tr(placeholder)} aria-label={tr(placeholder)} />
       </label>
       <div className="admin-list-filters">{children}</div>
-      <span className="admin-list-count">{count} result{count === 1 ? '' : 's'}</span>
+      <span className="admin-list-count">{count} {tr(count === 1 ? "result" : "results")}</span>
     </div>
   )
 }
@@ -768,11 +765,11 @@ function AdminPagination({ page, pages, total, pageSize, onPageChange }) {
   const to = Math.min(page * pageSize, total)
   return (
     <div className="admin-pagination">
-      <span>{total ? `${from}–${to} of ${total}` : '0 results'}</span>
+      <span>{total ? tr("{from}–{to} of {total}", { from, to, total }) : tr("0 results")}</span>
       <div>
-        <button type="button" onClick={() => onPageChange(page - 1)} disabled={page <= 1} aria-label="Previous page" title="Previous page"><ChevronLeftIcon size={16} /></button>
-        <strong>Page {page} of {pages}</strong>
-        <button type="button" onClick={() => onPageChange(page + 1)} disabled={page >= pages} aria-label="Next page" title="Next page"><ChevronRightIcon size={16} /></button>
+        <button type="button" onClick={() => onPageChange(page - 1)} disabled={page <= 1} aria-label={tr("Previous page")} title={tr("Previous page")}><ChevronLeftIcon size={16} /></button>
+        <strong>{tr("Page")}{' '}{page} {tr("of")}{' '}{pages}</strong>
+        <button type="button" onClick={() => onPageChange(page + 1)} disabled={page >= pages} aria-label={tr("Next page")} title={tr("Next page")}><ChevronRightIcon size={16} /></button>
       </div>
     </div>
   )
@@ -788,7 +785,7 @@ function AccessLinkDialog({ access, onClose, onError }) {
       onError('')
     } catch (copyError) {
       setCopied(false)
-      onError(copyError.message || 'Unable to copy the access link.')
+      onError(tr(copyError.message || 'Unable to copy the access link.'))
     }
   }
 
@@ -797,23 +794,22 @@ function AccessLinkDialog({ access, onClose, onError }) {
       <section className="access-link-dialog" role="dialog" aria-modal="true" aria-labelledby="access-link-title" onMouseDown={(event) => event.stopPropagation()}>
         <div className="access-link-dialog-heading">
           <div>
-            <span className="panel-kicker">ONE-TIME IDENTITY CLAIM</span>
-            <h2 id="access-link-title">Verified access for {access.guest_name}</h2>
+            <span className="panel-kicker">{tr("ONE-TIME IDENTITY CLAIM")}</span>
+            <h2 id="access-link-title">{tr("Verified access for")}{' '}{access.guest_name}</h2>
           </div>
-          <button type="button" className="access-link-close" onClick={onClose} aria-label="Close">×</button>
+          <button type="button" className="access-link-close" onClick={onClose} aria-label={tr("Close")}>×</button>
         </div>
         <p>
-          Share this link only with <strong>{access.authorized_email}</strong>. The first valid claim must use that Google account. After claiming, the raw token is consumed and the authorization is bound to the verified Google identity.
-        </p>
-        <textarea readOnly value={access.access_url} rows="4" aria-label="Generated access link" />
+          {tr("Share this link only with")}{' '}<strong>{access.authorized_email}</strong>{tr(". The first valid claim must use that Google account. After claiming, the raw token is consumed and the authorization is bound to the verified Google identity.")}</p>
+        <textarea readOnly value={access.access_url} rows="4" aria-label={tr("Generated access link")} />
         <div className="access-link-expiration">
-          Expires: <strong>{dateTime(access.expires_at)}</strong> · Maximum active sessions: <strong>{access.max_active_sessions}</strong>
+          {tr("Expires:")}{' '}<strong>{dateTime(access.expires_at)}</strong> {tr("· Maximum active sessions:")}{' '}<strong>{access.max_active_sessions}</strong>
         </div>
         <div className="access-link-dialog-actions">
           <button type="button" className="admin-primary-button" onClick={copyLink}>
-            <AccessLinkIcon size={17} />{copied ? 'Link copied' : 'Copy verified link'}
+            <AccessLinkIcon size={17} />{tr(copied ? 'Link copied' : 'Copy verified link')}
           </button>
-          <button type="button" className="access-link-secondary" onClick={onClose}>Close</button>
+          <button type="button" className="access-link-secondary" onClick={onClose}>{tr("Close")}</button>
         </div>
       </section>
     </div>
@@ -827,7 +823,7 @@ function AdminSummary({ icon, label, value, tone = '', hint = '' }) {
       <div className={`admin-summary-icon ${tone}`}>{icon}</div>
       <div>
         <div className="admin-summary-label">
-          <span>{label}</span>
+          <span>{tr(label)}</span>
           {hint ? <ParameterHint id={hintId} title={label} description={hint} /> : null}
         </div>
         <strong className={tone}>{value}</strong>

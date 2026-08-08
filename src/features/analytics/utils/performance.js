@@ -1,3 +1,4 @@
+import { getIntlLocale } from '../../../i18n/runtime'
 export const ANALYTICS_ZOOM_STEP = 0.84
 export const ANALYTICS_MIN_ZOOM_POINTS = 8
 export const ANALYTICS_DAY_MS = 24 * 60 * 60 * 1000
@@ -29,12 +30,12 @@ export function analyticsAxisLabel(value, visibleSpan) {
   const date = new Date(Number(value))
   if (Number.isNaN(date.getTime())) return ''
   if (visibleSpan <= ANALYTICS_DAY_MS * 2) {
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    return date.toLocaleTimeString(getIntlLocale(), { hour: '2-digit', minute: '2-digit', hour12: false })
   }
   if (visibleSpan <= ANALYTICS_DAY_MS * 60) {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    return date.toLocaleDateString(getIntlLocale(), { month: 'short', day: 'numeric' })
   }
-  return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+  return date.toLocaleDateString(getIntlLocale(), { month: 'short', year: '2-digit' })
 }
 
 export function monthParts(value) {
