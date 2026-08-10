@@ -1,6 +1,6 @@
 import { tr } from '../../../i18n/runtime'
 import { LanguageSelector } from '../../../i18n/LanguageSelector'
-import { AnalyticsIcon, BacktestIcon, DashboardIcon, PortfolioIcon, SettingsIcon } from '../../../shared/components/Icons'
+import { AnalyticsIcon, BacktestIcon, DashboardIcon, PortfolioIcon, SearchIcon, SettingsIcon } from '../../../shared/components/Icons'
 import appLogoUrl from '../../../assets/market-cycle-trader-logo.png'
 
 const VIEWER_NAV_ITEMS = [
@@ -16,6 +16,7 @@ const TRADER_NAV_ITEMS = [
 
 const ADMIN_NAV_ITEMS = [
   ...TRADER_NAV_ITEMS,
+  { id: 'asset-discovery', label: 'Asset Discovery', Icon: SearchIcon },
   { id: 'administration', label: 'Administration', Icon: DashboardIcon },
   { id: 'system-settings', label: 'Settings', Icon: SettingsIcon },
 ]

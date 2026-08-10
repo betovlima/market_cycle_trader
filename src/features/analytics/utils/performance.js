@@ -46,3 +46,10 @@ export function monthParts(value) {
   if (Number.isNaN(parsed.getTime())) return null
   return { year: parsed.getFullYear(), month: parsed.getMonth() + 1 }
 }
+
+export function returnTone(value, epsilon = 1e-12) {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return ''
+  if (Math.abs(numeric) <= epsilon) return 'neutral'
+  return numeric > 0 ? 'positive' : 'negative'
+}

@@ -27,6 +27,8 @@ import {
 import { ParameterHint } from '../../shared/components/ParameterHint'
 import { money, number, percent, shortDate, shortDateTime } from '../../shared/formatters'
 import { BacktestPerformanceExplorer } from './components/BacktestPerformanceExplorer'
+import { RotationInspector } from './components/RotationInspector'
+import { returnTone } from './utils/performance'
 import { AnalyticsMetric, ChartCell, ChartEmpty, SectionHeading } from './components/AnalyticsPrimitives'
 
 const ASSET_PAGE_SIZE = 10
@@ -55,10 +57,7 @@ const PORTFOLIO_METRIC_HINTS = {
   'Order fill rate': 'Share of submitted Paper orders that were filled successfully.',
 }
 
-function tone(value) {
-  if (value == null || Number.isNaN(Number(value))) return ''
-  return Number(value) >= 0 ? 'positive' : 'negative'
-}
+const tone = returnTone
 
 function compareValues(left, right) {
   if (left == null && right == null) return 0
@@ -257,7 +256,7 @@ function BacktestAnalytics({ dashboard }) {
     {!loading && data ? <>
       <section className="analytics-workspace-metrics">
         <AnalyticsMetric label={tr("Simulation return")} value={percent(metrics.simulation_return)} note={tr("Reference {value}", { value: percent(metrics.reference_return) })} tone={tone(metrics.simulation_return)} description={BACKTEST_METRIC_HINTS['Simulation return']} />
-        <AnalyticsMetric label={tr("Excess return")} value={percent((metrics.simulation_return ?? 0) - (metrics.reference_return ?? 0))} note={tr("Simulation minus reference")} tone={tone((metrics.simulation_return ?? 0) - (metrics.reference_return ?? 0))} description={BACKTEST_METRIC_HINTS['Excess return']} />
+        <AnalyticsMetric label="S − R" value={percent((metrics.simulation_return ?? 0) - (metrics.reference_return ?? 0))} note={tr("Simulation minus reference")} tone={tone((metrics.simulation_return ?? 0) - (metrics.reference_return ?? 0))} description={BACKTEST_METRIC_HINTS['Excess return']} />
         <AnalyticsMetric label={tr("Maximum drawdown")} value={percent(metrics.maximum_drawdown)} note={tr("Reference {value}", { value: percent(metrics.reference_maximum_drawdown) })} tone="negative" description={BACKTEST_METRIC_HINTS['Maximum drawdown']} />
         <AnalyticsMetric label={tr("Sharpe ratio")} value={number(metrics.sharpe, 3)} note={tr("Reference {value}", { value: number(metrics.reference_sharpe, 3) })} description={BACKTEST_METRIC_HINTS['Sharpe ratio']} />
         <AnalyticsMetric label={tr("Capital rotations")} value={String(rotation.total_rotations ?? 0)} note={tr("{count} profitable", { count: rotation.profitable_rotations ?? 0 })} description={BACKTEST_METRIC_HINTS['Capital rotations']} />
@@ -267,6 +266,8 @@ function BacktestAnalytics({ dashboard }) {
       </section>
 
       <BacktestPerformanceExplorer data={data} jobId={jobId} />
+
+      <RotationInspector rotations={data.rotations || []} summary={rotation} />
 
       <section className="analytics-workspace-section analytics-data-section">
         <SectionHeading

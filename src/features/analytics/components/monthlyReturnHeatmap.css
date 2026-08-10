@@ -96,3 +96,15 @@
   .analytics-heatmap-cell:not(.empty):hover,
   .analytics-heatmap-cell:not(.empty):focus-visible { transform: none; }
 }
+
+/* v1.12.100 — neutral S − R state */
+.analytics-heatmap-cell.neutral {
+  color: #bdd0e2;
+  background: rgba(102, 130, 156, var(--heat-alpha));
+}
+
+.analytics-heatmap-tooltip .neutral { color: #9fb7cc; }
+.analytics-heatmap-tooltip-dot.neutral {
+  background: #8fa8be;
+  box-shadow: 0 0 7px rgba(143, 168, 190, .28);
+}

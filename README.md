@@ -1,4 +1,4 @@
-# Market Cycle Trader Frontend v1.12.91
+# Market Cycle Trader Frontend v1.12.101
 
 React + Vite frontend for protected historical simulations and Paper portfolio monitoring.
 

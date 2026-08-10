@@ -1,6 +1,6 @@
 import { getIntlLocale, tr } from '../i18n/runtime'
 import { strategyParameterLabel } from '../i18n/strategyParameters'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { ApiError, apiFetch } from '../api/http'
 import { API } from '../config/env'
@@ -74,7 +74,8 @@ function parameterRelationship(name, schema, reference) {
   if (schema?.exclusiveMinimum !== undefined) details.push(`${tr('Greater than:')} ${schema.exclusiveMinimum}`)
   if (schema?.maximum !== undefined) details.push(`${tr('Maximum:')} ${schema.maximum}`)
   if (schema?.exclusiveMaximum !== undefined) details.push(`${tr('Less than:')} ${schema.exclusiveMaximum}`)
-  if (typeof reference === 'boolean') details.push(tr('Type: on/off'))
+  if (name === 'assets') details.push(tr('Type: ticker symbols'))
+  else if (typeof reference === 'boolean') details.push(tr('Type: on/off'))
   else if (Array.isArray(reference)) details.push(tr('Type: JSON array'))
   else if (typeof reference === 'number') details.push(tr(schema?.type === 'integer' ? 'Type: integer' : 'Type: number'))
   else details.push(tr('Type: text'))
@@ -121,6 +122,7 @@ function resolveFieldSchema(schema, name) {
 
 function toEditorValues(configuration) {
   return Object.fromEntries(Object.entries(configuration || {}).map(([name, value]) => {
+    if (name === 'assets' && Array.isArray(value)) return [name, value.join(', ')]
     if (Array.isArray(value)) return [name, JSON.stringify(value)]
     if (value === null || value === undefined) return [name, '']
     if (typeof value === 'number') return [name, String(value)]
@@ -130,9 +132,12 @@ function toEditorValues(configuration) {
 
 function parseEditorValues(values, original) {
   const configuration = {}
+  let assetsInput = null
   for (const [name, raw] of Object.entries(values)) {
     const reference = original[name]
-    if (Array.isArray(reference)) {
+    if (name === 'assets' && Array.isArray(reference)) {
+      assetsInput = String(raw || '').trim()
+    } else if (Array.isArray(reference)) {
       const parsed = JSON.parse(String(raw || '[]'))
       if (!Array.isArray(parsed)) throw new Error(tr('{field} must be a JSON array.', { field: strategyParameterLabel(name, titleFromName(name)) }))
       configuration[name] = parsed
@@ -148,7 +153,7 @@ function parseEditorValues(values, original) {
       configuration[name] = String(raw)
     }
   }
-  return configuration
+  return { configuration, assetsInput }
 }
 
 export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged, embedded = false }) {
@@ -166,6 +171,28 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
   const [parameterSearch, setParameterSearch] = useState('')
   const initialLoadStartedRef = useRef(false)
   const catalogLoadedRef = useRef(false)
+
+  const baselineEditorValues = useMemo(
+    () => toEditorValues(selected?.configuration || {}),
+    [selected?.configuration],
+  )
+
+  const parameterSchemas = useMemo(() => {
+    if (!selected?.configuration) return {}
+    return Object.fromEntries(
+      Object.keys(selected.configuration).map((field) => [
+        field,
+        resolveFieldSchema(catalog?.parameter_schema, field),
+      ]),
+    )
+  }, [catalog?.parameter_schema, selected?.configuration])
+
+  const updateEditorValue = useCallback((field, value) => {
+    setEditorValues((current) => {
+      if (Object.is(current[field], value)) return current
+      return { ...current, [field]: value }
+    })
+  }, [])
 
   const handleError = useCallback((requestError) => {
     if (requestError instanceof ApiError && requestError.status === 401) {
@@ -228,12 +255,13 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
 
   const hasUnsavedChanges = useMemo(() => {
     if (!selected || selected.locked) return false
-    const baselineValues = toEditorValues(selected.configuration || {})
-    return name !== (selected.name || '')
-      || description !== (selected.description || '')
-      || changeNote.trim().length > 0
-      || JSON.stringify(editorValues) !== JSON.stringify(baselineValues)
-  }, [changeNote, description, editorValues, name, selected])
+    if (name !== (selected.name || '') || description !== (selected.description || '') || changeNote.trim().length > 0) return true
+
+    const editorKeys = Object.keys(editorValues)
+    const baselineKeys = Object.keys(baselineEditorValues)
+    if (editorKeys.length !== baselineKeys.length) return true
+    return editorKeys.some((field) => !Object.is(editorValues[field], baselineEditorValues[field]))
+  }, [baselineEditorValues, changeNote, description, editorValues, name, selected])
 
   useEffect(() => {
     if (!hasUnsavedChanges) return undefined
@@ -298,8 +326,11 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
       return
     }
     let configuration
+    let assetsInput
     try {
-      configuration = parseEditorValues(editorValues, selected.configuration || {})
+      const parsed = parseEditorValues(editorValues, selected.configuration || {})
+      configuration = parsed.configuration
+      assetsInput = parsed.assetsInput
     } catch (parseError) {
       setError(parseError.message)
       return
@@ -313,6 +344,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
         body: {
           expected_revision: selected.revision,
           configuration,
+          assets_input: assetsInput,
           name: name.trim(),
           description: description.trim(),
           note,
@@ -494,7 +526,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
     return groups.map((group) => ({
       ...group,
       fields: group.fields.filter((field) => {
-        const schema = resolveFieldSchema(catalog?.parameter_schema, field)
+        const schema = parameterSchemas[field]
         const searchableText = [
           field,
           titleFromName(field),
@@ -505,7 +537,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
         return searchableText.includes(query)
       }),
     })).filter((group) => group.fields.length)
-  }, [catalog?.parameter_groups, catalog?.parameter_order, catalog?.parameter_schema, parameterSearch, selected])
+  }, [catalog?.parameter_groups, catalog?.parameter_order, parameterSchemas, parameterSearch, selected])
 
   const visibleParameterCount = useMemo(
     () => groupedParameters.reduce((total, group) => total + group.fields.length, 0),
@@ -714,10 +746,10 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
                         name={field}
                         value={editorValues[field]}
                         reference={selected.configuration[field]}
-                        schema={resolveFieldSchema(catalog.parameter_schema, field)}
+                        schema={parameterSchemas[field]}
                         hintAlign={fieldIndex % 2 === 1 ? 'right' : 'left'}
                         disabled={selected.locked}
-                        onChange={(value) => setEditorValues((current) => ({ ...current, [field]: value }))}
+                        onChange={updateEditorValue}
                       />
                     ))}
                   </div>
@@ -762,7 +794,7 @@ function StrategyFieldLabel({ id, label, hint, align = 'left' }) {
   )
 }
 
-function ParameterField({ name, value, reference, schema, hintAlign = 'left', disabled, onChange }) {
+const ParameterField = memo(function ParameterField({ name, value, reference, schema, hintAlign = 'left', disabled, onChange }) {
   const label = strategyParameterLabel(name, schema?.title || titleFromName(name))
   const hint = {
     description: schema?.description ? tr(schema.description) : tr('Controls the {label} value used by this protected research configuration.', { label: tr(label).toLocaleLowerCase() }),
@@ -782,7 +814,7 @@ function ParameterField({ name, value, reference, schema, hintAlign = 'left', di
     return (
       <label>
         {fieldHeading}
-        <select value={value ?? ''} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
+        <select value={value ?? ''} disabled={disabled} onChange={(event) => onChange(name, event.target.value)}>
           {enumValues.map((option) => <option key={String(option)} value={option}>{String(option)}</option>)}
         </select>
       </label>
@@ -792,7 +824,25 @@ function ParameterField({ name, value, reference, schema, hintAlign = 'left', di
     return (
       <label className="strategy-boolean-field">
         {fieldHeading}
-        <input type="checkbox" checked={Boolean(value)} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />
+        <input type="checkbox" checked={Boolean(value)} disabled={disabled} onChange={(event) => onChange(name, event.target.checked)} />
+      </label>
+    )
+  }
+  if (name === 'assets' && Array.isArray(reference)) {
+    return (
+      <label className="strategy-asset-field">
+        {fieldHeading}
+        <textarea
+          value={value ?? ''}
+          disabled={disabled}
+          rows="2"
+          spellCheck="false"
+          autoComplete="off"
+          autoCapitalize="characters"
+          placeholder={tr('NVDA, AAPL, MSFT or one symbol per line')}
+          onChange={(event) => onChange(name, event.target.value)}
+        />
+        <small>{tr('Enter ticker symbols separated by commas, spaces, semicolons or line breaks. The API normalizes the symbols, removes duplicates and builds the final asset list.')}</small>
       </label>
     )
   }
@@ -800,7 +850,7 @@ function ParameterField({ name, value, reference, schema, hintAlign = 'left', di
     return (
       <label className="strategy-array-field">
         {fieldHeading}
-        <textarea value={value ?? ''} disabled={disabled} rows="2" spellCheck="false" onChange={(event) => onChange(event.target.value)} />
+        <textarea value={value ?? ''} disabled={disabled} rows="2" spellCheck="false" onChange={(event) => onChange(name, event.target.value)} />
       </label>
     )
   }
@@ -815,7 +865,7 @@ function ParameterField({ name, value, reference, schema, hintAlign = 'left', di
           step={schema?.type === 'integer' ? '1' : 'any'}
           min={schema?.minimum}
           max={schema?.maximum}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => onChange(name, event.target.value)}
           required
         />
       </label>
@@ -824,7 +874,7 @@ function ParameterField({ name, value, reference, schema, hintAlign = 'left', di
   return (
     <label>
       {fieldHeading}
-      <input value={value ?? ''} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
+      <input value={value ?? ''} disabled={disabled} onChange={(event) => onChange(name, event.target.value)} />
     </label>
   )
-}
+})

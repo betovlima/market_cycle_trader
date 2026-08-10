@@ -10,6 +10,7 @@ import { useBacktestWorkspace } from './features/backtest/hooks/useBacktestWorks
 import { AdministrationPage } from './features/AdministrationPage'
 import { SystemSettingsPage } from './features/SystemSettingsPage'
 import { AnalyticsPage } from './features/analytics/AnalyticsPage'
+import { AssetDiscoveryPage } from './features/assetDiscovery/AssetDiscoveryPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { LoginPage } from './features/LoginPage'
 import { PaperPortfolioDashboard } from './features/paperPortfolio/PaperPortfolioDashboard'
@@ -44,7 +45,7 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
 
   useEffect(() => {
     const allowed = session.role === 'admin'
-      ? ['dashboard', 'backtest', 'analytics', 'portfolio', 'administration', 'system-settings']
+      ? ['dashboard', 'backtest', 'analytics', 'asset-discovery', 'portfolio', 'administration', 'system-settings']
       : session.role === 'trader'
         ? ['dashboard', 'backtest', 'analytics', 'portfolio']
         : ['dashboard', 'backtest', 'analytics']
@@ -59,6 +60,7 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
       {activeTab === 'dashboard' ? <DashboardPage workspace={workspace} onOpenBacktest={() => setActiveTab('backtest')} canRunBacktest /> : null}
       {activeTab === 'backtest' ? <BacktestPage workspace={workspace} canExportResults={session.role === 'admin'} /> : null}
       {activeTab === 'analytics' ? <AnalyticsPage session={session} dashboard={workspace.dashboard} /> : null}
+      {activeTab === 'asset-discovery' && session.role === 'admin' ? <AssetDiscoveryPage onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'portfolio' && ['admin', 'trader'].includes(session.role) ? <PaperPortfolioDashboard /> : null}
       {activeTab === 'administration' && session.role === 'admin' ? <AdministrationPage onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'system-settings' && session.role === 'admin' ? <SystemSettingsPage onSessionExpired={onSessionExpired} /> : null}

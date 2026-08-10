@@ -14,7 +14,7 @@ import {
 import { money, number, percent, shortDateTime } from '../../../shared/formatters'
 import { usePerformanceZoom } from '../hooks/usePerformanceZoom'
 import { useReorderableCards } from '../hooks/useReorderableCards'
-import { analyticsAxisLabel, analyticsTimestamp, monthParts } from '../utils/performance'
+import { analyticsAxisLabel, analyticsTimestamp, monthParts, returnTone } from '../utils/performance'
 import {
   AnalyticsDragHandle,
   AnalyticsModeTabs,
@@ -23,14 +23,11 @@ import {
   SectionHeading,
 } from './AnalyticsPrimitives'
 import { MonthlyReturnHeatmap } from './MonthlyReturnHeatmap'
+import { PerformanceDifferenceHint } from './PerformanceDifferenceHint'
 
 const PERFORMANCE_LAYOUT_STORAGE_KEY = 'market-cycle-trader.analytics.performance-layout.v1'
 const DEFAULT_PERFORMANCE_LAYOUT = ['performance', 'heatmap']
 
-function tone(value) {
-  if (value == null || Number.isNaN(Number(value))) return ''
-  return Number(value) >= 0 ? 'positive' : 'negative'
-}
 
 function PerformanceTooltip({ active, payload }) {
   if (!active || !payload?.length) return null
@@ -41,9 +38,9 @@ function PerformanceTooltip({ active, payload }) {
     <strong>{shortDateTime(point.timestamp)}</strong>
     <div><span>{tr("Simulation")}</span><b>{money(point.simulation_equity)}</b></div>
     <div><span>{tr("Reference")}</span><b>{money(point.reference_equity)}</b></div>
-    <div><span>{tr("Simulation change")}</span><b className={tone(point.simulation_change)}>{percent(point.simulation_change)}</b></div>
-    <div><span>{tr("Reference change")}</span><b className={tone(point.reference_change)}>{percent(point.reference_change)}</b></div>
-    <div><span>{tr("Excess")}</span><b className={tone(point.excess_change)}>{percent(point.excess_change)}</b></div>
+    <div><span>{tr("Simulation change")}</span><b className={returnTone(point.simulation_change)}>{percent(point.simulation_change)}</b></div>
+    <div><span>{tr("Reference change")}</span><b className={returnTone(point.reference_change)}>{percent(point.reference_change)}</b></div>
+    <div><span>S − R</span><b className={returnTone(point.excess_change)}>{percent(point.excess_change)}</b></div>
   </div>
 }
 
@@ -152,9 +149,10 @@ export function BacktestPerformanceExplorer({ data, jobId }) {
       items={[
         { value: 'value', label: 'Value' },
         { value: 'indexed', label: 'Indexed 100' },
-        { value: 'excess', label: 'Excess' },
+        { value: 'excess', label: 'S − R' },
       ]}
     />
+    <PerformanceDifferenceHint id="analytics-performance-sr-hint" />
     <span className="analytics-zoom-status">
       {zoomActive
         ? tr('{level}× · drag to pan', { level: zoomLevel >= 10 ? zoomLevel.toFixed(0) : zoomLevel.toFixed(1) })
@@ -212,7 +210,7 @@ export function BacktestPerformanceExplorer({ data, jobId }) {
               <Line type="monotone" dataKey="reference_index" name={tr("Reference")} dot={false} strokeWidth={2} stroke="var(--accent)" />
             </> : <>
               <ReferenceLine y={0} stroke="rgba(145, 169, 198, .45)" strokeDasharray="3 4" />
-              <Line type="monotone" dataKey="excess_change" name={tr("Excess return")} dot={false} strokeWidth={2.3} stroke="var(--positive)" />
+              <Line type="monotone" dataKey="excess_change" name="S − R" dot={false} strokeWidth={2.3} stroke="var(--positive)" />
             </>}
           </LineChart>
         </ResponsiveContainer>
@@ -231,9 +229,10 @@ export function BacktestPerformanceExplorer({ data, jobId }) {
           items={[
             { value: 'simulation', label: 'Simulation' },
             { value: 'reference', label: 'Reference' },
-            { value: 'excess', label: 'Excess' },
+            { value: 'excess', label: 'S − R' },
           ]}
         />
+        <PerformanceDifferenceHint id="analytics-heatmap-sr-hint" />
         {cardDragHandle('heatmap', 'Monthly return heatmap')}
       </div>}
     >
