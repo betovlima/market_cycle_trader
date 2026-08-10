@@ -1,4 +1,4 @@
-export const FRONT_VERSION = '1.12.99'
+export const FRONT_VERSION = '1.12.107'
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || ''
 export const API_BASE_URL = rawApiBaseUrl.replace(/\/$/, '')

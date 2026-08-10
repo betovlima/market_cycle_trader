@@ -5545,3 +5545,144 @@ a { color: inherit; }
   .app-footer-divider { display: none; }
   .app-footer-versions { width: 100%; justify-content: center; }
 }
+
+/* v1.12.100 — S − R indicator and neutral return tone */
+.analytics-performance-tooltip b.neutral { color: #9fb7cc; }
+.analytics-difference-hint {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+.analytics-difference-hint .parameter-hint { display: inline-flex; }
+.analytics-difference-hint .parameter-hint-trigger {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  font-size: .56rem;
+}
+
+/* Rotation Inspector — strategy-neutral retrospective diagnostics */
+.rotation-inspector-section { display: grid; gap: 14px; }
+.rotation-inspector-unavailable {
+  display: grid;
+  gap: 5px;
+  padding: 16px;
+  border: 1px solid rgba(120, 155, 190, .18);
+  border-radius: 12px;
+  background: rgba(13, 28, 43, .45);
+}
+.rotation-inspector-unavailable strong { color: #dcecff; font-size: .82rem; }
+.rotation-inspector-unavailable span { color: #829db7; font-size: .68rem; line-height: 1.55; }
+.rotation-inspector-summary {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+.rotation-inspector-metric {
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid rgba(120, 155, 190, .14);
+  border-radius: 10px;
+  background: rgba(10, 24, 37, .44);
+}
+.rotation-inspector-metric span {
+  display: block;
+  margin-bottom: 5px;
+  color: #7893ad;
+  font-size: .55rem;
+  font-weight: 800;
+  line-height: 1.35;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.rotation-inspector-metric strong { color: #e2effb; font-size: .84rem; }
+.rotation-inspector-metric strong.positive { color: var(--positive); }
+.rotation-inspector-metric strong.negative { color: var(--negative); }
+.rotation-inspector-chart-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+.rotation-inspector-chart-cell { min-width: 0; }
+.rotation-inspector-cost-chart-cell { grid-column: 1 / -1; }
+.rotation-inspector-chart { height: 250px; }
+.rotation-inspector-cost-chart-cell .rotation-inspector-chart { height: 290px; }
+.rotation-inspector-tooltip { min-width: 205px; }
+.rotation-inspector-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(255px, .75fr);
+  gap: 10px;
+  align-items: start;
+}
+.rotation-inspector-table-panel,
+.rotation-inspector-detail-panel {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(120, 155, 190, .14);
+  border-radius: 12px;
+  background: rgba(10, 24, 37, .36);
+}
+.rotation-inspector-table tbody tr { cursor: pointer; }
+.rotation-inspector-table tbody tr:hover,
+.rotation-inspector-table tbody tr:focus-visible { background: rgba(88, 163, 224, .07); outline: none; }
+.rotation-inspector-table tbody tr.selected-row { background: rgba(88, 163, 224, .12); }
+.rotation-inspector-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 9px;
+  color: #7893ad;
+  font-size: .59rem;
+}
+.rotation-inspector-pagination button {
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid rgba(120, 155, 190, .16);
+  border-radius: 8px;
+  background: rgba(12, 28, 43, .62);
+  color: #bfd5e8;
+  font-size: .58rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.rotation-inspector-pagination button:disabled { opacity: .35; cursor: default; }
+.rotation-inspector-definition-list dd { max-width: 58%; text-align: right; }
+
+@media (max-width: 1180px) {
+  .rotation-inspector-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .rotation-inspector-detail-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 800px) {
+  .rotation-inspector-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rotation-inspector-chart-grid { grid-template-columns: 1fr; }
+  .rotation-inspector-cost-chart-cell { grid-column: auto; }
+  .rotation-inspector-chart { height: 230px; }
+  .rotation-inspector-table { min-width: 720px; }
+}
+
+/* Assets are edited as plain ticker text. The API owns normalization and list construction. */
+.strategy-asset-field {
+  grid-column: 1 / -1;
+}
+
+.strategy-asset-field textarea {
+  min-height: 58px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+}
+
+.strategy-asset-field > small {
+  color: #71869e;
+  font-size: 0.66rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 820px) {
+  .strategy-asset-field {
+    grid-column: auto;
+  }
+}

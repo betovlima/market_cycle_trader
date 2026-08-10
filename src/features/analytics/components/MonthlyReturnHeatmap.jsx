@@ -2,7 +2,7 @@ import { getIntlLocale, tr } from '../../../i18n/runtime'
 import { useCallback, useMemo, useState } from 'react'
 
 import { percent } from '../../../shared/formatters'
-import { monthParts } from '../utils/performance'
+import { monthParts, returnTone } from '../utils/performance'
 import { ChartEmpty } from './AnalyticsPrimitives'
 import { MonthlyReturnTooltip } from './MonthlyReturnTooltip'
 import './monthlyReturnHeatmap.css'
@@ -16,7 +16,7 @@ const TOOLTIP_PADDING = 12
 
 function selectedModeLabel(mode) {
   if (mode === 'reference') return tr('Reference')
-  if (mode === 'excess') return tr('Excess')
+  if (mode === 'excess') return 'S − R'
   return tr('Simulation')
 }
 
@@ -88,7 +88,8 @@ export function MonthlyReturnHeatmap({ rows, mode }) {
           if (!present) return <span key={`${year}-${index}`} role="gridcell" className="analytics-heatmap-cell empty" aria-label={tr('{month} {year}. No observation.', { month: monthName, year })}>—</span>
 
           const alpha = Math.min(.78, .16 + (mapped.maxAbs ? Math.abs(data.selectedValue) / mapped.maxAbs : 0) * .62)
-          const relativeResult = data.excess > 0 ? 'Simulation outperformed' : data.excess < 0 ? 'Reference outperformed' : 'Same performance'
+          const differenceTone = returnTone(data.excess)
+          const relativeResult = differenceTone === 'positive' ? 'Simulation outperformed' : differenceTone === 'negative' ? 'Reference outperformed' : 'Same performance'
           const tooltipData = {
             month: monthName,
             year,
@@ -101,9 +102,9 @@ export function MonthlyReturnHeatmap({ rows, mode }) {
             key={`${year}-${index}`}
             role="gridcell"
             tabIndex={0}
-            className={`analytics-heatmap-cell ${data.selectedValue >= 0 ? 'positive' : 'negative'}`}
+            className={`analytics-heatmap-cell ${returnTone(data.selectedValue)}`}
             style={{ '--heat-alpha': alpha }}
-            aria-label={tr('{month} {year}. {mode} {selected}. Simulation {simulation}. Reference {reference}. Excess {excess}.', { month: monthName, year, mode: modeLabel, selected: percent(data.selectedValue), simulation: percent(data.simulation), reference: percent(data.reference), excess: percent(data.excess) })}
+            aria-label={tr('{month} {year}. {mode} {selected}. Simulation {simulation}. Reference {reference}. S − R {difference}.', { month: monthName, year, mode: modeLabel, selected: percent(data.selectedValue), simulation: percent(data.simulation), reference: percent(data.reference), difference: percent(data.excess) })}
             onMouseEnter={(event) => showTooltip(event, tooltipData)}
             onFocus={(event) => showTooltip(event, tooltipData)}
             onBlur={hideTooltip}
