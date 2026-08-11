@@ -1,4 +1,59 @@
-# Market Cycle Trader Frontend v1.12.101
+# Market Cycle Trader Frontend v1.12.113
+
+## v1.12.113 — Portfolio measurement ruler
+
+- `Portfolio Evolution` now includes an explicit **Measure** mode.
+- First click anchors point A; second click anchors point B and automatically exits measure mode.
+- The ruler shows A/B portfolio values, absolute USD difference, percentage change relative to A, and elapsed time.
+- Reference lines, endpoint markers and a highlighted band keep the selected interval visible on the chart.
+- Existing mouse-wheel zoom, drag-to-pan and BUY/SELL markers are preserved. Panning is temporarily disabled only while selecting A/B.
+- This is a frontend-only feature; API v1.13.43 and all Paper/strategy behavior remain unchanged.
+
+
+## v1.12.112 — Strategy-owned Backtest model
+
+- The algorithm selector remains only inside `SELECTED STRATEGY`.
+- Saving a model binds that algorithm and its parameter snapshot to the Strategy used for research.
+- Backtest no longer offers an algorithm selector; it shows the model saved with the selected Strategy as read-only information.
+- Starting a Backtest calls the generic `/api/jobs` route, and the API resolves the model exclusively from the selected Strategy.
+- Candidate action becomes available only when the saved model has an exact completed Backtest for the current Strategy revision.
+- Requires Market Cycle Trader API v1.13.43.
+
+## v1.12.111 — Model-aware Candidate and Winner lifecycle
+
+- Keeps model parameter selection inside `SELECTED STRATEGY`.
+- `Mark as candidate` now certifies the latest completed run for the model currently selected in that box.
+- Candidate and Trader Winner cards show the certified model identity.
+- Promotion feedback identifies the model frozen into the new Winner.
+- Requires Market Cycle Trader API v1.13.42.
+
+## v1.12.110 — Model Parameters inside Selected Strategy
+
+- Moves XGBoost / LightGBM / IQN parameter selection into the `SELECTED STRATEGY` box.
+- Each model owns a complete independent hyperparameter profile, even when parameter names overlap.
+- Removes the separate Model Research settings box to reduce visual ambiguity.
+- Strategy and experiment parameters remain shared and separate from model-owned values.
+- Requires Market Cycle Trader API v1.13.41.
+
+## v1.12.109 — Model-specific Research Settings
+
+- Adds Model Research inside Administrator System Settings.
+- Loads the model list, profile identity, editable fields, validation metadata and current values from the authenticated API.
+- LightGBM and IQN parameters are editable independently without changing Strategy or Winner.
+- XGBoost is shown as Strategy-owned and read-only to preserve the exact champion baseline.
+- Saves create an audited backend revision; each new challenger job freezes that revision into its execution snapshot.
+- Running jobs are never mutated by settings edits.
+- No LightGBM/IQN hyperparameter names or default values are embedded in the React component.
+- Requires Market Cycle Trader API v1.13.40.
+
+
+## v1.12.108 — LightGBM and IQN research challengers
+
+- Adds an Administrator-only model selector to Backtest: XGBoost baseline, LightGBM challenger and IQN challenger.
+- Keeps Viewer/Trader execution on the existing protected XGBoost baseline.
+- Shows sanitized model identity only in the Administrator execution status/history; Viewer/Trader history remains model-neutral, and no model settings or Strategy internals are embedded in the frontend.
+- Challenger selection never changes the selected Strategy, Candidate lifecycle or Trader Winner.
+- Requires Market Cycle Trader API v1.13.39 for challenger execution.
 
 React + Vite frontend for protected historical simulations and Paper portfolio monitoring.
 

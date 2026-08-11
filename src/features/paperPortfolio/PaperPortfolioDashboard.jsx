@@ -1,6 +1,6 @@
 import { getIntlLocale, tr } from '../../i18n/runtime'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { apiFetch } from '../../api/http'
 import { API } from '../../config/env'
@@ -290,6 +290,19 @@ function portfolioAxisLabel(value, visibleSpan) {
   return compactDate(date)
 }
 
+function portfolioMeasureInterval(startTimestamp, endTimestamp) {
+  const elapsed = Math.abs(Number(endTimestamp) - Number(startTimestamp))
+  if (!Number.isFinite(elapsed)) return '—'
+
+  const days = Math.floor(elapsed / DAY_MS)
+  const hours = Math.floor((elapsed % DAY_MS) / (60 * 60 * 1000))
+  const minutes = Math.floor((elapsed % (60 * 60 * 1000)) / (60 * 1000))
+
+  if (days > 0) return `${days}d ${hours}h`
+  if (hours > 0) return `${hours}h ${minutes}m`
+  return `${minutes}m`
+}
+
 export function PaperPortfolioDashboard() {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
@@ -306,6 +319,8 @@ export function PaperPortfolioDashboard() {
   const panStateRef = useRef(null)
   const [zoomDomain, setZoomDomain] = useState(null)
   const [isPanning, setIsPanning] = useState(false)
+  const [measureMode, setMeasureMode] = useState(false)
+  const [measureSelection, setMeasureSelection] = useState({ startTimestamp: null, endTimestamp: null })
 
   const loadRobotStatus = useCallback(async ({ silent = false } = {}) => {
     try {
@@ -475,6 +490,31 @@ export function PaperPortfolioDashboard() {
     return [minimum - padding, maximum + padding]
   }, [visibleChartData])
 
+  const measureStartPoint = useMemo(() => {
+    const index = nearestHistoryIndex(chartData, measureSelection.startTimestamp)
+    return index >= 0 ? chartData[index] : null
+  }, [chartData, measureSelection.startTimestamp])
+
+  const measureEndPoint = useMemo(() => {
+    const index = nearestHistoryIndex(chartData, measureSelection.endTimestamp)
+    return index >= 0 ? chartData[index] : null
+  }, [chartData, measureSelection.endTimestamp])
+
+  const measureResult = useMemo(() => {
+    if (!measureStartPoint || !measureEndPoint) return null
+    const startValue = Number(measureStartPoint.portfolio_value)
+    const endValue = Number(measureEndPoint.portfolio_value)
+    if (!Number.isFinite(startValue) || !Number.isFinite(endValue)) return null
+    const change = endValue - startValue
+    const changePercent = startValue !== 0 ? change / Math.abs(startValue) : null
+    return {
+      change,
+      changePercent,
+      interval: portfolioMeasureInterval(measureStartPoint.timestamp, measureEndPoint.timestamp),
+      tone: change > 0 ? 'positive' : change < 0 ? 'negative' : 'flat',
+    }
+  }, [measureEndPoint, measureStartPoint])
+
   const visibleTimeSpan = effectiveZoomDomain
     ? Math.max(0, effectiveZoomDomain.end - effectiveZoomDomain.start)
     : 0
@@ -538,6 +578,7 @@ export function PaperPortfolioDashboard() {
   }, [fullTimeDomain, minimumTimeSpan])
 
   function beginChartPan(event) {
+    if (measureMode) return
     if (event.button !== 0 || !zoomActive || !effectiveZoomDomain || !fullTimeDomain) return
     if (event.target?.closest?.('.portfolio-trade-marker-hit')) return
     const chartNode = chartWheelTargetRef.current
@@ -583,6 +624,43 @@ export function PaperPortfolioDashboard() {
     panStateRef.current = null
     setIsPanning(false)
     event.currentTarget.releasePointerCapture?.(event.pointerId)
+  }
+
+  function beginPortfolioMeasure() {
+    panStateRef.current = null
+    setIsPanning(false)
+    setMeasureSelection({ startTimestamp: null, endTimestamp: null })
+    setMeasureMode(true)
+  }
+
+  function clearPortfolioMeasure() {
+    setMeasureMode(false)
+    setMeasureSelection({ startTimestamp: null, endTimestamp: null })
+  }
+
+  function selectMeasurePoint(event) {
+    if (!measureMode || !effectiveZoomDomain) return
+    const chartNode = chartWheelTargetRef.current
+    if (!chartNode) return
+
+    const rect = chartNode.getBoundingClientRect()
+    const leftInset = Math.min(68, rect.width * 0.18)
+    const rightInset = Math.min(22, rect.width * 0.08)
+    const plotWidth = Math.max(1, rect.width - leftInset - rightInset)
+    const pointerRatio = clamp((event.clientX - rect.left - leftInset) / plotWidth, 0, 1)
+    const targetTimestamp = effectiveZoomDomain.start + (effectiveZoomDomain.end - effectiveZoomDomain.start) * pointerRatio
+
+    const nearestIndex = nearestHistoryIndex(visibleChartData, targetTimestamp)
+    if (nearestIndex < 0) return
+    const point = visibleChartData[nearestIndex]
+
+    if (measureSelection.startTimestamp === null) {
+      setMeasureSelection({ startTimestamp: point.timestamp, endTimestamp: null })
+      return
+    }
+
+    setMeasureSelection({ startTimestamp: measureSelection.startTimestamp, endTimestamp: point.timestamp })
+    setMeasureMode(false)
   }
 
   const position = data?.position
@@ -633,25 +711,70 @@ export function PaperPortfolioDashboard() {
                     <span><i className="buy" />{tr("Buy")}</span>
                     <span><i className="sell" />{tr("Sell")}</span>
                   </div>
+                  <div className="portfolio-chart-measure-controls" aria-live="polite">
+                    <button type="button" className={measureMode ? 'active' : ''} onClick={beginPortfolioMeasure}>
+                      {tr(measureMode ? (measureStartPoint ? 'Select point B' : 'Select point A') : 'Measure')}
+                    </button>
+                    {measureStartPoint ? <button type="button" onClick={clearPortfolioMeasure}>{tr("Clear")}</button> : null}
+                  </div>
                   <div className="portfolio-chart-zoom-controls" aria-live="polite">
-                    <span>{zoomActive ? tr('Zoom {level}× · Drag to pan', { level: zoomLevel >= 10 ? zoomLevel.toFixed(0) : zoomLevel.toFixed(1) }) : tr('Wheel to zoom · Drag to pan')}</span>
+                    <span>{measureMode
+                      ? tr(measureStartPoint ? 'Click the chart to set point B' : 'Click the chart to set point A')
+                      : zoomActive
+                        ? tr('Zoom {level}× · Drag to pan', { level: zoomLevel >= 10 ? zoomLevel.toFixed(0) : zoomLevel.toFixed(1) })
+                        : tr('Wheel to zoom · Drag to pan')}</span>
                     {zoomActive ? <button type="button" onClick={() => setZoomDomain(null)}>{tr("Reset zoom")}</button> : null}
                   </div>
                   <div className="portfolio-monitor"><span className={data.market_clock?.is_open ? 'positive' : 'muted'}>{tr(data.market_clock?.is_open ? 'Market open' : 'Market closed')}</span></div>
                 </div>
               </div>
+              {measureStartPoint ? (
+                <div className={`portfolio-measurement-summary ${measureResult?.tone || 'pending'}`} role="status" aria-live="polite">
+                  <div className="portfolio-measurement-point">
+                    <span>{tr("Point A")}</span>
+                    <strong>{money(measureStartPoint.portfolio_value)}</strong>
+                    <small>{shortDateTime(measureStartPoint.recorded_at)}</small>
+                  </div>
+                  <span className="portfolio-measurement-arrow" aria-hidden="true">→</span>
+                  <div className="portfolio-measurement-point">
+                    <span>{tr("Point B")}</span>
+                    <strong>{measureEndPoint ? money(measureEndPoint.portfolio_value) : '—'}</strong>
+                    <small>{measureEndPoint ? shortDateTime(measureEndPoint.recorded_at) : tr("Select on chart")}</small>
+                  </div>
+                  <div className="portfolio-measurement-result">
+                    <span>{tr("Difference")}</span>
+                    <strong>{measureResult ? money(measureResult.change) : '—'}</strong>
+                    <small>{measureResult?.changePercent == null ? '—' : percent(measureResult.changePercent)}</small>
+                  </div>
+                  <div className="portfolio-measurement-result interval">
+                    <span>{tr("Interval")}</span>
+                    <strong>{measureResult?.interval || '—'}</strong>
+                  </div>
+                </div>
+              ) : null}
               <div
                 ref={chartWheelTargetRef}
-                className={`performance-chart portfolio-chart portfolio-chart-events portfolio-interactive-chart ${zoomActive ? 'is-zoomed' : ''} ${isPanning ? 'is-panning' : ''}`}
-                aria-label={tr("Portfolio evolution chart. Use the mouse wheel to zoom. When zoomed, hold the left mouse button and drag to pan through time. Buy and sell markers use a pointer cursor.")}
+                className={`performance-chart portfolio-chart portfolio-chart-events portfolio-interactive-chart ${zoomActive ? 'is-zoomed' : ''} ${isPanning ? 'is-panning' : ''} ${measureMode ? 'is-measuring' : ''}`}
+                aria-label={tr("Portfolio evolution chart. Use the mouse wheel to zoom. When zoomed, hold the left mouse button and drag to pan through time. Activate Measure and select two points to compare portfolio values.")}
                 onPointerDown={beginChartPan}
                 onPointerMove={moveChartPan}
                 onPointerUp={endChartPan}
                 onPointerCancel={endChartPan}
+                onClick={selectMeasurePoint}
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={visibleChartData} margin={{ top: 18, right: 18, left: 10, bottom: 6 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    {measureStartPoint && measureEndPoint ? (
+                      <ReferenceArea
+                        x1={Math.min(measureStartPoint.timestamp, measureEndPoint.timestamp)}
+                        x2={Math.max(measureStartPoint.timestamp, measureEndPoint.timestamp)}
+                        fill="var(--accent)"
+                        fillOpacity={0.075}
+                        strokeOpacity={0}
+                        ifOverflow="hidden"
+                      />
+                    ) : null}
                     <XAxis
                       dataKey="timestamp"
                       type="number"
@@ -664,6 +787,36 @@ export function PaperPortfolioDashboard() {
                     <YAxis domain={yDomain} tickFormatter={(value) => `$${Number(value).toLocaleString(getIntlLocale(), { maximumFractionDigits: 0 })}`} />
                     <Tooltip content={<PortfolioChartTooltip />} cursor={{ stroke: 'rgba(157, 175, 195, .45)', strokeWidth: 1 }} />
                     <Line type="monotone" dataKey="portfolio_value" name={tr("Portfolio")} dot={<TradeEventDot />} activeDot={false} strokeWidth={2.5} stroke="var(--positive)" isAnimationActive={false} />
+                    {measureStartPoint ? (
+                      <>
+                        <ReferenceLine x={measureStartPoint.timestamp} stroke="var(--accent-soft)" strokeDasharray="4 4" ifOverflow="hidden" />
+                        <ReferenceDot
+                          x={measureStartPoint.timestamp}
+                          y={Number(measureStartPoint.portfolio_value)}
+                          r={5}
+                          fill="var(--accent)"
+                          stroke="#f0f6ff"
+                          strokeWidth={1.5}
+                          ifOverflow="hidden"
+                          label={{ value: 'A', position: 'top', fill: 'var(--accent-soft)', fontSize: 10, fontWeight: 900 }}
+                        />
+                      </>
+                    ) : null}
+                    {measureEndPoint ? (
+                      <>
+                        <ReferenceLine x={measureEndPoint.timestamp} stroke={measureResult?.tone === 'negative' ? 'var(--negative)' : 'var(--positive)'} strokeDasharray="4 4" ifOverflow="hidden" />
+                        <ReferenceDot
+                          x={measureEndPoint.timestamp}
+                          y={Number(measureEndPoint.portfolio_value)}
+                          r={5}
+                          fill={measureResult?.tone === 'negative' ? 'var(--negative)' : 'var(--positive)'}
+                          stroke="#f0f6ff"
+                          strokeWidth={1.5}
+                          ifOverflow="hidden"
+                          label={{ value: 'B', position: 'top', fill: measureResult?.tone === 'negative' ? 'var(--negative)' : 'var(--positive)', fontSize: 10, fontWeight: 900 }}
+                        />
+                      </>
+                    ) : null}
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>

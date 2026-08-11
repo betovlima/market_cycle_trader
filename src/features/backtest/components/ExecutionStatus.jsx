@@ -1,7 +1,7 @@
 import { tr } from '../../../i18n/runtime'
 import { useEffect, useRef } from 'react'
 
-export function ExecutionStatus({ workspace }) {
+export function ExecutionStatus({ workspace, modelLabel = "" }) {
   const { job } = workspace
   const logRef = useRef(null)
   const logs = Array.isArray(job?.logs) ? job.logs : []
@@ -37,8 +37,9 @@ export function ExecutionStatus({ workspace }) {
         </div>
         <span>{progressLabel}%</span>
       </div>
-      {(runCount > 0 || foldCount > 0 || phase) ? (
+      {(runCount > 0 || foldCount > 0 || phase || modelLabel) ? (
         <div className="execution-detail-grid" aria-label={tr("Detailed training progress")}>
+          {modelLabel ? <span><small>{tr("Model")}</small><strong>{modelLabel}</strong></span> : null}
           {runCount > 0 ? <span><small>{tr("Run")}</small><strong>{Math.max(0, runIndex)}/{runCount}</strong></span> : null}
           {foldCount > 0 ? <span><small>{tr("Fold")}</small><strong>{Math.max(0, foldIndex)}/{foldCount}</strong></span> : null}
           {phase ? <span className="phase"><small>{tr("Phase")}</small><strong>{tr(phase)}</strong></span> : null}

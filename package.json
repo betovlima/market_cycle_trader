@@ -1,7 +1,7 @@
 {
   "name": "market_cycle_trader",
   "private": true,
-  "version": "1.12.107",
+  "version": "1.12.113",
   "type": "module",
   "scripts": {
     "dev": "vite",

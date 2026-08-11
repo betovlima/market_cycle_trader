@@ -398,7 +398,7 @@ function RotationPanel({ jobId, payload, loading, error }) {
   )
 }
 
-export function BacktestPage({ workspace, canExportResults = false }) {
+export function BacktestPage({ workspace, canExportResults = false, canRunResearchModels = false }) {
   const {
     job,
     dashboard,
@@ -425,8 +425,52 @@ export function BacktestPage({ workspace, canExportResults = false }) {
   const [historyStatus, setHistoryStatus] = useState('all')
   const [historySort, setHistorySort] = useState({ key: 'created_at', direction: 'desc' })
   const [historyPage, setHistoryPage] = useState(1)
+  const [selectedStrategyModel, setSelectedStrategyModel] = useState(null)
+  const [strategyContextError, setStrategyContextError] = useState('')
+  const [researchExecutionModels, setResearchExecutionModels] = useState({})
   const selectedStrategyName = dashboard?.selected_backtest_strategy_name || tr('Not selected')
   const activeStrategyName = (running ? job?.strategy_profile_name : null) || selectedStrategyName
+
+  useEffect(() => {
+    let active = true
+    if (!canRunResearchModels) {
+      setSelectedStrategyModel(null)
+      setStrategyContextError('')
+      return () => { active = false }
+    }
+
+    apiFetch(`${API}/admin/strategies/control`)
+      .then((value) => {
+        if (!active) return
+        setSelectedStrategyModel(value?.research_strategy?.research_model || null)
+        setStrategyContextError('')
+      })
+      .catch((requestError) => {
+        if (!active) return
+        setSelectedStrategyModel(null)
+        setStrategyContextError(requestError.message || 'Unable to load the model saved with the selected Strategy.')
+      })
+    return () => { active = false }
+  }, [canRunResearchModels, dashboard?.selected_backtest_strategy_name])
+
+  useEffect(() => {
+    let active = true
+    if (!canRunResearchModels) {
+      setResearchExecutionModels({})
+      return () => { active = false }
+    }
+
+    apiFetch(`${API}/admin/model-research/executions?limit=50`)
+      .then((value) => {
+        if (!active) return
+        const items = Array.isArray(value?.items) ? value.items : []
+        setResearchExecutionModels(Object.fromEntries(items.filter((item) => item?.id).map((item) => [item.id, item])))
+      })
+      .catch(() => {
+        if (active) setResearchExecutionModels({})
+      })
+    return () => { active = false }
+  }, [canRunResearchModels, job?.id, detail?.id, dashboard?.recent_backtests?.[0]?.id])
 
   useEffect(() => {
     let active = true
@@ -656,14 +700,19 @@ export function BacktestPage({ workspace, canExportResults = false }) {
 
   const historyRows = useMemo(() => {
     const normalizedQuery = historyQuery.trim().toLowerCase()
-    const rows = (dashboard?.recent_backtests || []).filter((item) => {
+    const rows = (dashboard?.recent_backtests || []).map((item) => ({
+      ...item,
+      research_model_label: canRunResearchModels ? (researchExecutionModels[item.id]?.model_label || 'Baseline') : '',
+    })).filter((item) => {
       if (historyStatus !== 'all' && String(item.status || '').toLowerCase() !== historyStatus) return false
       if (!normalizedQuery) return true
-      return String(item.strategy_profile_name || 'Unknown test').toLowerCase().includes(normalizedQuery)
+      const haystack = `${item.strategy_profile_name || 'Unknown test'} ${canRunResearchModels ? item.research_model_label : ''}`.toLowerCase()
+      return haystack.includes(normalizedQuery)
     })
     return sortRows(rows, historySort, {
       created_at: (item) => Date.parse(item.created_at || '') || 0,
       strategy_profile_name: (item) => String(item.strategy_profile_name || 'Unknown test'),
+      research_model_label: (item) => String(item.research_model_label || 'Baseline'),
       status: (item) => String(item.status || ''),
       simulation_return: (item) => item.metrics?.simulation_return == null ? null : Number(item.metrics.simulation_return),
       sharpe: (item) => item.metrics?.sharpe == null ? null : Number(item.metrics.sharpe),
@@ -671,7 +720,7 @@ export function BacktestPage({ workspace, canExportResults = false }) {
       position_changes: (item) => item.metrics?.position_changes == null ? null : Number(item.metrics.position_changes),
       duration_seconds: (item) => item.duration_seconds == null ? null : Number(item.duration_seconds),
     })
-  }, [dashboard, historyQuery, historySort, historyStatus])
+  }, [canRunResearchModels, dashboard, historyQuery, historySort, historyStatus, researchExecutionModels])
 
   const historyPages = Math.max(1, Math.ceil(historyRows.length / HISTORY_PAGE_SIZE))
   const currentHistoryPage = Math.min(historyPage, historyPages)
@@ -682,6 +731,11 @@ export function BacktestPage({ workspace, canExportResults = false }) {
   }, [refreshDashboard])
 
   useEffect(() => { setHistoryPage(1) }, [historyQuery, historySort, historyStatus])
+
+  const savedResearchModelLabel = canRunResearchModels ? (selectedStrategyModel?.label || '') : ''
+  const activeResearchModelLabel = canRunResearchModels && job?.id ? (researchExecutionModels[job.id]?.model_label || savedResearchModelLabel) : ''
+  const displayedResearchModelLabel = canRunResearchModels && detail?.id ? (researchExecutionModels[detail.id]?.model_label || '') : ''
+  const historyColumnCount = canRunResearchModels ? 9 : 8
 
   async function exportResults() {
     if (!canExportResults || !detail?.id || exporting) return
@@ -711,23 +765,33 @@ export function BacktestPage({ workspace, canExportResults = false }) {
               <div className="backtest-context-line" aria-live="polite">
                 <span>{tr(running ? 'Evaluating' : 'Selected test')}:</span>
                 <strong title={activeStrategyName}>{activeStrategyName}</strong>
-                {!running && detail?.strategy_profile_name ? <><i>·</i><span>{tr("Displayed:")}</span><strong title={detail.strategy_profile_name}>{detail.strategy_profile_name}</strong></> : null}
+                {!running && savedResearchModelLabel ? <><i>·</i><span>{tr('Saved model')}:</span><strong>{savedResearchModelLabel}</strong></> : null}
+                {running && activeResearchModelLabel ? <><i>·</i><span>{tr('Model')}:</span><strong>{activeResearchModelLabel}</strong></> : null}
+                {!running && detail?.strategy_profile_name ? <><i>·</i><span>{tr("Displayed:")}</span><strong title={detail.strategy_profile_name}>{detail.strategy_profile_name}</strong>{displayedResearchModelLabel ? <><i>·</i><span>{tr('Model')}:</span><strong>{displayedResearchModelLabel}</strong></> : null}</> : null}
               </div>
             </div>
           </div>
           <div className="backtest-workspace-actions">
+            {canRunResearchModels ? (
+              <div className="research-model-control research-model-readonly" aria-label={tr('Model saved with selected Strategy')}>
+                <span>{tr('Saved model')}</span>
+                <strong>{savedResearchModelLabel || tr('Unavailable')}</strong>
+                <small>{tr('Defined in Selected Strategy')}</small>
+              </div>
+            ) : null}
             {canExportResults && detail?.metrics ? (
               <button type="button" className="secondary-action compact" onClick={exportResults} disabled={exporting}>
                 {tr(exporting ? 'Exporting…' : 'Export Results')}
               </button>
             ) : null}
-            <button type="button" className="primary-action compact" onClick={runBacktest} disabled={startDisabled}>
+            <button type="button" className="primary-action compact" onClick={() => runBacktest()} disabled={startDisabled}>
               <PlayIcon /> {tr(restoringExecution ? 'Checking Execution' : startingBacktest ? 'Starting…' : running ? 'Simulation Running' : 'Start New Backtest')}
             </button>
           </div>
         </header>
 
-        <ExecutionStatus workspace={workspace} />
+        <ExecutionStatus workspace={workspace} modelLabel={activeResearchModelLabel} />
+        {strategyContextError ? <div className="global-inline-message error-inline backtest-workspace-message">{tr(strategyContextError)}</div> : null}
         {exportError ? <div className="global-inline-message error-inline backtest-workspace-message">{tr(exportError)}</div> : null}
         {loadingDetail ? <div className="backtest-loading-row">{tr("Loading simulation result…")}</div> : null}
 
@@ -823,7 +887,7 @@ export function BacktestPage({ workspace, canExportResults = false }) {
           <ListToolbar
             query={historyQuery}
             onQueryChange={setHistoryQuery}
-            placeholder={tr("Filter by test name")}
+            placeholder={tr("Filter by test or model")}
             resultCount={historyRows.length}
             resultLabel={historyRows.length === 1 ? 'execution' : 'executions'}
           >
@@ -839,6 +903,7 @@ export function BacktestPage({ workspace, canExportResults = false }) {
                 <tr>
                   <SortableHeader label={tr("Date")} field="created_at" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.created_at} />
                   <SortableHeader label={tr("Test")} field="strategy_profile_name" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.strategy_profile_name} />
+                  {canRunResearchModels ? <SortableHeader label={tr("Model")} field="research_model_label" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} /> : null}
                   <SortableHeader label={tr("Status")} field="status" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.status} />
                   <SortableHeader label={tr("Total Return")} field="simulation_return" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.simulation_return} />
                   <SortableHeader label={tr("Sharpe Ratio")} field="sharpe" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.sharpe} />
@@ -852,6 +917,7 @@ export function BacktestPage({ workspace, canExportResults = false }) {
                   <tr key={item.id} className={detail?.id === item.id ? 'selected-row' : ''}>
                     <td>{shortDateTime(item.created_at)}</td>
                     <td className="backtest-name-cell" title={item.strategy_profile_name || tr('Unknown test')}>{item.strategy_profile_name || tr('Unknown test')}</td>
+                    {canRunResearchModels ? <td>{item.research_model_label || tr('Baseline')}</td> : null}
                     <td><StatusBadge status={item.status} /></td>
                     <td className={item.metrics?.simulation_return == null ? '' : Number(item.metrics.simulation_return) >= 0 ? 'positive' : 'negative'}>{percent(item.metrics?.simulation_return)}</td>
                     <td>{item.metrics?.sharpe == null ? '—' : Number(item.metrics.sharpe).toFixed(3)}</td>
@@ -859,7 +925,7 @@ export function BacktestPage({ workspace, canExportResults = false }) {
                     <td>{item.metrics?.position_changes == null ? '—' : Math.round(item.metrics.position_changes)}</td>
                     <td>{durationLabel(item.duration_seconds)}</td>
                   </tr>
-                )) : <tr><td colSpan="8" className="empty-cell">{tr("No backtest history matches the selected filters.")}</td></tr>}
+                )) : <tr><td colSpan={historyColumnCount} className="empty-cell">{tr("No backtest history matches the selected filters.")}</td></tr>}
               </tbody>
             </table>
           </div>
