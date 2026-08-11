@@ -66,7 +66,7 @@ function ModelField({ field, value, disabled, onChange }) {
         value={inputValue(field, value)}
         min={min ?? undefined}
         max={max ?? undefined}
-        step={field.step ?? (field.type === 'integer' ? 1 : 'any')}
+        step={field.type === 'integer' ? 1 : 'any'}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         required
@@ -81,6 +81,8 @@ export function ModelResearchSettingsPanel({
   strategy = null,
   onStrategyModelSaved = null,
   onDirtyChange = null,
+  parameterSearch = '',
+  onSearchMatchCount = null,
 }) {
   const [payload, setPayload] = useState(null)
   const [selectedModelId, setSelectedModelId] = useState('')
@@ -148,6 +150,27 @@ export function ModelResearchSettingsPanel({
     () => (payload?.models || []).find((item) => item.id === selectedModelId) || null,
     [payload, selectedModelId],
   )
+
+  const visibleModelFields = useMemo(() => {
+    const fields = selectedModel?.fields || []
+    const query = parameterSearch.trim().toLocaleLowerCase()
+    if (!query) return fields
+    return fields.filter((field) => {
+      const searchableText = [
+        field.name,
+        field.label,
+        field.description,
+        selectedModel?.id,
+        selectedModel?.label,
+        'model parameters',
+      ].filter(Boolean).join(' ').toLocaleLowerCase()
+      return searchableText.includes(query)
+    })
+  }, [parameterSearch, selectedModel])
+
+  useEffect(() => {
+    onSearchMatchCount?.(visibleModelFields.length)
+  }, [onSearchMatchCount, visibleModelFields.length])
 
   const dirty = Boolean(
     strategy
@@ -259,7 +282,7 @@ export function ModelResearchSettingsPanel({
       {selectedModel ? (
         <form onSubmit={save} className="model-research-form">
           <div className="model-research-fields-grid">
-            {(selectedModel.fields || []).map((field) => (
+            {visibleModelFields.map((field) => (
               <ModelField key={field.name} field={field} value={formValues[field.name]} disabled={Boolean(strategy?.locked)} onChange={(value) => changeField(field, value)} />
             ))}
           </div>

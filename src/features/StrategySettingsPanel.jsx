@@ -171,6 +171,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
   const [activeJob, setActiveJob] = useState(null)
   const [modelHasUnsavedChanges, setModelHasUnsavedChanges] = useState(false)
   const [parameterSearch, setParameterSearch] = useState('')
+  const [modelParameterMatchCount, setModelParameterMatchCount] = useState(0)
   const initialLoadStartedRef = useRef(false)
   const catalogLoadedRef = useRef(false)
 
@@ -560,6 +561,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
     () => groupedParameters.reduce((total, group) => total + group.fields.length, 0),
     [groupedParameters],
   )
+  const globalVisibleParameterCount = visibleParameterCount + modelParameterMatchCount
 
   if (loading) {
     return <section className={`${embedded ? 'settings-workspace-section settings-strategy-section' : 'panel'} strategy-lab-panel`}><div className="settings-loading"><span className="loading-ring" />{tr("Loading strategies…")}</div></section>
@@ -704,12 +706,31 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
             </div>
           </div>
 
+          <div className="strategy-parameter-tools strategy-parameter-tools-global">
+            <label className="strategy-parameter-search">
+              <StrategyFieldLabel id="hint-parameter-search" label={tr("Find a parameter")} hint={STRATEGY_FIELD_HINTS.search} />
+              <div className="strategy-parameter-search-control">
+                <input
+                  type="search"
+                  value={parameterSearch}
+                  placeholder={tr("Search Strategy and selected model parameters by label or technical name")}
+                  onChange={(event) => setParameterSearch(event.target.value)}
+                  autoComplete="off"
+                />
+                {parameterSearch ? <button type="button" onClick={() => setParameterSearch('')}>{tr("Clear")}</button> : null}
+              </div>
+            </label>
+            <small>{parameterSearch ? tr(globalVisibleParameterCount === 1 ? '{count} matching parameter' : '{count} matching parameters', { count: globalVisibleParameterCount }) : tr(globalVisibleParameterCount === 1 ? '{count} parameter available' : '{count} parameters available', { count: globalVisibleParameterCount })}</small>
+          </div>
+
           <ModelResearchSettingsPanel
             onSessionExpired={onSessionExpired}
             embedded
             strategy={selected}
             onStrategyModelSaved={handleStrategyModelSaved}
             onDirtyChange={setModelHasUnsavedChanges}
+            parameterSearch={parameterSearch}
+            onSearchMatchCount={setModelParameterMatchCount}
           />
 
           {selected.status === 'candidate' ? (
@@ -755,23 +776,6 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
               </label>
             </div>
 
-            <div className="strategy-parameter-tools">
-              <label className="strategy-parameter-search">
-                <StrategyFieldLabel id="hint-parameter-search" label={tr("Find a parameter")} hint={STRATEGY_FIELD_HINTS.search} />
-                <div className="strategy-parameter-search-control">
-                  <input
-                    type="search"
-                    value={parameterSearch}
-                    placeholder={tr("Search by label or technical name, for example rotation_cash_threshold")}
-                    onChange={(event) => setParameterSearch(event.target.value)}
-                    autoComplete="off"
-                  />
-                  {parameterSearch ? <button type="button" onClick={() => setParameterSearch('')}>{tr("Clear")}</button> : null}
-                </div>
-              </label>
-              <small>{parameterSearch ? tr(visibleParameterCount === 1 ? '{count} matching parameter' : '{count} matching parameters', { count: visibleParameterCount }) : tr(visibleParameterCount === 1 ? '{count} parameter available' : '{count} parameters available', { count: visibleParameterCount })}</small>
-            </div>
-
             <div className="strategy-parameter-groups">
               {groupedParameters.map((group, index) => (
                 <details key={`${group.id}:${parameterSearch ? 'filtered' : 'all'}`} open={parameterSearch ? true : index === 0 || group.id === 'model'}>
@@ -792,8 +796,8 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
                   </div>
                 </details>
               ))}
-              {visibleParameterCount === 0 ? (
-                <div className="strategy-parameter-empty">{tr("No parameter matches “")}{parameterSearch}{tr("”. Search by part of the visible label or technical name.")}</div>
+              {parameterSearch && globalVisibleParameterCount === 0 ? (
+                <div className="strategy-parameter-empty">{tr("No parameter matches “")}{parameterSearch}{tr("”. Search Strategy and selected model parameters by label, technical name or description.")}</div>
               ) : null}
             </div>
 
