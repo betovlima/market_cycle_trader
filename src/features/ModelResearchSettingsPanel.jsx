@@ -298,6 +298,7 @@ export function ModelResearchSettingsPanel({
           <p className="model-research-snapshot-note">{tr('The algorithm and parameter values are saved with this Strategy. Backtest only reads this immutable model snapshot; it does not select or override the algorithm.')}</p>
         </form>
       ) : null}
+
     </Container>
   )
 }

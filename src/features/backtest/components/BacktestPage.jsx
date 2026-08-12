@@ -18,6 +18,7 @@ import {
 import { ParameterHint } from '../../../shared/components/ParameterHint'
 import { durationLabel, money, percent, shortDateTime } from '../../../shared/formatters'
 import { ExecutionStatus } from './ExecutionStatus'
+import { ModelTuningPanel } from '../../ModelTuningPanel'
 
 const ROTATION_PAGE_SIZE = 12
 const HISTORY_PAGE_SIZE = 10
@@ -398,7 +399,7 @@ function RotationPanel({ jobId, payload, loading, error }) {
   )
 }
 
-export function BacktestPage({ workspace, canExportResults = false, canRunResearchModels = false }) {
+export function BacktestPage({ workspace, canExportResults = false, canRunResearchModels = false, onSessionExpired }) {
   const {
     job,
     dashboard,
@@ -426,6 +427,7 @@ export function BacktestPage({ workspace, canExportResults = false, canRunResear
   const [historySort, setHistorySort] = useState({ key: 'created_at', direction: 'desc' })
   const [historyPage, setHistoryPage] = useState(1)
   const [selectedStrategyModel, setSelectedStrategyModel] = useState(null)
+  const [researchWorkspaceMode, setResearchWorkspaceMode] = useState('simulation')
   const [strategyContextError, setStrategyContextError] = useState('')
   const [researchExecutionModels, setResearchExecutionModels] = useState({})
   const selectedStrategyName = dashboard?.selected_backtest_strategy_name || tr('Not selected')
@@ -773,23 +775,35 @@ export function BacktestPage({ workspace, canExportResults = false, canRunResear
           </div>
           <div className="backtest-workspace-actions">
             {canRunResearchModels ? (
+              <div className="backtest-research-mode-switch" role="tablist" aria-label={tr('Research workspace')}>
+                <button type="button" role="tab" aria-selected={researchWorkspaceMode === 'simulation'} className={researchWorkspaceMode === 'simulation' ? 'active' : ''} onClick={() => setResearchWorkspaceMode('simulation')}>{tr('Simulation Backtest')}</button>
+                <button type="button" role="tab" aria-selected={researchWorkspaceMode === 'tuning'} className={researchWorkspaceMode === 'tuning' ? 'active' : ''} onClick={() => setResearchWorkspaceMode('tuning')}>{tr('Model Tuning')}</button>
+              </div>
+            ) : null}
+            {canRunResearchModels && researchWorkspaceMode === 'simulation' ? (
               <div className="research-model-control research-model-readonly" aria-label={tr('Model saved with selected Strategy')}>
                 <span>{tr('Saved model')}</span>
                 <strong>{savedResearchModelLabel || tr('Unavailable')}</strong>
                 <small>{tr('Defined in Selected Strategy')}</small>
               </div>
             ) : null}
-            {canExportResults && detail?.metrics ? (
+            {researchWorkspaceMode === 'simulation' && canExportResults && detail?.metrics ? (
               <button type="button" className="secondary-action compact" onClick={exportResults} disabled={exporting}>
                 {tr(exporting ? 'Exporting…' : 'Export Results')}
               </button>
             ) : null}
-            <button type="button" className="primary-action compact" onClick={() => runBacktest()} disabled={startDisabled}>
+            {researchWorkspaceMode === 'simulation' ? <button type="button" className="primary-action compact" onClick={() => runBacktest()} disabled={startDisabled}>
               <PlayIcon /> {tr(restoringExecution ? 'Checking Execution' : startingBacktest ? 'Starting…' : running ? 'Simulation Running' : 'Start New Backtest')}
-            </button>
+            </button> : null}
           </div>
         </header>
 
+        {researchWorkspaceMode === 'tuning' && canRunResearchModels ? (
+          <ModelTuningPanel
+            onSessionExpired={onSessionExpired}
+            onStrategyModelSaved={(updated) => setSelectedStrategyModel(updated?.research_model_configuration || updated?.research_model || null)}
+          />
+        ) : <>
         <ExecutionStatus workspace={workspace} modelLabel={activeResearchModelLabel} />
         {strategyContextError ? <div className="global-inline-message error-inline backtest-workspace-message">{tr(strategyContextError)}</div> : null}
         {exportError ? <div className="global-inline-message error-inline backtest-workspace-message">{tr(exportError)}</div> : null}
@@ -931,6 +945,7 @@ export function BacktestPage({ workspace, canExportResults = false, canRunResear
           </div>
           <Pagination page={currentHistoryPage} pages={historyPages} total={historyRows.length} pageSize={HISTORY_PAGE_SIZE} onPageChange={setHistoryPage} />
         </section>
+        </>}
       </section>
     </section>
   )
