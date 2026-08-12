@@ -1,6 +1,8 @@
 import { getIntlLocale, tr } from '../../i18n/runtime'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  Bar,
+  BarChart,
   CartesianGrid,
   ComposedChart,
   Legend,
@@ -8,6 +10,7 @@ import {
   LineChart,
   ReferenceArea,
   ReferenceDot,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -33,6 +36,7 @@ const NAVIGATOR_PAGE_SIZE = 10
 const ZOOM_STEP = 0.84
 const MIN_ZOOM_POINTS = 8
 const DAY_MS = 24 * 60 * 60 * 1000
+const PROBABILITY_METHOD = 'champion_probability'
 
 const DASHBOARD_HINTS = {
   totalBacktests: {
@@ -292,7 +296,98 @@ function tradeTone(value) {
   return number > 0 ? 'profit' : 'loss'
 }
 
-export function DashboardPage({ workspace, onOpenBacktest, canRunBacktest = false }) {
+function decimal(value, digits = 4) {
+  const number = Number(value)
+  return Number.isFinite(number) ? number.toFixed(digits) : '—'
+}
+
+function StrategyForecastTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null
+  const row = payload[0]?.payload
+  if (!row) return null
+  return <div className="dashboard-story-tooltip dashboard-intelligence-tooltip">
+    <strong>{row.asset}</strong>
+    <div><span>{tr('Rank')}</span><b>#{row.rank ?? '—'}</b></div>
+    <div><span>{tr('Ranking Utility')}</span><b>{decimal(row.ranking_utility)}</b></div>
+    <div><span>{tr('Cash Edge')}</span><b>{decimal(row.cash_edge)}</b></div>
+    <div><span>{tr('State')}</span><b>{row.is_target ? tr('TARGET') : row.is_current ? tr('CURRENT') : row.is_raw_best ? tr('BEST') : tr('WATCH')}</b></div>
+  </div>
+}
+
+function DecisionTimelineTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null
+  const row = payload[0]?.payload
+  if (!row) return null
+  return <div className="dashboard-story-tooltip dashboard-intelligence-tooltip wide">
+    <strong>{shortDateTime(row.decision_date || row.timestamp)}</strong>
+    <div><span>{tr('Current')}</span><b>{row.current_asset || row.previous_asset || 'CASH'}</b></div>
+    <div><span>{tr('Decision')}</span><b>{row.final_action_asset || row.selected_asset || 'CASH'}</b></div>
+    <div><span>{tr('Reason')}</span><b>{row.decision_reason || '—'}</b></div>
+    <div><span>{tr('Best asset')}</span><b>{row.best_asset || row.raw_best_asset || '—'}</b></div>
+    <div><span>{tr('Best utility')}</span><b>{decimal(row.best_score)}</b></div>
+    <div><span>{tr('Best cash edge')}</span><b>{decimal(row.best_cash_edge)}</b></div>
+    <div><span>{tr('Current cash edge')}</span><b>{decimal(row.current_cash_edge)}</b></div>
+  </div>
+}
+
+function TuningTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null
+  const row = payload[0]?.payload
+  if (!row) return null
+  return <div className="dashboard-story-tooltip dashboard-intelligence-tooltip">
+    <strong>{row.label}</strong>
+    <div><span>{tr('Status')}</span><b>{tr(row.status || 'unknown')}</b></div>
+    <div><span>{tr('Ending capital')}</span><b>{money(row.ending_capital)}</b></div>
+    <div><span>{tr('Sharpe')}</span><b>{decimal(row.sharpe, 3)}</b></div>
+    <div><span>{tr('Max Drawdown')}</span><b>{percent(row.maximum_drawdown)}</b></div>
+  </div>
+}
+
+function strategyValue(value) {
+  if (value === null || value === undefined) return '—'
+  if (Array.isArray(value)) return value.join(', ')
+  if (typeof value === 'object') return JSON.stringify(value)
+  if (typeof value === 'boolean') return value ? 'true' : 'false'
+  return String(value)
+}
+
+function StrategyConfigurationGrid({ configuration, modelConfiguration }) {
+  const rows = Object.entries(configuration || {}).sort(([left], [right]) => left.localeCompare(right))
+  const modelRows = Object.entries(modelConfiguration || {}).sort(([left], [right]) => left.localeCompare(right))
+  if (!rows.length && !modelRows.length) return null
+  return <details className="dashboard-strategy-config">
+    <summary>{tr('Full Strategy Configuration')}</summary>
+    <div className="dashboard-strategy-config-body">
+      {rows.length ? <section><h4>{tr('Strategy')}</h4><dl>{rows.map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{strategyValue(value)}</dd></div>)}</dl></section> : null}
+      {modelRows.length ? <section><h4>{tr('Research Model')}</h4><dl>{modelRows.map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{strategyValue(value)}</dd></div>)}</dl></section> : null}
+    </div>
+  </details>
+}
+
+function buildCashIntervals(rows) {
+  const intervals = []
+  let start = null
+  let end = null
+  rows.forEach((row) => {
+    const timestamp = timestampValue(row.decision_date || row.timestamp)
+    const asset = String(row.final_action_asset || row.selected_asset || '').toUpperCase()
+    if (timestamp === null) return
+    if (asset === 'CASH') {
+      if (start === null) start = timestamp
+      end = timestamp
+      return
+    }
+    if (start !== null) {
+      intervals.push({ start, end: end ?? start })
+      start = null
+      end = null
+    }
+  })
+  if (start !== null) intervals.push({ start, end: end ?? start })
+  return intervals
+}
+
+export function DashboardPage({ workspace, session, onOpenBacktest, canRunBacktest = false }) {
   const { dashboard, loadingDashboard, running, restoringExecution, startingBacktest, startDisabled, runBacktest } = workspace
   const best = dashboard?.best_performance
   const last = dashboard?.last_backtest
@@ -315,6 +410,15 @@ export function DashboardPage({ workspace, onOpenBacktest, canRunBacktest = fals
   const [isPanning, setIsPanning] = useState(false)
   const chartInteractionRef = useRef(null)
   const panStateRef = useRef(null)
+
+  const canViewStrategyIntelligence = ['admin', 'trader'].includes(String(session?.role || '').toLowerCase())
+  const [intelligence, setIntelligence] = useState(null)
+  const [intelligenceLoading, setIntelligenceLoading] = useState(false)
+  const [intelligenceError, setIntelligenceError] = useState('')
+  const [forecastView, setForecastView] = useState('top10')
+  const [selectedTuningCandidateId, setSelectedTuningCandidateId] = useState(null)
+  const [tuningCandidateDetail, setTuningCandidateDetail] = useState(null)
+  const [tuningCandidateLoading, setTuningCandidateLoading] = useState(false)
 
   async function startBacktest() {
     const created = await runBacktest()
@@ -350,6 +454,57 @@ export function DashboardPage({ workspace, onOpenBacktest, canRunBacktest = fals
       .finally(() => { if (active) setStoryLoading(false) })
     return () => { active = false }
   }, [storyJobId])
+
+  useEffect(() => {
+    if (!canViewStrategyIntelligence) {
+      setIntelligence(null)
+      setIntelligenceError('')
+      return undefined
+    }
+    let active = true
+    let timer = null
+    const load = async ({ silent = false } = {}) => {
+      if (!silent) setIntelligenceLoading(true)
+      try {
+        const suffix = storyJobId ? `?job_id=${encodeURIComponent(storyJobId)}` : ''
+        const payload = await apiFetch(`${API}/dashboard/strategy-intelligence${suffix}`)
+        if (!active) return
+        setIntelligence(payload)
+        setIntelligenceError('')
+        const tuning = payload?.tuning
+        const nextCandidate = tuning?.best_candidate_id ?? tuning?.control_candidate_id ?? tuning?.candidates?.find((item) => item.status === 'completed')?.candidate_id ?? null
+        setSelectedTuningCandidateId((current) => current !== null && tuning?.candidates?.some((item) => item.candidate_id === current) ? current : nextCandidate)
+        if (['queued', 'running', 'stop_requested'].includes(String(tuning?.status || ''))) {
+          timer = window.setTimeout(() => load({ silent: true }), 3000)
+        }
+      } catch (requestError) {
+        if (!active) return
+        setIntelligenceError(requestError.message || 'Unable to load Strategy Intelligence.')
+      } finally {
+        if (active && !silent) setIntelligenceLoading(false)
+      }
+    }
+    load()
+    return () => {
+      active = false
+      if (timer) window.clearTimeout(timer)
+    }
+  }, [canViewStrategyIntelligence, storyJobId])
+
+  useEffect(() => {
+    const runId = intelligence?.tuning?.id
+    if (!canViewStrategyIntelligence || !runId || selectedTuningCandidateId === null || selectedTuningCandidateId === undefined) {
+      setTuningCandidateDetail(null)
+      return undefined
+    }
+    let active = true
+    setTuningCandidateLoading(true)
+    apiFetch(`${API}/dashboard/strategy-intelligence/tuning/${encodeURIComponent(runId)}/candidates/${encodeURIComponent(selectedTuningCandidateId)}`)
+      .then((payload) => { if (active) setTuningCandidateDetail(payload) })
+      .catch(() => { if (active) setTuningCandidateDetail(null) })
+      .finally(() => { if (active) setTuningCandidateLoading(false) })
+    return () => { active = false }
+  }, [canViewStrategyIntelligence, intelligence?.tuning?.id, selectedTuningCandidateId])
 
   const trades = useMemo(() => storyData?.trade_explorer || [], [storyData])
   const safeTradeIndex = trades.length ? clamp(selectedTradeIndex, 0, trades.length - 1) : 0
@@ -655,6 +810,49 @@ export function DashboardPage({ workspace, onOpenBacktest, canRunBacktest = fals
     return accumulator
   }, { all: 0, completed: 0, interrupted: 0, failed: 0, active: 0 }), [recentBacktests])
 
+  const researchStrategy = intelligence?.research_strategy || null
+  const forecast = intelligence?.forecast || null
+  const forecastRows = useMemo(() => {
+    const rows = Array.isArray(forecast?.asset_forecast) ? forecast.asset_forecast : []
+    return forecastView === 'all' ? rows : rows.slice(0, 10)
+  }, [forecast?.asset_forecast, forecastView])
+  const forecastHasCashEdge = forecastRows.some((row) => Number.isFinite(Number(row.cash_edge)))
+
+  const decisionRows = useMemo(() => (intelligence?.decision_history?.rows || [])
+    .map((row) => ({ ...row, timestamp_value: timestampValue(row.decision_date || row.timestamp) }))
+    .filter((row) => row.timestamp_value !== null), [intelligence?.decision_history?.rows])
+  const cashIntervals = useMemo(() => buildCashIntervals(decisionRows), [decisionRows])
+  const decisionSpan = decisionRows.length > 1 ? decisionRows[decisionRows.length - 1].timestamp_value - decisionRows[0].timestamp_value : 0
+  const cashExitThreshold = decisionRows.find((row) => Number.isFinite(Number(row.cash_exit_threshold)))?.cash_exit_threshold ?? forecast?.cash_exit_threshold
+  const cashEntryThreshold = decisionRows.find((row) => Number.isFinite(Number(row.cash_entry_threshold)))?.cash_entry_threshold ?? forecast?.cash_entry_threshold
+
+  const tuning = intelligence?.tuning || null
+  const tuningRows = useMemo(() => (tuning?.candidates || [])
+    .map((candidate) => ({
+      candidate_id: candidate.candidate_id,
+      label: candidate.is_control ? tr('Control') : `#${candidate.candidate_id}`,
+      status: candidate.status,
+      kind: candidate.kind,
+      rank: candidate.rank,
+      ending_capital: candidate.metrics?.ending_capital ?? null,
+      sharpe: candidate.metrics?.sharpe ?? null,
+      maximum_drawdown: candidate.metrics?.maximum_drawdown ?? null,
+      eligible: candidate.metrics?.eligible,
+      champion_gate_passed: candidate.champion_gate_passed,
+    }))
+    .filter((row) => Number.isFinite(Number(row.ending_capital)))
+    .sort((left, right) => Number(left.candidate_id) - Number(right.candidate_id)), [tuning?.candidates])
+  const tuningControlCapital = tuningRows.find((row) => String(row.kind) === 'control' || Number(row.candidate_id) === Number(tuning?.control_candidate_id))?.ending_capital ?? null
+  const tuningPreviewRows = useMemo(() => (tuningCandidateDetail?.equity_preview || [])
+    .map((row) => ({ ...row, timestamp_value: timestampValue(row.timestamp) }))
+    .filter((row) => row.timestamp_value !== null), [tuningCandidateDetail?.equity_preview])
+  const tuningPreviewSpan = tuningPreviewRows.length > 1 ? tuningPreviewRows[tuningPreviewRows.length - 1].timestamp_value - tuningPreviewRows[0].timestamp_value : 0
+
+  function selectTuningCandidateFromChart(entry) {
+    const id = Number(entry?.candidate_id ?? entry?.payload?.candidate_id)
+    if (Number.isFinite(id)) setSelectedTuningCandidateId(id)
+  }
+
   return (
     <section className="page-stack dashboard-single-workspace">
       <section className="data-panel dashboard-workspace-panel">
@@ -675,6 +873,127 @@ export function DashboardPage({ workspace, onOpenBacktest, canRunBacktest = fals
           <DashboardMetric id="dashboard-hint-last-backtest" label={tr("Last Backtest")} value={last?.created_at ? relativeTime(last.created_at) : '—'} note={last?.created_at ? shortDateTime(last.created_at) : tr('No execution yet')} tone="blue" hint={DASHBOARD_HINTS.lastBacktest} />
           <MarketUpdateMetric />
         </div>
+
+        {canViewStrategyIntelligence ? <section className="dashboard-intelligence-section">
+          <div className="dashboard-intelligence-heading">
+            <div>
+              <span className="panel-kicker">{tr('ADMIN / TRADER')}</span>
+              <h2>{tr('Strategy Intelligence')}</h2>
+              <p>{tr('Interactive model outlook, Risk-Off decisions and tuning research from protected server-side data.')}</p>
+            </div>
+            {researchStrategy ? <div className="dashboard-intelligence-strategy">
+              <span>{tr('Selected Strategy')}</span>
+              <strong>{researchStrategy.name}</strong>
+              <small>{researchStrategy.status} · rev {researchStrategy.revision} · {researchStrategy.configuration?.strategy_mode || '—'}</small>
+            </div> : null}
+          </div>
+
+          {intelligenceError ? <div className="global-inline-message error-inline dashboard-story-message">{tr(intelligenceError)}</div> : null}
+          {intelligenceLoading ? <div className="dashboard-story-loading intelligence-loading"><span className="loading-ring" />{tr('Loading Strategy Intelligence…')}</div> : null}
+
+          {!intelligenceLoading && intelligence ? <>
+            <div className="dashboard-intelligence-grid">
+              <article className="dashboard-intelligence-card dashboard-forecast-card">
+                <div className="dashboard-intelligence-card-heading">
+                  <div><span className="panel-kicker">{tr('Next Open')}</span><h3>{tr('Strategy Forecast')}</h3></div>
+                  {forecast?.asset_forecast?.length > 10 ? <div className="dashboard-intelligence-toggle" role="group" aria-label={tr('Forecast assets')}>
+                    <button type="button" className={forecastView === 'top10' ? 'active' : ''} onClick={() => setForecastView('top10')}>{tr('Top 10')}</button>
+                    <button type="button" className={forecastView === 'all' ? 'active' : ''} onClick={() => setForecastView('all')}>{tr('All')}</button>
+                  </div> : null}
+                </div>
+                {forecast ? <>
+                  <div className="dashboard-forecast-summary">
+                    <div><span>{tr('Strategy')}</span><strong>{forecast.strategy_name || '—'}</strong></div>
+                    <div><span>{tr('Current')}</span><strong>{forecast.current_asset || 'CASH'}</strong></div>
+                    <div><span>{tr('Target')}</span><strong>{forecast.target_asset || 'CASH'}</strong></div>
+                    <div><span>{tr('Action')}</span><strong>{String(forecast.action || '—').replaceAll('_', ' ')}</strong></div>
+                    <div><span>{tr('Execution')}</span><strong>{forecast.execution_session || '—'}</strong></div>
+                  </div>
+                  <div className="dashboard-forecast-chart" style={{ height: forecastView === 'all' ? `${Math.max(310, forecastRows.length * 25)}px` : '310px' }}>
+                    {forecastRows.length ? <ResponsiveContainer width="100%" height="100%"><BarChart data={forecastRows} layout="vertical" margin={{ top: 8, right: 18, left: 4, bottom: 6 }} barGap={2}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                      <XAxis type="number" tickFormatter={(value) => Number(value).toFixed(2)} />
+                      <YAxis type="category" dataKey="asset" width={54} tick={{ fontSize: 11 }} />
+                      <Tooltip content={<StrategyForecastTooltip />} />
+                      <Legend />
+                      <ReferenceLine x={0} strokeDasharray="4 4" />
+                      <Bar dataKey="ranking_utility" name={tr('Ranking Utility')} radius={[0, 4, 4, 0]} />
+                      {forecastHasCashEdge ? <Bar dataKey="cash_edge" name={tr('Cash Edge')} radius={[0, 4, 4, 0]} /> : null}
+                    </BarChart></ResponsiveContainer> : <div className="dashboard-story-empty">{tr('No protected forecast has been prepared yet.')}</div>}
+                  </div>
+                  <div className="dashboard-forecast-thresholds">
+                    <span>{tr('Cash exit')} <b>{decimal(forecast.cash_exit_threshold)}</b></span>
+                    <span>{tr('Cash entry')} <b>{decimal(forecast.cash_entry_threshold)}</b></span>
+                    <span>{tr('Switch margin')} <b>{decimal(forecast.effective_switch_margin)}</b></span>
+                  </div>
+                  {!forecastHasCashEdge ? <small className="dashboard-intelligence-note">{tr('This plan predates protected Cash Edge persistence. The next prepared Risk-Off plan will populate the Cash Edge series automatically.')}</small> : null}
+                </> : <div className="dashboard-story-empty">{tr('No next-open Paper forecast is stored yet. The Dashboard does not contact Alpaca or refresh market data.')}</div>}
+              </article>
+
+              <article className="dashboard-intelligence-card dashboard-decision-card">
+                <div className="dashboard-intelligence-card-heading">
+                  <div><span className="panel-kicker">{tr('Selected Backtest')}</span><h3>{tr('Risk-Off Decision Timeline')}</h3></div>
+                  <span className="dashboard-intelligence-count">{decisionRows.length} {tr('points')}</span>
+                </div>
+                <div className="dashboard-decision-chart">
+                  {decisionRows.length ? <ResponsiveContainer width="100%" height="100%"><ComposedChart data={decisionRows} margin={{ top: 12, right: 16, left: 4, bottom: 6 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="timestamp_value" type="number" scale="time" domain={['dataMin', 'dataMax']} minTickGap={38} tickFormatter={(value) => dashboardAxisLabel(value, decisionSpan)} />
+                    <YAxis tickFormatter={(value) => Number(value).toFixed(2)} />
+                    <Tooltip content={<DecisionTimelineTooltip />} />
+                    <Legend />
+                    {cashIntervals.map((interval, index) => <ReferenceArea key={`${interval.start}-${index}`} x1={interval.start} x2={interval.end} className="dashboard-cash-area" ifOverflow="extendDomain" />)}
+                    {Number.isFinite(Number(cashExitThreshold)) ? <ReferenceLine y={Number(cashExitThreshold)} strokeDasharray="3 4" label={{ value: tr('Cash exit'), position: 'insideTopRight', fontSize: 10 }} /> : null}
+                    {Number.isFinite(Number(cashEntryThreshold)) && Number(cashEntryThreshold) !== Number(cashExitThreshold) ? <ReferenceLine y={Number(cashEntryThreshold)} strokeDasharray="6 4" label={{ value: tr('Cash entry'), position: 'insideBottomRight', fontSize: 10 }} /> : null}
+                    <Line type="monotone" dataKey="best_score" name={tr('Best Utility')} dot={false} activeDot={{ r: 4 }} strokeWidth={2.1} isAnimationActive={false} />
+                    <Line type="monotone" dataKey="best_cash_edge" name={tr('Best Cash Edge')} dot={false} activeDot={{ r: 4 }} strokeWidth={2.1} isAnimationActive={false} connectNulls />
+                    <Line type="monotone" dataKey="current_cash_edge" name={tr('Current Cash Edge')} dot={false} activeDot={{ r: 4 }} strokeWidth={1.6} strokeDasharray="5 4" isAnimationActive={false} connectNulls />
+                  </ComposedChart></ResponsiveContainer> : <div className="dashboard-story-empty">{tr('The selected backtest has no protected decision diagnostics.')}</div>}
+                </div>
+                <div className="dashboard-decision-legend-note"><span className="cash-swatch" />{tr('Shaded periods indicate decisions whose resulting state is CASH.')}</div>
+              </article>
+            </div>
+
+            {researchStrategy ? <StrategyConfigurationGrid configuration={researchStrategy.configuration} modelConfiguration={researchStrategy.research_model_configuration} /> : null}
+
+            <article className="dashboard-intelligence-card dashboard-tuning-card">
+              <div className="dashboard-intelligence-card-heading">
+                <div><span className="panel-kicker">{tr('Research')}</span><h3>{tr('Model Tuning Candidates')}</h3><p>{tr('Click a completed Candidate bar to inspect its retained portfolio curve.')}</p></div>
+                {tuning ? <div className="dashboard-tuning-status"><strong>{String(tuning.method || '').replaceAll('_', ' ')}</strong><span>{tr(tuning.status)} · {Number(tuning.progress || 0).toFixed(0)}%</span>{tuning.method === PROBABILITY_METHOD && tuning.probability_state ? <small>{tr('Champion')} #{tuning.probability_state.last_champion_candidate_id ?? tuning.probability_anchor?.candidate_id ?? 0} · {tr('Trust region')} {(Number(tuning.probability_state.trust_region_radius || 0) * 100).toFixed(1)}% · {tr('Adaptive trials')} {tuning.probability_state.adaptive_trials_completed || 0}</small> : null}</div> : null}
+              </div>
+              {tuning && tuningRows.length ? <div className="dashboard-tuning-layout">
+                <div className="dashboard-tuning-performance-chart">
+                  <ResponsiveContainer width="100%" height="100%"><BarChart data={tuningRows} margin={{ top: 12, right: 12, left: 6, bottom: 6 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="label" interval={0} tick={{ fontSize: 10 }} />
+                    <YAxis tickFormatter={(value) => `$${Number(value).toLocaleString(getIntlLocale(), { notation: 'compact', maximumFractionDigits: 1 })}`} />
+                    <Tooltip content={<TuningTooltip />} />
+                    {Number.isFinite(Number(tuningControlCapital)) ? <ReferenceLine y={Number(tuningControlCapital)} strokeDasharray="5 4" label={{ value: tr('Control'), position: 'insideTopRight', fontSize: 10 }} /> : null}
+                    <Bar dataKey="ending_capital" name={tr('Ending Capital')} radius={[4, 4, 0, 0]} onClick={selectTuningCandidateFromChart} className="dashboard-tuning-candidate-bar" />
+                  </BarChart></ResponsiveContainer>
+                </div>
+
+                <div className="dashboard-tuning-candidate-panel">
+                  {tuningCandidateLoading ? <div className="dashboard-story-loading compact"><span className="loading-ring" />{tr('Loading Candidate…')}</div> : tuningCandidateDetail ? <>
+                    <div className="dashboard-tuning-candidate-title"><div><span>{tuningCandidateDetail.is_control ? tr('Control') : `${tr('Candidate')} #${tuningCandidateDetail.candidate_id}`}</span><strong>{money(tuningCandidateDetail.metrics?.ending_capital)}</strong></div><small>{tr(tuningCandidateDetail.status)} · Sharpe {decimal(tuningCandidateDetail.metrics?.sharpe, 3)} · DD {percent(tuningCandidateDetail.metrics?.maximum_drawdown)}</small></div>
+                    <div className="dashboard-tuning-preview-chart">
+                      {tuningPreviewRows.length ? <ResponsiveContainer width="100%" height="100%"><LineChart data={tuningPreviewRows} margin={{ top: 8, right: 10, left: 4, bottom: 4 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="timestamp_value" type="number" scale="time" domain={['dataMin', 'dataMax']} minTickGap={28} tickFormatter={(value) => dashboardAxisLabel(value, tuningPreviewSpan)} />
+                        <YAxis tickFormatter={(value) => `$${Number(value).toLocaleString(getIntlLocale(), { notation: 'compact', maximumFractionDigits: 1 })}`} />
+                        <Tooltip formatter={(value) => money(value)} labelFormatter={(value) => shortDateTime(new Date(Number(value)).toISOString())} />
+                        <Legend />
+                        <Line type="monotone" dataKey="simulation_equity" name={tr('Candidate')} dot={false} strokeWidth={2.2} isAnimationActive={false} />
+                        <Line type="monotone" dataKey="reference_equity" name={tr('Buy & Hold')} dot={false} strokeWidth={1.8} isAnimationActive={false} />
+                      </LineChart></ResponsiveContainer> : <div className="dashboard-story-empty compact">{tr('No compact curve was retained for this older Candidate. New Candidates retain a visual preview before raw tuning artifacts are deleted.')}</div>}
+                    </div>
+                    {tuningCandidateDetail.settings && Object.keys(tuningCandidateDetail.settings).length ? <details className="dashboard-candidate-settings"><summary>{tr('Candidate hyperparameters')}</summary><dl>{Object.entries(tuningCandidateDetail.settings).sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{strategyValue(value)}</dd></div>)}</dl></details> : null}
+                  </> : <div className="dashboard-story-empty compact">{tr('Select a completed Candidate in the chart.')}</div>}
+                </div>
+              </div> : <div className="dashboard-story-empty compact">{tr('No completed tuning Candidate is available for the selected Strategy.')}</div>}
+            </article>
+          </> : null}
+        </section> : null}
 
         <section className="dashboard-story-section">
           <div className="dashboard-story-heading">

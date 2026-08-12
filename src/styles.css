@@ -6072,3 +6072,259 @@ a { color: inherit; }
 .settings-strategy-section .strategy-boundary-grid .promoted-candidate-boundary-card {
   background: transparent;
 }
+
+/* v2.0.3 — protected Strategy Intelligence inside Dashboard */
+.dashboard-intelligence-section {
+  min-width: 0;
+  padding: 14px;
+  border-bottom: 1px solid rgba(79, 111, 146, .18);
+  background: linear-gradient(180deg, rgba(8, 29, 52, .34), rgba(4, 17, 32, .18));
+}
+.dashboard-intelligence-heading,
+.dashboard-intelligence-card-heading {
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+}
+.dashboard-intelligence-heading h2,
+.dashboard-intelligence-card-heading h3 { margin: 0; }
+.dashboard-intelligence-heading h2 { font-size: .96rem; }
+.dashboard-intelligence-card-heading h3 { font-size: .82rem; }
+.dashboard-intelligence-heading p,
+.dashboard-intelligence-card-heading p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: .61rem;
+}
+.dashboard-intelligence-strategy {
+  min-width: 260px;
+  max-width: 46%;
+  display: grid;
+  gap: 2px;
+  text-align: right;
+}
+.dashboard-intelligence-strategy span,
+.dashboard-intelligence-strategy small { color: #7e97b2; font-size: .57rem; }
+.dashboard-intelligence-strategy strong {
+  overflow: hidden;
+  color: #dcecff;
+  font-size: .7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.intelligence-loading { min-height: 90px; }
+.dashboard-intelligence-grid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 11px;
+}
+.dashboard-intelligence-card {
+  min-width: 0;
+  border: 1px solid rgba(79, 120, 169, .2);
+  border-radius: 10px;
+  background: rgba(4, 18, 34, .42);
+  overflow: hidden;
+}
+.dashboard-forecast-card,
+.dashboard-decision-card,
+.dashboard-tuning-card { padding: 10px 11px; }
+.dashboard-intelligence-toggle {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border: 1px solid rgba(80, 133, 196, .28);
+  border-radius: 7px;
+  background: rgba(7, 26, 47, .62);
+}
+.dashboard-intelligence-toggle button {
+  min-height: 25px;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 5px;
+  color: #859db7;
+  background: transparent;
+  font-size: .56rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.dashboard-intelligence-toggle button.active { color: #eef7ff; background: rgba(47, 140, 255, .24); }
+.dashboard-forecast-summary {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(4, minmax(0, .8fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+.dashboard-forecast-summary > div {
+  min-width: 0;
+  padding: 6px 7px;
+  border: 1px solid rgba(82, 123, 169, .16);
+  border-radius: 7px;
+  background: rgba(9, 30, 53, .45);
+}
+.dashboard-forecast-summary span,
+.dashboard-forecast-thresholds span { color: #7f96af; font-size: .54rem; }
+.dashboard-forecast-summary strong {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: #dce8f5;
+  font-size: .62rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+.dashboard-forecast-chart { min-height: 260px; margin-top: 7px; }
+.dashboard-forecast-thresholds {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 6px;
+  border-top: 1px solid rgba(79, 111, 146, .14);
+}
+.dashboard-forecast-thresholds b { margin-left: 3px; color: #b9d5ef; }
+.dashboard-intelligence-note {
+  display: block;
+  margin-top: 6px;
+  color: #7f96af;
+  font-size: .57rem;
+}
+.dashboard-decision-chart { height: 355px; margin-top: 7px; }
+.dashboard-cash-area { fill: rgba(246, 202, 84, .075); stroke: rgba(246, 202, 84, .14); }
+.dashboard-decision-legend-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: #8098b3;
+  font-size: .56rem;
+}
+.dashboard-decision-legend-note .cash-swatch {
+  width: 18px;
+  height: 8px;
+  border: 1px solid rgba(246, 202, 84, .3);
+  border-radius: 2px;
+  background: rgba(246, 202, 84, .12);
+}
+.dashboard-intelligence-count {
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: #9bcaff;
+  background: rgba(47, 140, 255, .11);
+  font-size: .55rem;
+  font-weight: 800;
+}
+.dashboard-intelligence-tooltip.wide { min-width: 220px; }
+.dashboard-strategy-config,
+.dashboard-candidate-settings {
+  margin-top: 10px;
+  border: 1px solid rgba(79, 120, 169, .18);
+  border-radius: 9px;
+  background: rgba(5, 20, 37, .42);
+}
+.dashboard-strategy-config > summary,
+.dashboard-candidate-settings > summary {
+  padding: 8px 10px;
+  color: #a8c4e1;
+  font-size: .61rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.dashboard-strategy-config-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 10px 10px;
+}
+.dashboard-strategy-config-body section { min-width: 0; }
+.dashboard-strategy-config-body h4 { margin: 3px 0 6px; color: #8ebde9; font-size: .61rem; }
+.dashboard-strategy-config dl,
+.dashboard-candidate-settings dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+.dashboard-strategy-config dl > div,
+.dashboard-candidate-settings dl > div {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(110px, .9fr) minmax(0, 1.1fr);
+  gap: 7px;
+  padding: 5px 6px;
+  border: 1px solid rgba(79, 111, 146, .1);
+  border-radius: 6px;
+  background: rgba(8, 27, 49, .32);
+}
+.dashboard-strategy-config dt,
+.dashboard-candidate-settings dt { color: #7890aa; font-size: .53rem; overflow-wrap: anywhere; }
+.dashboard-strategy-config dd,
+.dashboard-candidate-settings dd { margin: 0; color: #c9d9e9; text-align: right; font-size: .54rem; overflow-wrap: anywhere; }
+.dashboard-tuning-card { margin-top: 10px; }
+.dashboard-tuning-status {
+  min-width: 160px;
+  display: grid;
+  gap: 2px;
+  text-align: right;
+}
+.dashboard-tuning-status strong { color: #b9d5ef; font-size: .61rem; text-transform: uppercase; }
+.dashboard-tuning-status span { color: #7f96af; font-size: .55rem; }
+.dashboard-tuning-layout {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(310px, .75fr);
+  gap: 10px;
+  margin-top: 8px;
+}
+.dashboard-tuning-performance-chart,
+.dashboard-tuning-candidate-panel {
+  min-width: 0;
+  min-height: 310px;
+  border: 1px solid rgba(79, 111, 146, .14);
+  border-radius: 8px;
+  background: rgba(3, 14, 27, .24);
+}
+.dashboard-tuning-performance-chart { height: 340px; padding: 5px; }
+.dashboard-tuning-candidate-panel { padding: 8px; }
+.dashboard-tuning-candidate-bar { cursor: pointer; }
+.dashboard-tuning-candidate-title {
+  display: grid;
+  gap: 2px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(79, 111, 146, .14);
+}
+.dashboard-tuning-candidate-title > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dashboard-tuning-candidate-title span { color: #91aac4; font-size: .58rem; font-weight: 800; }
+.dashboard-tuning-candidate-title strong { color: var(--positive); font-size: .78rem; }
+.dashboard-tuning-candidate-title small { color: #7d94ad; font-size: .54rem; }
+.dashboard-tuning-preview-chart { height: 205px; margin-top: 6px; }
+.dashboard-candidate-settings { margin-top: 7px; }
+.dashboard-candidate-settings dl { padding: 0 8px 8px; grid-template-columns: 1fr; }
+
+@media (max-width: 1180px) {
+  .dashboard-intelligence-grid { grid-template-columns: 1fr; }
+  .dashboard-tuning-layout { grid-template-columns: 1fr; }
+  .dashboard-forecast-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .dashboard-intelligence-heading,
+  .dashboard-intelligence-card-heading { align-items: flex-start; flex-direction: column; }
+  .dashboard-intelligence-strategy { min-width: 0; max-width: 100%; text-align: left; }
+  .dashboard-forecast-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-strategy-config-body { grid-template-columns: 1fr; }
+  .dashboard-strategy-config dl { grid-template-columns: 1fr; }
+  .dashboard-decision-chart { height: 290px; }
+  .dashboard-tuning-performance-chart { height: 300px; }
+}
+@media (max-width: 520px) {
+  .dashboard-intelligence-section { padding: 10px; }
+  .dashboard-forecast-summary { grid-template-columns: 1fr; }
+  .dashboard-strategy-config dl > div,
+  .dashboard-candidate-settings dl > div { grid-template-columns: 1fr; }
+  .dashboard-strategy-config dd,
+  .dashboard-candidate-settings dd { text-align: left; }
+}

@@ -57,7 +57,7 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
     {idleRemaining !== null && idleRemaining <= 300 ? <div className="session-expiration-warning">{tr("Your session will expire soon.")}</div> : null}
     {workspace.error ? <div className="global-error"><strong>{tr("Unable to load data")}</strong><span>{tr(workspace.error)}</span><button type="button" onClick={() => workspace.setError('')}>×</button></div> : null}
     <main className="workspace-main">
-      {activeTab === 'dashboard' ? <DashboardPage workspace={workspace} onOpenBacktest={() => setActiveTab('backtest')} canRunBacktest /> : null}
+      {activeTab === 'dashboard' ? <DashboardPage workspace={workspace} session={session} onOpenBacktest={() => setActiveTab('backtest')} canRunBacktest /> : null}
       {activeTab === 'backtest' ? <BacktestPage workspace={workspace} canExportResults={session.role === 'admin'} canRunResearchModels={session.role === 'admin'} onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'analytics' ? <AnalyticsPage session={session} dashboard={workspace.dashboard} /> : null}
       {activeTab === 'asset-discovery' && session.role === 'admin' ? <AssetDiscoveryPage onSessionExpired={onSessionExpired} /> : null}

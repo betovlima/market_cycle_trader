@@ -1250,4 +1250,18 @@ export const ES_TRANSLATIONS = {
   'Failure': 'Falla',
   'Log': 'Log',
 
+  'Start Adaptive CARO': 'Iniciar CARO Adaptativo',
+  'Adaptive CARO tuning started. It runs a small Latin Hypercube warm-up and then proposes each next candidate only after learning from completed results.': 'Tuning CARO Adaptativo iniciado. Ejecuta un pequeño calentamiento Latin Hypercube y luego propone cada candidato siguiente solo después de aprender de los resultados completados.',
+  'Adaptive CARO started from the selected completed exploration. Adaptive trials begin immediately against the selected Champion anchor.': 'CARO Adaptativo iniciado desde la exploración completada seleccionada. Los trials adaptativos comienzan inmediatamente contra el ancla Champion seleccionada.',
+  'Use Adaptive CARO for the normal search: fresh Control, a small Latin Hypercube warm-up, then sequential probabilistic candidates that learn after every completed Backtest. Full Latin Hypercube remains available only for static exploration and sensitivity analysis.': 'Use CARO Adaptativo para la búsqueda normal: Control nuevo, pequeño calentamiento Latin Hypercube y luego candidatos probabilísticos secuenciales que aprenden después de cada Backtest completado. Latin Hypercube completo queda disponible solo para exploración estática y análisis de sensibilidad.',
+  'Adaptive CARO starts fresh by default. It uses a small Latin Hypercube warm-up and then learns sequentially after every candidate. A completed prior exploration can still be selected explicitly as optional evidence; it is never auto-selected.': 'CARO Adaptativo comienza desde cero por defecto. Usa un pequeño calentamiento Latin Hypercube y luego aprende secuencialmente después de cada candidato. Una exploración previa completada aún puede seleccionarse explícitamente como evidencia opcional; nunca se selecciona automáticamente.',
+  'Small LHS warm-up + sequential adaptive CARO trials': 'Pequeño calentamiento LHS + trials CARO adaptativos secuenciales',
+  'Imported completed observations + sequential adaptive CARO trials': 'Observaciones completadas importadas + trials CARO adaptativos secuenciales',
+  'Warm-up Latin Hypercube trials': 'Trials de calentamiento Latin Hypercube',
+  'Adaptive state': 'Estado adaptativo',
+  'Champion': 'Champion',
+  'Trust region': 'Región de confianza',
+  'Adaptive trials': 'Trials adaptativos',
+  'No-improvement streak': 'Racha sin mejora',
+
 }

@@ -55,7 +55,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
   const [sourceRunId, setSourceRunId] = useState('')
   const [anchorCandidateId, setAnchorCandidateId] = useState('')
   const [run, setRun] = useState(null)
-  const [method, setMethod] = useState('latin_hypercube')
+  const [method, setMethod] = useState(PROBABILITY_METHOD)
   const [candidateCount, setCandidateCount] = useState(20)
   const [seed, setSeed] = useState(42)
   const [startupTrials, setStartupTrials] = useState('')
@@ -191,7 +191,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
 
   const active = Boolean(run && ACTIVE.has(run.status))
   const probabilityMode = method === PROBABILITY_METHOD
-  const startActionLabel = probabilityMode ? tr('Start CARO Probability') : tr('Start Latin Hypercube')
+  const startActionLabel = probabilityMode ? tr('Start Adaptive CARO') : tr('Start Latin Hypercube')
   const reusingPriorCampaign = probabilityMode && Boolean(selectedSource)
   const canTune = Boolean(
     strategy
@@ -233,8 +233,8 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
       setRun(created)
       setNotice(probabilityMode
         ? reusingPriorCampaign
-          ? tr('CARO Probability started from the selected Latin Hypercube observations. Adaptive trials begin immediately against the selected Champion anchor.')
-          : tr('CARO Probability tuning started. It performs startup exploration and then proposes adaptive champion-anchored candidates.')
+          ? tr('Adaptive CARO started from the selected completed exploration. Adaptive trials begin immediately against the selected Champion anchor.')
+          : tr('Adaptive CARO tuning started. It runs a small Latin Hypercube warm-up and then proposes each next candidate only after learning from completed results.')
         : tr('Latin Hypercube tuning started in the integrated research worker.'))
     } catch (requestError) {
       handleError(requestError)
@@ -364,7 +364,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
         <div>
           <span className="panel-kicker">{tr('MODEL TUNING')}</span>
           <h3>{tr('Model research')}</h3>
-          <p>{tr('Run LightGBM tuning inside the main research environment. Latin Hypercube explores the space; CARO Probability can run independently or reuse a completed exploration campaign without rerunning its observations.')}</p>
+          <p>{tr('Use Adaptive CARO for the normal search: fresh Control, a small Latin Hypercube warm-up, then sequential probabilistic candidates that learn after every completed Backtest. Full Latin Hypercube remains available only for static exploration and sensitivity analysis.')}</p>
         </div>
         <div className="model-tuning-method-badge">{selectedMethod?.label || tr('Model Tuning')}</div>
       </div>
@@ -431,8 +431,8 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
             onChange={(event) => {
               const nextMethod = event.target.value
               setMethod(nextMethod)
-              if (nextMethod === PROBABILITY_METHOD && !sourceRunId && sources.length) {
-                setSourceRunId(sources[0].run_id)
+              if (nextMethod !== PROBABILITY_METHOD) {
+                setSourceRunId('')
                 setAnchorCandidateId('')
               }
             }}
@@ -459,7 +459,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
         <div className="model-tuning-control-note">
           <span>{tr('Validation')}</span>
           <strong>{tr('Chronological walk-forward')}</strong>
-          <small>{probabilityMode ? reusingPriorCampaign ? tr('Imported observations + adaptive probabilistic trials') : tr('Standalone startup exploration + adaptive probabilistic trials') : tr('1 fresh control rerun + exploration candidates')}</small>
+          <small>{probabilityMode ? reusingPriorCampaign ? tr('Imported completed observations + sequential adaptive CARO trials') : tr('Small LHS warm-up + sequential adaptive CARO trials') : tr('1 fresh control rerun + exploration candidates')}</small>
         </div>
         <div className="model-tuning-actions">
           <button type="button" className="primary-action" onClick={start} disabled={!canTune || active || busy}>{busy && !active ? tr('Starting…') : startActionLabel}</button>
@@ -472,7 +472,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
           <div className="model-tuning-results-heading">
             <div>
               <strong>{tr('Champion probability gates')}</strong>
-              <span>{tr('CARO can start independently or reuse a completed Latin Hypercube campaign as prior evidence. When prior campaigns exist, the newest one is selected by default; choose None explicitly for a standalone CARO run. Reused observations are not executed again.')}</span>
+              <span>{tr('Adaptive CARO starts fresh by default. It uses a small Latin Hypercube warm-up and then learns sequentially after every candidate. A completed prior exploration can still be selected explicitly as optional evidence; it is never auto-selected.')}</span>
             </div>
           </div>
           <div className="model-tuning-prior-source">
@@ -503,7 +503,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
             </div>
           ) : null}
           <div className="model-tuning-probability-grid">
-            {!reusingPriorCampaign ? <label><span>{tr('Startup trials')}</span><input type="number" min="4" step="1" value={startupTrials} disabled={active || busy} onChange={(event) => setStartupTrials(event.target.value)} /></label> : null}
+            {!reusingPriorCampaign ? <label><span>{tr('Warm-up Latin Hypercube trials')}</span><input type="number" min="4" step="1" value={startupTrials} disabled={active || busy} onChange={(event) => setStartupTrials(event.target.value)} /></label> : null}
             <label><span>{tr('Minimum capital improvement (%)')}</span><input type="number" min="0" step="0.1" value={minimumCapitalImprovementPct} disabled={active || busy} onChange={(event) => setMinimumCapitalImprovementPct(event.target.value)} /></label>
             <label><span>{tr('Sharpe tolerance')}</span><input type="number" min="0" step="0.01" value={sharpeTolerance} disabled={active || busy} onChange={(event) => setSharpeTolerance(event.target.value)} /></label>
             <label><span>{tr('Drawdown tolerance (pp)')}</span><input type="number" min="0" step="0.1" value={drawdownTolerancePct} disabled={active || busy} onChange={(event) => setDrawdownTolerancePct(event.target.value)} /></label>
@@ -541,6 +541,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
           <div className="model-tuning-progress-track"><i style={{ width: `${Math.max(0, Math.min(100, Number(run.progress || 0)))}%` }} /></div>
           {run.baseline_execution ? <small>{tr('Baseline')} · {run.baseline_execution.job_id} · {money(run.baseline_execution.metrics?.ending_capital)}</small> : null}
           {run.probability_anchor ? <small>{tr('Champion anchor')} · {run.probability_anchor.candidate_id !== undefined ? `#${run.probability_anchor.candidate_id} · ` : ''}{money(run.probability_anchor.metrics?.ending_capital)} · {run.imported_observation_count || 0} {tr('imported observations')}</small> : null}
+          {run.method === PROBABILITY_METHOD && run.probability_state ? <small>{tr('Adaptive state')} · {tr('Champion')} #{run.probability_state.last_champion_candidate_id ?? run.probability_anchor?.candidate_id ?? 0} · {tr('Trust region')} {(Number(run.probability_state.trust_region_radius || 0) * 100).toFixed(1)}% · {tr('Adaptive trials')} {run.probability_state.adaptive_trials_completed || 0} · {tr('No-improvement streak')} {run.probability_state.no_improvement_streak || 0}</small> : null}
           {run.market_data_cutoff_date ? <small>{tr('Frozen market-data cutoff')} · {run.market_data_cutoff_date}</small> : null}
           {run.source_tuning_run_id && run.adoption_context_compatible === false ? <small>{tr('Imported research context differs from the selected Strategy. Adoption applies model settings for confirmation only; a normal Backtest in the target Strategy remains mandatory.')}</small> : null}
           {run.status === 'stop_requested' ? <small>{tr('Cancelling the active tuning candidate now. Partial research artifacts will be discarded.')}</small> : null}
