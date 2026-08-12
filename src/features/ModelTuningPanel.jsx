@@ -191,6 +191,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
 
   const active = Boolean(run && ACTIVE.has(run.status))
   const probabilityMode = method === PROBABILITY_METHOD
+  const startActionLabel = probabilityMode ? tr('Start CARO Probability') : tr('Start Latin Hypercube')
   const reusingPriorCampaign = probabilityMode && Boolean(selectedSource)
   const canTune = Boolean(
     strategy
@@ -249,7 +250,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
     try {
       const updated = await apiFetch(`${API}/admin/model-tuning/${encodeURIComponent(run.id)}/stop`, { method: 'POST' })
       setRun(updated)
-      setNotice(tr('Stop requested. Active candidates will finish safely and no new candidate will start.'))
+      setNotice(tr('Stop requested. The active tuning candidate is being cancelled and no new candidate will start.'))
     } catch (requestError) {
       handleError(requestError)
     } finally {
@@ -461,8 +462,8 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
           <small>{probabilityMode ? reusingPriorCampaign ? tr('Imported observations + adaptive probabilistic trials') : tr('Standalone startup exploration + adaptive probabilistic trials') : tr('1 fresh control rerun + exploration candidates')}</small>
         </div>
         <div className="model-tuning-actions">
-          <button type="button" className="primary-action" onClick={start} disabled={!canTune || active || busy}>{busy && !active ? tr('Starting…') : tr('Start tuning')}</button>
-          <button type="button" className="secondary-action" onClick={stop} disabled={!active || busy || run?.status === 'stop_requested'}>{tr('Stop')}</button>
+          <button type="button" className="primary-action" onClick={start} disabled={!canTune || active || busy}>{busy && !active ? tr('Starting…') : startActionLabel}</button>
+          <button type="button" className="secondary-action" onClick={stop} disabled={!active || busy || run?.status === 'stop_requested'}>{run?.status === 'stop_requested' ? tr('Stopping…') : tr('Stop')}</button>
         </div>
       </div>
 
@@ -529,7 +530,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
           <div className="model-tuning-progress-row">
             <div>
               <strong>{tr('Campaign')} {run.id}</strong>
-              <span>{tr(run.status)} · {run.completed_candidates}/{run.total_candidates} {tr('completed')} · {(catalog.methods || []).find((item) => item.id === run.method)?.label || run.method}</span>
+              <span>{tr(run.status)} · {run.completed_candidates}/{run.total_candidates} {tr('completed')}{run.cancelled_candidates ? ` · ${run.cancelled_candidates} ${tr('cancelled')}` : ''} · {(catalog.methods || []).find((item) => item.id === run.method)?.label || run.method}</span>
             </div>
             <div className="model-tuning-run-actions">
               <button type="button" className="secondary-action compact" onClick={openCampaignLog} disabled={logLoading}>{tr('Campaign log')}</button>
@@ -542,7 +543,8 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
           {run.probability_anchor ? <small>{tr('Champion anchor')} · {run.probability_anchor.candidate_id !== undefined ? `#${run.probability_anchor.candidate_id} · ` : ''}{money(run.probability_anchor.metrics?.ending_capital)} · {run.imported_observation_count || 0} {tr('imported observations')}</small> : null}
           {run.market_data_cutoff_date ? <small>{tr('Frozen market-data cutoff')} · {run.market_data_cutoff_date}</small> : null}
           {run.source_tuning_run_id && run.adoption_context_compatible === false ? <small>{tr('Imported research context differs from the selected Strategy. Adoption applies model settings for confirmation only; a normal Backtest in the target Strategy remains mandatory.')}</small> : null}
-          {run.active_candidate_ids?.length ? <small>{tr('Active candidates')} · {run.active_candidate_ids.map((id) => `#${id}`).join(', ')}</small> : null}
+          {run.status === 'stop_requested' ? <small>{tr('Cancelling the active tuning candidate now. Partial research artifacts will be discarded.')}</small> : null}
+          {run.active_candidate_ids?.length ? <small>{tr(run.status === 'stop_requested' ? 'Cancelling candidate' : 'Active candidates')} · {run.active_candidate_ids.map((id) => `#${id}`).join(', ')}</small> : null}
         </div>
       ) : null}
 

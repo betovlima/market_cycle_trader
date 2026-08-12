@@ -1,4 +1,13 @@
-# Market Cycle Trader Frontend v1.12.120
+# Market Cycle Trader Frontend v2.0.2
+
+## v2.0.2 — Explicit tuning actions and immediate Stop
+
+- Makes the selected tuning action explicit: `Start Latin Hypercube` or `Start CARO Probability`.
+- Keeps the Research Method selector and server-owned search-space contract unchanged.
+- Shows `Stopping…` and a cancellation message while the active tuning candidate is being terminated.
+- Displays cancelled candidate counts separately from completed candidates.
+- Requires API v2.0.6 for immediate active-candidate cancellation.
+
 
 ## v1.12.115 — Global parameter search
 
