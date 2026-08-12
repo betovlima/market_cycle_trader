@@ -2895,7 +2895,7 @@ a { color: inherit; }
 }
 
 .settings-strategy-section .strategy-boundary-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0;
   margin: 10px 0;
   border: 1px solid rgba(126, 158, 197, .16);
@@ -5917,4 +5917,158 @@ a { color: inherit; }
   }
   .portfolio-measurement-result { grid-column: span 1; }
   .portfolio-measurement-result:not(.interval) { grid-column: 1 / -1; padding-top: 5px; border-top: 1px solid rgba(82, 132, 190, .12); }
+}
+
+/* Model tuning — admin research only */
+.model-tuning-panel { display: grid; gap: 14px; margin-top: 4px; padding-top: 16px; border-top: 1px solid rgba(79,111,146,.2); }
+.model-tuning-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.model-tuning-heading h3 { margin: 3px 0 4px; font-size: 1rem; }
+.model-tuning-heading p { margin: 0; max-width: 820px; color: var(--muted); font-size: .8rem; line-height: 1.45; }
+.model-tuning-method-badge { padding: 6px 10px; border: 1px solid rgba(47,140,255,.28); border-radius: 999px; background: rgba(47,140,255,.07); color: var(--text); font-size: .72rem; font-weight: 700; white-space: nowrap; }
+.model-tuning-controls { display: grid; grid-template-columns: 150px 150px minmax(240px,1fr) auto; gap: 10px; align-items: stretch; }
+.model-tuning-controls > label, .model-tuning-control-note { display: grid; gap: 6px; padding: 10px 11px; border: 1px solid rgba(79,111,146,.2); border-radius: 9px; background: rgba(7,21,39,.45); }
+.model-tuning-controls span, .model-tuning-reason > span { color: var(--muted); font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.model-tuning-controls input, .model-tuning-reason input { width: 100%; min-width: 0; height: 34px; padding: 0 9px; border: 1px solid var(--border-strong); border-radius: 7px; background: #09192b; color: var(--text); }
+.model-tuning-control-note strong { font-size: .84rem; }
+.model-tuning-control-note small { color: var(--muted); font-size: .72rem; }
+.model-tuning-actions { display: flex; align-items: center; gap: 8px; }
+.model-tuning-actions button { min-height: 38px; white-space: nowrap; }
+.model-tuning-space { border: 1px solid rgba(79,111,146,.18); border-radius: 9px; overflow: hidden; }
+.model-tuning-space > summary { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; cursor: pointer; font-size: .78rem; font-weight: 700; }
+.model-tuning-space > summary span { color: var(--muted); font-weight: 600; }
+.model-tuning-space-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 0; border-top: 1px solid rgba(79,111,146,.16); }
+.model-tuning-space-grid > div { display: grid; gap: 3px; padding: 9px 11px; border-right: 1px solid rgba(79,111,146,.12); border-bottom: 1px solid rgba(79,111,146,.12); }
+.model-tuning-space-grid strong { font-size: .74rem; overflow-wrap: anywhere; }
+.model-tuning-space-grid span { color: var(--muted); font-size: .72rem; }
+.model-tuning-run { display: grid; gap: 7px; padding: 11px 12px; border: 1px solid rgba(47,140,255,.22); border-radius: 9px; background: rgba(47,140,255,.045); }
+.model-tuning-progress-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.model-tuning-progress-row > div { display: grid; gap: 2px; }
+.model-tuning-progress-row span, .model-tuning-run small { color: var(--muted); font-size: .72rem; }
+.model-tuning-progress-track { height: 7px; overflow: hidden; border-radius: 999px; background: rgba(89,116,146,.18); }
+.model-tuning-progress-track i { display: block; height: 100%; border-radius: inherit; background: currentColor; transition: width .25s ease; }
+.model-tuning-results-wrap { display: grid; gap: 10px; }
+.model-tuning-results-heading { display: flex; justify-content: space-between; gap: 12px; align-items: end; }
+.model-tuning-results-heading > div { display: grid; gap: 3px; }
+.model-tuning-results-heading span, .model-tuning-results-heading small { color: var(--muted); font-size: .72rem; }
+.model-tuning-table-scroll { overflow-x: auto; border: 1px solid rgba(79,111,146,.18); border-radius: 9px; }
+.model-tuning-table { width: 100%; border-collapse: collapse; min-width: 980px; font-size: .75rem; }
+.model-tuning-table th, .model-tuning-table td { padding: 8px 9px; border-bottom: 1px solid rgba(79,111,146,.12); text-align: right; white-space: nowrap; }
+.model-tuning-table th:nth-child(2), .model-tuning-table td:nth-child(2), .model-tuning-table th:nth-child(3), .model-tuning-table td:nth-child(3) { text-align: left; }
+.model-tuning-table th { color: var(--muted); font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; }
+.model-tuning-table td strong { display: block; }
+.model-tuning-table td small { display: block; color: var(--muted); font-size: .67rem; }
+.model-tuning-table tr.control { background: rgba(89,116,146,.06); }
+.model-tuning-table tr.best { background: rgba(24,217,147,.055); }
+.model-tuning-adopted { color: var(--positive); font-weight: 700; }
+.model-tuning-reason { display: grid; gap: 6px; }
+.model-tuning-footnote { margin: 0; color: var(--muted); font-size: .73rem; line-height: 1.45; }
+@media (max-width: 1050px) { .model-tuning-controls { grid-template-columns: repeat(2,minmax(0,1fr)); } .model-tuning-actions { justify-content: flex-end; } .model-tuning-space-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 680px) { .model-tuning-heading { flex-direction: column; } .model-tuning-controls, .model-tuning-space-grid { grid-template-columns: 1fr; } .model-tuning-actions { justify-content: stretch; } .model-tuning-actions button { flex: 1; } }
+
+/* v1.12.116 — Model Tuning is an execution workspace, not a Settings section. */
+.backtest-research-mode-switch { display: inline-flex; align-items: center; padding: 3px; border: 1px solid rgba(79,111,146,.24); border-radius: 9px; background: rgba(7,21,39,.52); }
+.backtest-research-mode-switch button { min-height: 32px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: .74rem; font-weight: 700; cursor: pointer; }
+.backtest-research-mode-switch button.active { background: rgba(47,140,255,.14); color: var(--text); box-shadow: inset 0 0 0 1px rgba(47,140,255,.24); }
+.model-tuning-workspace { margin-top: 0; padding: 18px 0 2px; border-top: 0; }
+.model-tuning-context-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.model-tuning-context-grid > div { display: grid; gap: 3px; padding: 11px 12px; border: 1px solid rgba(79,111,146,.2); border-radius: 9px; background: rgba(7,21,39,.36); }
+.model-tuning-context-grid span, .model-tuning-baseline-metrics span, .model-tuning-settings-grid span, .model-tuning-fold-grid span { color: var(--muted); font-size: .69rem; font-weight: 700; text-transform: uppercase; letter-spacing: .035em; }
+.model-tuning-context-grid strong { font-size: .86rem; }
+.model-tuning-context-grid small { color: var(--muted); font-size: .7rem; }
+.model-tuning-baseline { display: grid; gap: 10px; padding: 12px; border: 1px solid rgba(47,140,255,.2); border-radius: 9px; background: rgba(47,140,255,.035); }
+.model-tuning-baseline > select { width: 100%; min-height: 36px; padding: 0 9px; border: 1px solid var(--border-strong); border-radius: 7px; background: #09192b; color: var(--text); }
+.model-tuning-baseline-metrics { display: grid; grid-template-columns: minmax(210px,1.7fr) repeat(5,minmax(95px,1fr)); gap: 8px; }
+.model-tuning-baseline-metrics > div { display: grid; gap: 3px; min-width: 0; padding: 8px 9px; border: 1px solid rgba(79,111,146,.14); border-radius: 7px; background: rgba(7,21,39,.34); }
+.model-tuning-baseline-metrics strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .78rem; }
+.model-tuning-empty-baseline { color: var(--muted); font-size: .77rem; }
+.model-tuning-run-actions { display: flex !important; grid-auto-flow: column; align-items: center; gap: 10px !important; }
+.model-tuning-row-actions { display: flex; justify-content: flex-end; gap: 5px; }
+.model-tuning-row-actions button { min-height: 28px; padding: 0 8px; }
+.model-tuning-candidate-detail { display: grid; gap: 10px; padding: 12px; border: 1px solid rgba(79,111,146,.2); border-radius: 9px; background: rgba(7,21,39,.32); }
+.model-tuning-settings-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 7px; }
+.model-tuning-settings-grid > div, .model-tuning-fold-grid > div { display: grid; gap: 3px; padding: 8px 9px; border: 1px solid rgba(79,111,146,.14); border-radius: 7px; }
+.model-tuning-settings-grid strong, .model-tuning-fold-grid strong { font-size: .78rem; overflow-wrap: anywhere; }
+.model-tuning-fold-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; }
+.model-tuning-fold-grid small { color: var(--muted); font-size: .68rem; }
+@media (max-width: 1120px) { .model-tuning-baseline-metrics { grid-template-columns: repeat(3,minmax(0,1fr)); } .model-tuning-settings-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
+@media (max-width: 760px) { .backtest-research-mode-switch { width: 100%; } .backtest-research-mode-switch button { flex: 1; } .model-tuning-context-grid, .model-tuning-baseline-metrics, .model-tuning-settings-grid, .model-tuning-fold-grid { grid-template-columns: 1fr; } }
+
+/* v1.12.117 — Dedicated tuning worker and optional CARO Probability research. */
+.model-tuning-context-grid-wide { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.model-tuning-context-grid .worker-online { border-color: rgba(24,217,147,.28); background: rgba(24,217,147,.045); }
+.model-tuning-context-grid .worker-offline { border-color: rgba(255,177,66,.28); background: rgba(255,177,66,.045); }
+.model-tuning-method-selector { display: grid; grid-template-columns: minmax(220px,.7fr) minmax(320px,1.3fr); gap: 10px; align-items: stretch; }
+.model-tuning-method-selector > label, .model-tuning-method-selector > div { display: grid; gap: 6px; padding: 10px 11px; border: 1px solid rgba(79,111,146,.2); border-radius: 9px; background: rgba(7,21,39,.4); }
+.model-tuning-method-selector span { color: var(--muted); font-size: .72rem; line-height: 1.4; }
+.model-tuning-method-selector label > span { font-size: .69rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.model-tuning-method-selector select { width: 100%; min-height: 36px; padding: 0 9px; border: 1px solid var(--border-strong); border-radius: 7px; background: #09192b; color: var(--text); }
+.model-tuning-probability-config { display: grid; gap: 10px; padding: 12px; border: 1px solid rgba(151,105,255,.24); border-radius: 9px; background: rgba(151,105,255,.045); }
+.model-tuning-probability-config > p { margin: 0; color: var(--muted); font-size: .72rem; line-height: 1.45; }
+.model-tuning-probability-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 8px; }
+.model-tuning-probability-grid label { display: grid; gap: 5px; }
+.model-tuning-probability-grid label > span { color: var(--muted); font-size: .67rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.model-tuning-probability-grid input { width: 100%; min-width: 0; height: 34px; padding: 0 9px; border: 1px solid var(--border-strong); border-radius: 7px; background: #09192b; color: var(--text); }
+.model-tuning-proposal-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; }
+.model-tuning-proposal-grid > div { display: grid; gap: 3px; padding: 8px 9px; border: 1px solid rgba(151,105,255,.18); border-radius: 7px; background: rgba(151,105,255,.025); }
+.model-tuning-proposal-grid span { color: var(--muted); font-size: .67rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.model-tuning-proposal-grid strong { font-size: .8rem; overflow-wrap: anywhere; }
+@media (max-width: 1120px) { .model-tuning-context-grid-wide { grid-template-columns: repeat(2,minmax(0,1fr)); } .model-tuning-probability-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
+@media (max-width: 760px) { .model-tuning-context-grid-wide, .model-tuning-method-selector, .model-tuning-probability-grid, .model-tuning-proposal-grid { grid-template-columns: 1fr; } }
+
+/* v1.12.118 — CARO can reuse completed Latin Hypercube evidence inside the integrated research worker. */
+.model-tuning-prior-source { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); gap: 10px; margin: 10px 0; }
+.model-tuning-prior-source > label { display: grid; gap: 6px; padding: 10px 11px; border: 1px solid rgba(151,105,255,.22); border-radius: 9px; background: rgba(151,105,255,.035); }
+.model-tuning-prior-source span, .model-tuning-anchor-card span { color: var(--muted); font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.model-tuning-prior-source select { width: 100%; min-width: 0; height: 36px; padding: 0 9px; border: 1px solid var(--border-strong); border-radius: 7px; background: #09192b; color: var(--text); }
+.model-tuning-anchor-card { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 8px; margin: 8px 0 12px; }
+.model-tuning-anchor-card > div { display: grid; gap: 4px; padding: 9px 10px; border: 1px solid rgba(151,105,255,.18); border-radius: 8px; background: rgba(151,105,255,.025); }
+.model-tuning-anchor-card strong { font-size: .82rem; overflow-wrap: anywhere; }
+@media (max-width: 1120px) { .model-tuning-anchor-card { grid-template-columns: repeat(3,minmax(0,1fr)); } }
+@media (max-width: 760px) { .model-tuning-prior-source, .model-tuning-anchor-card { grid-template-columns: 1fr; } }
+
+.model-tuning-promising-region {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.model-tuning-promising-region > strong {
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* v1.12.119 — persistent admin-only diagnostics for Model Tuning campaigns and candidates. */
+.model-tuning-failure-type { color: #ff9e9e !important; font-weight: 700; }
+.model-tuning-candidate-failure { display: grid; grid-template-columns: minmax(160px,.5fr) minmax(0,1.8fr) auto; gap: 10px; align-items: center; padding: 10px 11px; border: 1px solid rgba(255,94,94,.28); border-radius: 8px; background: rgba(255,94,94,.045); }
+.model-tuning-candidate-failure strong { font-size: .78rem; }
+.model-tuning-candidate-failure span { color: var(--muted); font-size: .72rem; overflow-wrap: anywhere; }
+.model-tuning-log-overlay { position: fixed; inset: 0; z-index: 1500; display: grid; place-items: center; padding: 28px; background: rgba(1,8,18,.78); backdrop-filter: blur(3px); }
+.model-tuning-log-dialog { width: min(1180px,96vw); max-height: 88vh; display: grid; grid-template-rows: auto auto minmax(220px,1fr) auto; gap: 10px; padding: 14px; border: 1px solid rgba(79,111,146,.42); border-radius: 12px; background: #071527; box-shadow: 0 22px 70px rgba(0,0,0,.45); overflow: hidden; }
+.model-tuning-log-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.model-tuning-log-heading > div { display: grid; gap: 3px; min-width: 0; }
+.model-tuning-log-heading strong { font-size: .94rem; }
+.model-tuning-log-heading span { color: var(--muted); font-size: .7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-tuning-log-meta { display: flex; flex-wrap: wrap; gap: 8px 14px; padding: 8px 10px; border: 1px solid rgba(79,111,146,.18); border-radius: 8px; background: rgba(7,21,39,.55); }
+.model-tuning-log-meta span { color: var(--muted); font-size: .7rem; }
+.model-tuning-log-meta strong { color: var(--text); font-weight: 700; }
+.model-tuning-log-pre { min-height: 220px; margin: 0; padding: 12px; overflow: auto; border: 1px solid rgba(79,111,146,.2); border-radius: 8px; background: #030c17; color: #d6e7ff; font: 500 .72rem/1.48 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.model-tuning-log-actions { display: flex; justify-content: flex-end; gap: 8px; }
+@media (max-width: 760px) { .model-tuning-log-overlay { padding: 10px; } .model-tuning-log-dialog { width: 100%; max-height: 94vh; } .model-tuning-candidate-failure { grid-template-columns: 1fr; } .model-tuning-log-actions button { flex: 1; } }
+
+/* v2.0.0 — lifecycle governance: one Candidate, one Promoted Candidate and one Winner. */
+
+/* v2.0.0 lifecycle governance */
+.strategy-list-markers span.promoted {
+  background: rgba(86, 136, 203, 0.16);
+  color: #9ec8f2;
+}
+
+.strategy-boundary-grid .promoted-candidate-boundary-card {
+  border-color: rgba(104, 151, 214, 0.24);
+  background: rgba(25, 53, 91, 0.24);
+}
+
+.settings-strategy-section .strategy-boundary-grid .promoted-candidate-boundary-card {
+  background: transparent;
 }

@@ -1,6 +1,6 @@
-# Market Cycle Trader Frontend v1.12.113
+# Market Cycle Trader Frontend v1.12.120
 
-## v1.12.113 — Portfolio measurement ruler
+## v1.12.115 — Global parameter search
 
 - `Portfolio Evolution` now includes an explicit **Measure** mode.
 - First click anchors point A; second click anchors point B and automatically exits measure mode.

@@ -1,0 +1,30 @@
+Market Cycle Trader Frontend v1.12.112 validation
+=================================================
+
+Scope
+-----
+Strategy-owned model selection with read-only model identity in Backtest.
+
+Validated behavior
+------------------
+- Algorithm selection and model parameter editing remain inside SELECTED STRATEGY.
+- Saving the model persists it through the Strategy-specific API endpoint.
+- Backtest contains no model select control.
+- Backtest reads and displays the model saved with the currently selected Strategy.
+- Start New Backtest calls only POST /api/jobs and sends no model-family override.
+- Backtest history continues showing the sanitized model identity associated with each completed run for Administrator comparison.
+- Mark as candidate is enabled only when the current saved model has an exact completed Backtest for the current Strategy revision.
+- Model parameter names/default values remain schema-driven from the Administrator API rather than hard-coded into ModelResearchSettingsPanel.jsx.
+
+Static validation
+-----------------
+- JS/JSX files parsed/transpiled: PASS — 42 files, 0 syntax errors.
+- CSS structural validation: PASS — 1927 opening braces / 1927 closing braces.
+- BacktestPage contains no <select> element: PASS.
+- VERSION: 1.12.112 — PASS.
+- package.json version: 1.12.112 — PASS.
+- FRONT_VERSION: 1.12.112 — PASS.
+
+Build limitation
+----------------
+A full Vite production build was not executed because node_modules are not installed in this validation environment and external package-registry access is unavailable. Static JS/JSX and CSS validation completed successfully.
