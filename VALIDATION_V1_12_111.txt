@@ -1,0 +1,27 @@
+Market Cycle Trader Frontend v1.12.111 validation
+=================================================
+
+Scope
+-----
+Model-aware Candidate/Winner controls inside SELECTED STRATEGY.
+
+Validated behavior
+------------------
+- Model selection remains visible inside SELECTED STRATEGY.
+- Mark as candidate sends the selected model family to the API.
+- Candidate and Trader Winner cards display the certified model identity returned by the API.
+- IQN cannot be marked Candidate in the UI because it has no protected live Trader engine.
+- Model hyperparameters, defaults, thresholds and Strategy values are not hard-coded in React.
+- The frontend does not reconstruct model snapshots; the API remains authoritative.
+
+Static validation
+-----------------
+- JS/JSX files parsed/transpiled: PASS — 43 files, 0 errors.
+- CSS structural validation: PASS — 1918 opening braces / 1918 closing braces.
+- VERSION: 1.12.111 — PASS.
+- package.json version: 1.12.111 — PASS.
+- FRONT_VERSION: 1.12.111 — PASS.
+
+Build limitation
+----------------
+A full Vite production build was not executed because node_modules are not installed in this validation environment and external package-registry access is unavailable. Static JS/JSX and CSS validation completed successfully.

@@ -62,8 +62,8 @@ const BOUNDARY_HINTS = {
     relationship: 'A candidate represents the exact revision that completed its qualifying backtest.',
   },
   lifecycle: {
-    description: 'Lifecycle protection keeps only one active candidate and one protected Trader winner at a time.',
-    relationship: 'Older validated or promoted snapshots remain protected for audit and cloning.',
+    description: 'Lifecycle protection keeps only one active Candidate, one active Promoted Candidate and one protected Trader Winner at a time.',
+    relationship: 'Older candidates, promoted candidates and winners remain protected as historical snapshots for audit and cloning.',
   },
 }
 
@@ -88,9 +88,11 @@ function statusLabel(value) {
   return tr(STATUS_LABELS[String(value || 'draft')] || titleFromName(String(value || 'draft')))
 }
 
-function lifecycleSummary(item, isWinner, isCandidate) {
+function lifecycleSummary(item, isWinner, isCandidate, isPromotedCandidate) {
   if (isWinner) return tr('Active Trader winner')
   if (isCandidate) return tr('Active validated candidate')
+  if (isPromotedCandidate) return tr('Active promoted candidate')
+  if (item.status === 'superseded_candidate' && item.historical_lifecycle_status === 'promoted_candidate') return tr('Historical promoted candidate')
   if (item.status === 'superseded_candidate') return tr('Replaced by a newer candidate')
   if (item.status === 'promoted_candidate') return tr('Promoted to a protected winner snapshot')
   if (item.status === 'former_winner') return tr('Historical former Trader winner')
@@ -99,11 +101,12 @@ function lifecycleSummary(item, isWinner, isCandidate) {
 }
 
 
-function strategyCatalogRank(item, winnerId, researchId, candidateId) {
+function strategyCatalogRank(item, winnerId, researchId, candidateId, promotedCandidateId) {
   if (item.id === winnerId) return 0
   if (item.id === researchId) return 1
   if (item.id === candidateId) return 2
-  return 3
+  if (item.id === promotedCandidateId) return 3
+  return 4
 }
 
 function resolveFieldSchema(schema, name) {
@@ -469,7 +472,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
     }
     const confirmation = window.confirm(
       tr('Promote {name} to the Trader winner?', { name: `"${strategy.name}"` }) + '\n\n' +
-      tr('This is a metadata-only handoff while the market is closed. The current position, cash, trade history, scheduler and armed next-session run will be preserved. No Alpaca request, calibration, prediction or order is executed now. The promoted Winner and all of its assets will be loaded by the next scheduled pre-market evaluation.'),
+      tr('This is a metadata-only handoff while the market is closed. The current Winner will be preserved as Former Winner, the current Promoted Candidate will become historical, and this validated Candidate will become the single Promoted Candidate and the source of the new Winner. The current position, cash, trade history, scheduler and armed next-session run will be preserved. No Alpaca request, calibration, prediction or order is executed now. The new Winner and all of its assets will be loaded by the next scheduled pre-market evaluation.'),
     )
     if (!confirmation) return
     const note = window.prompt(tr('Promotion reason:'), tr('Promote {name} after validated backtest', { name: strategy.name }))?.trim()
@@ -492,7 +495,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
       const assetCount = result.promotion?.next_scheduled_evaluation_assets_count || tr('all')
       const preservedMode = tr(String(result.promotion?.trader_control_mode || 'unchanged').replaceAll('_', ' '))
       const winnerModel = result.winner?.winner_model?.label || result.promotion?.winner_model?.label || tr('Winner model')
-      setNotice(tr('{name} is now the single protected Trader winner using {model}. The current position and Paper pipeline were preserved without broker interaction. Trader mode remains {mode}; its next scheduled pre-market evaluation will load {count} assets from the new Winner.', { name: result.winner.name, model: winnerModel, mode: preservedMode, count: assetCount }))
+      setNotice(tr('{name} is now the single protected Trader Winner using {model}. The validated Strategy is now the single Promoted Candidate; the previous Winner and promoted Candidate were preserved as history. The current position and Paper pipeline were preserved without broker interaction. Trader mode remains {mode}; its next scheduled pre-market evaluation will load {count} assets from the new Winner.', { name: result.winner.name, model: winnerModel, mode: preservedMode, count: assetCount }))
       await loadCatalog(strategy.id)
       onTraderWinnerChanged?.()
     } catch (requestError) {
@@ -574,6 +577,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
   const researchId = catalog.control?.research_strategy_id
   const winnerId = catalog.control?.trader_winner_strategy_id
   const candidateId = catalog.control?.candidate_strategy_id
+  const promotedCandidateId = catalog.control?.promoted_candidate_strategy_id
   const hasActiveBacktest = Boolean(activeJob)
   const hasCompletedBacktestForSavedModel = selected.last_backtest_status === 'completed'
     && Number(selected.last_backtest_revision) === Number(selected.revision)
@@ -593,8 +597,8 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
     && selected.id !== winnerId
     && !hasActiveBacktest
   const orderedStrategies = [...catalog.items].sort((left, right) => {
-    const rankDifference = strategyCatalogRank(left, winnerId, researchId, candidateId)
-      - strategyCatalogRank(right, winnerId, researchId, candidateId)
+    const rankDifference = strategyCatalogRank(left, winnerId, researchId, candidateId, promotedCandidateId)
+      - strategyCatalogRank(right, winnerId, researchId, candidateId, promotedCandidateId)
     if (rankDifference !== 0) return rankDifference
     return String(left.name || '').localeCompare(String(right.name || ''), undefined, { sensitivity: 'base' })
   })
@@ -645,11 +649,19 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
             {catalog.control.candidate_strategy?.candidate_model?.label ? <small>{catalog.control.candidate_strategy.candidate_model.label}</small> : null}
           </div>
         </article>
+        <article className="promoted-candidate-boundary-card">
+          <TrophyIcon size={20} />
+          <div>
+            <span className="strategy-boundary-label">{tr("Promoted candidate")}</span>
+            <strong>{catalog.control.promoted_candidate_strategy?.name || tr('No promoted candidate')}</strong>
+            {catalog.control.promoted_candidate_strategy?.candidate_model?.label ? <small>{catalog.control.promoted_candidate_strategy.candidate_model.label}</small> : null}
+          </div>
+        </article>
         <article>
           <ShieldIcon size={20} />
           <div>
             <span className="strategy-boundary-label">{tr("Lifecycle rule")}{' '}<ParameterHint id="hint-boundary-lifecycle" title={tr("Lifecycle rule")} align="right" {...BOUNDARY_HINTS.lifecycle} /></span>
-            <strong>{tr("One Candidate · one Winner")}</strong>
+            <strong>{tr("One Candidate · one Promoted Candidate · one Winner")}</strong>
           </div>
         </article>
       </div>
@@ -669,6 +681,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
               const isResearch = item.id === researchId
               const isWinner = item.id === winnerId
               const isCandidate = item.id === candidateId
+              const isPromotedCandidate = item.id === promotedCandidateId
               return (
                 <article key={item.id} className={`strategy-list-item ${selected.id === item.id ? 'selected' : ''}`}>
                   <button type="button" className="strategy-list-select" onClick={() => selectDetail(item.id)} disabled={Boolean(busy)}>
@@ -677,11 +690,12 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
                       <small className={`strategy-status status-${item.status}`}>{statusLabel(item.status)}</small>
                     </span>
                     <span>{tr("Revision")}{' '}{item.revision} · {tr(item.locked ? 'Protected' : 'Editable')}</span>
-                    <span>{lifecycleSummary(item, isWinner, isCandidate)}</span>
+                    <span>{lifecycleSummary(item, isWinner, isCandidate, isPromotedCandidate)}</span>
                   </button>
                   <div className="strategy-list-markers">
                     {isResearch ? <span>{tr("BACKTEST")}</span> : null}
                     {isCandidate ? <span className="candidate">{tr("CANDIDATE")}</span> : null}
+                    {isPromotedCandidate ? <span className="promoted">{tr("PROMOTED")}</span> : null}
                     {isWinner ? <span className="winner">{tr("TRADER")}</span> : null}
                   </div>
                 </article>
@@ -743,7 +757,11 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
           {selected.status === 'superseded_candidate' ? (
             <div className="strategy-candidate-note historical">
               <StarIcon size={18} />
-              <div><strong>{tr("Superseded candidate")}</strong><span>{tr("This validated candidate was replaced by")}{' '}{selected.superseded_by_strategy_id || tr('a newer candidate')} {tr("and remains protected for audit and cloning.")}</span></div>
+              {selected.historical_lifecycle_status === 'promoted_candidate' ? (
+                <div><strong>{tr("Historical promoted candidate")}</strong><span>{tr("This Strategy previously held the Promoted Candidate role and was replaced by")}{' '}{selected.superseded_by_strategy_id || tr('a newer candidate')} {tr("It remains protected for audit and cloning.")}</span></div>
+              ) : (
+                <div><strong>{tr("Superseded candidate")}</strong><span>{tr("This validated candidate was replaced by")}{' '}{selected.superseded_by_strategy_id || tr('a newer candidate')} {tr("and remains protected for audit and cloning.")}</span></div>
+              )}
             </div>
           ) : null}
 
