@@ -472,7 +472,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
     }
     const confirmation = window.confirm(
       tr('Promote {name} to the Trader winner?', { name: `"${strategy.name}"` }) + '\n\n' +
-      tr('This is a metadata-only handoff while the market is closed. The current Winner will be preserved as Former Winner, the current Promoted Candidate will become historical, and this validated Candidate will become the single Promoted Candidate and the source of the new Winner. The current position, cash, trade history, scheduler and armed next-session run will be preserved. No Alpaca request, calibration, prediction or order is executed now. The new Winner and all of its assets will be loaded by the next scheduled pre-market evaluation.'),
+      tr('This is a metadata-only Winner handoff. The current Winner will be preserved as Former Winner, the current Promoted Candidate will become historical, and this validated Candidate will become the single Promoted Candidate and the source of the new Winner. The current position, cash, trade history, scheduler and armed next-session run will be preserved. No Alpaca request, calibration, prediction or order is executed by this promotion. Promotion is allowed while the regular market is open only when the protected Paper pipeline is idle and no prepared, pending or executing plan exists. The new Winner and all of its assets will be loaded by the next scheduled pre-market evaluation.'),
     )
     if (!confirmation) return
     const note = window.prompt(tr('Promotion reason:'), tr('Promote {name} after validated backtest', { name: strategy.name }))?.trim()
@@ -485,7 +485,6 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
         method: 'POST',
         body: {
           confirm_promote_to_trader: true,
-          confirm_market_closed: true,
           confirm_preserve_operational_state: true,
           expected_control_revision: catalog.control.revision,
           expected_strategy_revision: strategy.revision,
