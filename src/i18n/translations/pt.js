@@ -1369,10 +1369,14 @@ export const PT_TRANSLATIONS = {
   'No-improvement streak': 'Sequência sem melhoria',
 
   'Use in Backtest': 'Usar no Backtest',
+  'A new Strategy was created with the tuning result and selected as BACKTEST. After a successful Backtest it becomes the active CANDIDATE automatically.': 'Uma nova Strategy foi criada com o resultado do tuning e selecionada como BACKTEST. Após um Backtest concluído com sucesso, ela se torna automaticamente a CANDIDATE ativa.',
   'Tuning result loaded into a new working Strategy and selected for Backtest.': 'Resultado do tuning carregado em uma nova Strategy de trabalho e selecionado para Backtest.',
   'Tuning result loaded into the selected Strategy for Backtest.': 'Resultado do tuning carregado na Strategy selecionada para Backtest.',
   'Any completed tuning candidate can be used in Backtest. Champion Gate and fold eligibility are informational and do not block manual research actions.': 'Qualquer candidato de tuning concluído pode ser usado no Backtest. Champion Gate e elegibilidade dos folds são apenas informativos e não bloqueiam ações manuais de pesquisa.',
 
   'Loaded': 'Carregado',
+
+  'Backtest Strategy': 'Strategy de Backtest',
+  'This CARO result is ready for Backtest. A successful Backtest automatically makes this Strategy the active Candidate.': 'Este resultado do CARO está pronto para Backtest. Um Backtest concluído com sucesso torna automaticamente esta Strategy a Candidate ativa.',
 
 }

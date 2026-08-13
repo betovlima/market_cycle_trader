@@ -193,9 +193,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
         method: 'POST',
         body: {},
       })
-      setNotice(tr(response.derived_strategy_created
-        ? 'Tuning result loaded into a new working Strategy and selected for Backtest.'
-        : 'Tuning result loaded into the selected Strategy for Backtest.'))
+      setNotice(tr('A new Strategy was created with the tuning result and selected as BACKTEST. After a successful Backtest it becomes the active CANDIDATE automatically.'))
       await onStrategyModelSaved?.(response.strategy)
       await loadWorkspace()
     } catch (requestError) {

@@ -2,6 +2,7 @@ export const ACTIVE_JOB_STATUSES = new Set(['queued', 'running'])
 
 export const STATUS_LABELS = {
   draft: 'Draft',
+  backtest: 'Backtest',
   candidate: 'Candidate',
   superseded_candidate: 'Superseded candidate',
   promoted_candidate: 'Promoted candidate',

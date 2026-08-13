@@ -5,7 +5,14 @@ import { ShieldIcon, StarIcon, TrophyIcon } from '../../../shared/components/Ico
 export function StrategyLifecycleNotes({ selected }) {
   return (
     <>
-{selected.status === 'candidate' ? (
+{selected.status === 'backtest' ? (
+            <div className="strategy-candidate-note">
+              <StarIcon size={18} />
+              <div><strong>{tr("Backtest Strategy")}</strong><span>{tr("This CARO result is ready for Backtest. A successful Backtest automatically makes this Strategy the active Candidate.")}</span></div>
+            </div>
+          ) : null}
+
+          {selected.status === 'candidate' ? (
             <div className="strategy-candidate-note">
               <StarIcon size={18} />
               <div><strong>{tr("Validated candidate")}</strong><span>{tr("Certified revision")}{' '}{selected.candidate_revision} · {selected.candidate_model?.label || tr('Model snapshot')} · {tr("using backtest")}{' '}{selected.candidate_backtest_id}{tr(". Saving Strategy parameters will return it to draft; model settings remain frozen by the certified job.")}</span></div>
