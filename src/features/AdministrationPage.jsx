@@ -1,4 +1,4 @@
-import { getIntlLocale, tr } from '../i18n/runtime'
+import { tr } from '../i18n/runtime'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ApiError, apiFetch } from '../api/http'
@@ -7,134 +7,14 @@ import {
   AccessLinkIcon,
   AccessLockIcon,
   AccessUsersIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   ClockIcon,
   EyeIcon,
   ListFilterIcon,
-  SearchIcon,
   ShieldIcon,
-  SortIcon,
 } from '../shared/components/Icons'
-import { ParameterHint } from '../shared/components/ParameterHint'
-
-const DURATION_OPTIONS = [
-  [3600, '1 hour'],
-  [21600, '6 hours'],
-  [86400, '24 hours'],
-  [259200, '3 days'],
-  [604800, '7 days'],
-  [2592000, '30 days'],
-]
-
-const SESSION_OPTIONS = [1, 2, 3, 4, 5]
-const DEFAULT_DURATION_SECONDS = String(DURATION_OPTIONS[0][0])
-const INVITATION_PAGE_SIZE = 8
-const LOG_PAGE_SIZE = 12
-
-const ADMIN_HINTS = {
-  accessRecords: 'Total number of access records currently returned by Administration, including active, pending, expired and restricted records.',
-  pending: 'Invitations that were generated but have not yet completed the required Google identity verification.',
-  active: 'Access records that have been claimed successfully or are currently active for the verified Google identity.',
-  restricted: 'Records that are expired, revoked, blocked or still use the legacy unverified access model.',
-  guestName: 'Friendly name used by the Administrator to identify the person receiving this access invitation.',
-  authorizedEmail: 'Google account that is authorized to claim the generated invitation. A different Google identity cannot claim it.',
-  role: 'Permission profile granted after identity verification. Viewer is limited to backtests, Trader also receives Portfolio access, and Administrator receives full administration access.',
-  duration: 'How long the generated access authorization remains valid before it expires.',
-  sessions: 'Maximum number of simultaneously active authenticated sessions allowed for this access record.',
-  status: 'Current lifecycle state of the invitation or identity-bound access record.',
-  claimedIdentity: 'Google identity that successfully claimed the invitation. It remains bound to the access record after verification.',
-  expires: 'Date and time when this access authorization stops being valid unless it is extended.',
-  lastAccess: 'Most recent recorded successful use of this access record.',
-  auditTime: 'Timestamp when the audited access event was recorded by the API.',
-  auditEvent: 'Access-control event recorded by the API, such as claim, grant, login, denial, session replacement or administrative update.',
-  auditUser: 'Friendly user name associated with the audited access event when available.',
-  auditIdentity: 'Verified Google identity associated with the access event when available.',
-  auditRole: 'Permission profile associated with the access event.',
-  auditResult: 'Whether the access-control event completed successfully or was denied.',
-  auditClient: 'Client IP address recorded for the access-control event.',
-}
-
-function dateTime(value) {
-  if (!value) return '—'
-  return new Date(value).toLocaleString(getIntlLocale())
-}
-
-function statusClass(status) {
-  if (status === 'active' || status === 'claimed') return 'positive'
-  if (status === 'pending_verification') return 'pending'
-  if (status === 'legacy_unverified') return 'warning'
-  return 'negative'
-}
-
-function statusLabel(status) {
-  const labels = {
-    pending_verification: 'Pending verification',
-    claimed: 'Claimed',
-    active: 'Active',
-    legacy_unverified: 'Legacy unverified',
-    expired: 'Expired',
-    revoked: 'Revoked',
-    blocked: 'Blocked',
-  }
-  return tr(labels[status] || String(status || 'Unknown').replaceAll('_', ' '))
-}
-
-function roleLabel(value) {
-  if (!value) return tr('Viewer')
-  return tr(value.charAt(0).toUpperCase() + value.slice(1))
-}
-
-function defaultSessions(role) {
-  return ['trader', 'admin'].includes(role) ? '1' : '2'
-}
-
-function compareValues(left, right) {
-  if (left == null && right == null) return 0
-  if (left == null) return -1
-  if (right == null) return 1
-  const leftNumber = Number(left)
-  const rightNumber = Number(right)
-  if (Number.isFinite(leftNumber) && Number.isFinite(rightNumber)) return leftNumber - rightNumber
-  return String(left).localeCompare(String(right), undefined, { numeric: true, sensitivity: 'base' })
-}
-
-function sortedRows(rows, sort, valueGetter = null) {
-  const multiplier = sort.direction === 'asc' ? 1 : -1
-  return [...rows].sort((left, right) => {
-    const leftValue = valueGetter ? valueGetter(left, sort.key) : left?.[sort.key]
-    const rightValue = valueGetter ? valueGetter(right, sort.key) : right?.[sort.key]
-    return compareValues(leftValue, rightValue) * multiplier
-  })
-}
-
-function toggledSort(current, key) {
-  if (current.key === key) return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
-  return { key, direction: 'asc' }
-}
-
-function boundedPage(page, total, pageSize) {
-  const pages = Math.max(1, Math.ceil(total / pageSize))
-  return Math.min(Math.max(1, page), pages)
-}
-
-async function copyText(value) {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(value)
-    return
-  }
-
-  const textarea = document.createElement('textarea')
-  textarea.value = value
-  textarea.setAttribute('readonly', '')
-  textarea.style.position = 'fixed'
-  textarea.style.opacity = '0'
-  document.body.appendChild(textarea)
-  textarea.select()
-  const copied = document.execCommand('copy')
-  textarea.remove()
-  if (!copied) throw new Error(tr('The browser did not allow copying the link.'))
-}
+import { ADMIN_HINTS, DEFAULT_DURATION_SECONDS, DURATION_OPTIONS, INVITATION_PAGE_SIZE, LOG_PAGE_SIZE, SESSION_OPTIONS } from './administration/adminConfig'
+import { boundedPage, dateTime, defaultSessions, roleLabel, sortedRows, statusClass, statusLabel, toggledSort } from './administration/adminUtils'
+import { AccessLinkDialog, AdminFieldLabel, AdminListToolbar, AdminPagination, AdminSortableTh, AdminSummary } from './administration/components/AdminPrimitives'
 
 export function AdministrationPage({ onSessionExpired }) {
   const [invitations, setInvitations] = useState([])
@@ -722,112 +602,5 @@ export function AdministrationPage({ onSessionExpired }) {
         ) : null}
       </section>
     </section>
-  )
-}
-
-function AdminFieldLabel({ id, label, hint }) {
-  return (
-    <span className="admin-field-label">
-      <span>{tr(label)}</span>
-      <ParameterHint id={id} title={label} description={hint} />
-    </span>
-  )
-}
-
-function AdminSortableTh({ label, field, sort, onSort, hint = '' }) {
-  const active = sort.key === field
-  return (
-    <th>
-      <button type="button" className={`admin-sort-header ${active ? 'active' : ''}`} onClick={() => onSort(field)} title={tr("Sort by {label}", { label: tr(label) })}>
-        <span>{tr(label)}</span>
-        {hint ? <ParameterHint id={`admin-column-${field}`} title={label} description={hint} /> : null}
-        <SortIcon size={14} descending={active ? sort.direction === 'desc' : true} />
-      </button>
-    </th>
-  )
-}
-
-function AdminListToolbar({ query, onQueryChange, placeholder, count, children }) {
-  return (
-    <div className="admin-list-toolbar">
-      <label className="admin-list-search">
-        <SearchIcon size={15} />
-        <input type="search" value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={tr(placeholder)} aria-label={tr(placeholder)} />
-      </label>
-      <div className="admin-list-filters">{children}</div>
-      <span className="admin-list-count">{count} {tr(count === 1 ? "result" : "results")}</span>
-    </div>
-  )
-}
-
-function AdminPagination({ page, pages, total, pageSize, onPageChange }) {
-  const from = total ? ((page - 1) * pageSize) + 1 : 0
-  const to = Math.min(page * pageSize, total)
-  return (
-    <div className="admin-pagination">
-      <span>{total ? tr("{from}–{to} of {total}", { from, to, total }) : tr("0 results")}</span>
-      <div>
-        <button type="button" onClick={() => onPageChange(page - 1)} disabled={page <= 1} aria-label={tr("Previous page")} title={tr("Previous page")}><ChevronLeftIcon size={16} /></button>
-        <strong>{tr("Page")}{' '}{page} {tr("of")}{' '}{pages}</strong>
-        <button type="button" onClick={() => onPageChange(page + 1)} disabled={page >= pages} aria-label={tr("Next page")} title={tr("Next page")}><ChevronRightIcon size={16} /></button>
-      </div>
-    </div>
-  )
-}
-
-function AccessLinkDialog({ access, onClose, onError }) {
-  const [copied, setCopied] = useState(false)
-
-  async function copyLink() {
-    try {
-      await copyText(access.access_url)
-      setCopied(true)
-      onError('')
-    } catch (copyError) {
-      setCopied(false)
-      onError(tr(copyError.message || 'Unable to copy the access link.'))
-    }
-  }
-
-  return (
-    <div className="access-link-dialog-backdrop" role="presentation" onMouseDown={onClose}>
-      <section className="access-link-dialog" role="dialog" aria-modal="true" aria-labelledby="access-link-title" onMouseDown={(event) => event.stopPropagation()}>
-        <div className="access-link-dialog-heading">
-          <div>
-            <span className="panel-kicker">{tr("ONE-TIME IDENTITY CLAIM")}</span>
-            <h2 id="access-link-title">{tr("Verified access for")}{' '}{access.guest_name}</h2>
-          </div>
-          <button type="button" className="access-link-close" onClick={onClose} aria-label={tr("Close")}>×</button>
-        </div>
-        <p>
-          {tr("Share this link only with")}{' '}<strong>{access.authorized_email}</strong>{tr(". The first valid claim must use that Google account. After claiming, the raw token is consumed and the authorization is bound to the verified Google identity.")}</p>
-        <textarea readOnly value={access.access_url} rows="4" aria-label={tr("Generated access link")} />
-        <div className="access-link-expiration">
-          {tr("Expires:")}{' '}<strong>{dateTime(access.expires_at)}</strong> {tr("· Maximum active sessions:")}{' '}<strong>{access.max_active_sessions}</strong>
-        </div>
-        <div className="access-link-dialog-actions">
-          <button type="button" className="admin-primary-button" onClick={copyLink}>
-            <AccessLinkIcon size={17} />{tr(copied ? 'Link copied' : 'Copy verified link')}
-          </button>
-          <button type="button" className="access-link-secondary" onClick={onClose}>{tr("Close")}</button>
-        </div>
-      </section>
-    </div>
-  )
-}
-
-function AdminSummary({ icon, label, value, tone = '', hint = '' }) {
-  const hintId = `admin-summary-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
-  return (
-    <article className={`admin-summary-card ${tone}`}>
-      <div className={`admin-summary-icon ${tone}`}>{icon}</div>
-      <div>
-        <div className="admin-summary-label">
-          <span>{tr(label)}</span>
-          {hint ? <ParameterHint id={hintId} title={label} description={hint} /> : null}
-        </div>
-        <strong className={tone}>{value}</strong>
-      </div>
-    </article>
   )
 }

@@ -1277,4 +1277,11 @@ export const ES_TRANSLATIONS = {
   'Adaptive trials': 'Trials adaptativos',
   'No-improvement streak': 'Racha sin mejora',
 
+  'Use in Backtest': 'Usar en Backtest',
+  'Tuning result loaded into a new working Strategy and selected for Backtest.': 'Resultado del tuning cargado en una nueva Strategy de trabajo y seleccionado para Backtest.',
+  'Tuning result loaded into the selected Strategy for Backtest.': 'Resultado del tuning cargado en la Strategy seleccionada para Backtest.',
+  'Any completed tuning candidate can be used in Backtest. Champion Gate and fold eligibility are informational and do not block manual research actions.': 'Cualquier candidato de tuning completado puede usarse en Backtest. Champion Gate y la elegibilidad de los folds son solo informativos y no bloquean acciones manuales de investigación.',
+
+  'Loaded': 'Cargado',
+
 }

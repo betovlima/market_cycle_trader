@@ -1,164 +1,15 @@
-import { getIntlLocale, tr } from '../i18n/runtime'
-import { strategyParameterLabel } from '../i18n/strategyParameters'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { tr } from '../i18n/runtime'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { ApiError, apiFetch } from '../api/http'
 import { API } from '../config/env'
-import { ActivityIcon, ShieldIcon, StarIcon, TrophyIcon } from '../shared/components/Icons'
-import { ParameterHint } from '../shared/components/ParameterHint'
 import { ModelResearchSettingsPanel } from './ModelResearchSettingsPanel'
-
-const ACTIVE_JOB_STATUSES = new Set(['queued', 'running'])
-
-function titleFromName(name) {
-  return name.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
-}
-
-function dateTime(value) {
-  if (!value) return '—'
-  return new Date(value).toLocaleString(getIntlLocale())
-}
-
-const STATUS_LABELS = {
-  draft: 'Draft',
-  candidate: 'Candidate',
-  superseded_candidate: 'Superseded candidate',
-  promoted_candidate: 'Promoted candidate',
-  winner: 'Winner',
-  former_winner: 'Former winner',
-}
-
-
-const STRATEGY_FIELD_HINTS = {
-  name: {
-    description: 'Human-readable name used to identify this research strategy in the catalog and backtest selection.',
-    relationship: 'Renaming a draft does not change the protected Trader winner.',
-  },
-  description: {
-    description: 'Short explanation of the purpose of this research revision so later comparisons remain understandable.',
-    relationship: 'Use it to record the intent of the test, not confidential credentials or runtime secrets.',
-  },
-  search: {
-    description: 'Filters the editable configuration by visible label, technical parameter name, group name or available schema metadata.',
-    relationship: 'Filtering changes only what is visible in this page; it never changes the strategy configuration.',
-  },
-  changeReason: {
-    description: 'Audit note explaining why this strategy revision is being changed.',
-    relationship: 'A valid note is required before saving an editable draft revision.',
-  },
-}
-
-const BOUNDARY_HINTS = {
-  winner: {
-    description: 'Protected strategy snapshot currently used by the Trader.',
-    relationship: 'Research edits remain isolated until an explicitly validated candidate is promoted.',
-  },
-  backtest: {
-    description: 'Strategy revision currently selected as the source for the next backtest.',
-    relationship: 'Selecting a backtest strategy does not change the Trader winner.',
-  },
-  candidate: {
-    description: 'Single validated strategy revision eligible for promotion to Trader winner.',
-    relationship: 'A candidate represents the exact revision that completed its qualifying backtest.',
-  },
-  lifecycle: {
-    description: 'Lifecycle protection keeps only one active Candidate, one active Promoted Candidate and one protected Trader Winner at a time.',
-    relationship: 'Older candidates, promoted candidates and winners remain protected as historical snapshots for audit and cloning.',
-  },
-}
-
-function parameterRelationship(name, schema, reference) {
-  const details = []
-  const enumValues = Array.isArray(schema?.enum) ? schema.enum : []
-  if (enumValues.length) details.push(`${tr('Allowed:')} ${enumValues.join(', ')}`)
-  if (schema?.minimum !== undefined) details.push(`${tr('Minimum:')} ${schema.minimum}`)
-  if (schema?.exclusiveMinimum !== undefined) details.push(`${tr('Greater than:')} ${schema.exclusiveMinimum}`)
-  if (schema?.maximum !== undefined) details.push(`${tr('Maximum:')} ${schema.maximum}`)
-  if (schema?.exclusiveMaximum !== undefined) details.push(`${tr('Less than:')} ${schema.exclusiveMaximum}`)
-  if (name === 'assets') details.push(tr('Type: ticker symbols'))
-  else if (typeof reference === 'boolean') details.push(tr('Type: on/off'))
-  else if (Array.isArray(reference)) details.push(tr('Type: JSON array'))
-  else if (typeof reference === 'number') details.push(tr(schema?.type === 'integer' ? 'Type: integer' : 'Type: number'))
-  else details.push(tr('Type: text'))
-  details.push(`${tr('Technical name:')} ${name}`)
-  return details.join(' · ')
-}
-
-function statusLabel(value) {
-  return tr(STATUS_LABELS[String(value || 'draft')] || titleFromName(String(value || 'draft')))
-}
-
-function lifecycleSummary(item, isWinner, isCandidate, isPromotedCandidate) {
-  if (isWinner) return tr('Active Trader winner')
-  if (isCandidate) return tr('Active validated candidate')
-  if (isPromotedCandidate) return tr('Active promoted candidate')
-  if (item.status === 'superseded_candidate' && item.historical_lifecycle_status === 'promoted_candidate') return tr('Historical promoted candidate')
-  if (item.status === 'superseded_candidate') return tr('Replaced by a newer candidate')
-  if (item.status === 'promoted_candidate') return tr('Promoted to a protected winner snapshot')
-  if (item.status === 'former_winner') return tr('Historical former Trader winner')
-  if (item.last_backtest_status === 'completed') return tr('Backtest completed · eligible for candidate')
-  return tr('Backtest required')
-}
-
-
-function strategyCatalogRank(item, winnerId, researchId, candidateId, promotedCandidateId) {
-  if (item.id === winnerId) return 0
-  if (item.id === researchId) return 1
-  if (item.id === candidateId) return 2
-  if (item.id === promotedCandidateId) return 3
-  return 4
-}
-
-function resolveFieldSchema(schema, name) {
-  const property = schema?.properties?.[name] || {}
-  const resolve = (value) => {
-    if (!value?.$ref) return value || {}
-    const key = value.$ref.split('/').pop()
-    return schema?.$defs?.[key] || value
-  }
-  if (property.$ref) return resolve(property)
-  if (Array.isArray(property.anyOf)) {
-    const candidate = property.anyOf.find((item) => item.type !== 'null') || property.anyOf[0]
-    return { ...property, ...resolve(candidate) }
-  }
-  return property
-}
-
-function toEditorValues(configuration) {
-  return Object.fromEntries(Object.entries(configuration || {}).map(([name, value]) => {
-    if (name === 'assets' && Array.isArray(value)) return [name, value.join(', ')]
-    if (Array.isArray(value)) return [name, JSON.stringify(value)]
-    if (value === null || value === undefined) return [name, '']
-    if (typeof value === 'number') return [name, String(value)]
-    return [name, value]
-  }))
-}
-
-function parseEditorValues(values, original) {
-  const configuration = {}
-  let assetsInput = null
-  for (const [name, raw] of Object.entries(values)) {
-    const reference = original[name]
-    if (name === 'assets' && Array.isArray(reference)) {
-      assetsInput = String(raw || '').trim()
-    } else if (Array.isArray(reference)) {
-      const parsed = JSON.parse(String(raw || '[]'))
-      if (!Array.isArray(parsed)) throw new Error(tr('{field} must be a JSON array.', { field: strategyParameterLabel(name, titleFromName(name)) }))
-      configuration[name] = parsed
-    } else if (typeof reference === 'boolean') {
-      configuration[name] = Boolean(raw)
-    } else if (typeof reference === 'number') {
-      const parsed = Number(raw)
-      if (!Number.isFinite(parsed)) throw new Error(tr('{field} must be numeric.', { field: strategyParameterLabel(name, titleFromName(name)) }))
-      configuration[name] = parsed
-    } else if (reference === null) {
-      configuration[name] = String(raw || '').trim() || null
-    } else {
-      configuration[name] = String(raw)
-    }
-  }
-  return { configuration, assetsInput }
-}
+import { ACTIVE_JOB_STATUSES, STRATEGY_FIELD_HINTS } from './strategySettings/strategySettingsConfig'
+import { dateTime, parseEditorValues, resolveFieldSchema, statusLabel, strategyCatalogRank, titleFromName, toEditorValues } from './strategySettings/strategySettingsUtils'
+import { ParameterField, StrategyFieldLabel } from './strategySettings/components/StrategyFields'
+import { StrategyBoundaryGrid } from './strategySettings/components/StrategyBoundaryGrid'
+import { StrategyCatalog } from './strategySettings/components/StrategyCatalog'
+import { StrategyLifecycleNotes } from './strategySettings/components/StrategyLifecycleNotes'
 
 export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged, embedded = false }) {
   const [catalog, setCatalog] = useState(null)
@@ -623,85 +474,25 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
           {tr("Backtest")}{' '}{activeJob.id} {tr("is")}{' '}{statusLabel(activeJob.status)}{tr(". You may clone and edit test strategies, but strategy selection, deletion, promotion and a new backtest remain locked until it finishes.")}</div>
       ) : null}
 
-      <div className="strategy-boundary-grid">
-        <article className="winner-boundary-card">
-          <TrophyIcon size={20} />
-          <div>
-            <span className="strategy-boundary-label">{tr("Trader winner")}{' '}<ParameterHint id="hint-boundary-winner" title={tr("Trader winner")} {...BOUNDARY_HINTS.winner} /></span>
-            <strong>{catalog.control.trader_winner?.name}</strong>
-            <small>{catalog.control.trader_winner?.winner_model?.label || tr('XGBoost Utility')}</small>
-          </div>
-        </article>
-        <article>
-          <ActivityIcon size={20} />
-          <div>
-            <span className="strategy-boundary-label">{tr("Backtest strategy")}{' '}<ParameterHint id="hint-boundary-backtest" title={tr("Backtest strategy")} {...BOUNDARY_HINTS.backtest} /></span>
-            <strong>{catalog.control.research_strategy?.name}</strong>
-            {catalog.control.research_strategy?.research_model?.label ? <small>{catalog.control.research_strategy.research_model.label}</small> : null}
-          </div>
-        </article>
-        <article className="candidate-boundary-card">
-          <StarIcon size={20} />
-          <div>
-            <span className="strategy-boundary-label">{tr("Current candidate")}{' '}<ParameterHint id="hint-boundary-candidate" title={tr("Current candidate")} {...BOUNDARY_HINTS.candidate} /></span>
-            <strong>{catalog.control.candidate_strategy?.name || tr('No active candidate')}</strong>
-            {catalog.control.candidate_strategy?.candidate_model?.label ? <small>{catalog.control.candidate_strategy.candidate_model.label}</small> : null}
-          </div>
-        </article>
-        <article className="promoted-candidate-boundary-card">
-          <TrophyIcon size={20} />
-          <div>
-            <span className="strategy-boundary-label">{tr("Promoted candidate")}</span>
-            <strong>{catalog.control.promoted_candidate_strategy?.name || tr('No promoted candidate')}</strong>
-            {catalog.control.promoted_candidate_strategy?.candidate_model?.label ? <small>{catalog.control.promoted_candidate_strategy.candidate_model.label}</small> : null}
-          </div>
-        </article>
-        <article>
-          <ShieldIcon size={20} />
-          <div>
-            <span className="strategy-boundary-label">{tr("Lifecycle rule")}{' '}<ParameterHint id="hint-boundary-lifecycle" title={tr("Lifecycle rule")} align="right" {...BOUNDARY_HINTS.lifecycle} /></span>
-            <strong>{tr("One Candidate · one Promoted Candidate · one Winner")}</strong>
-          </div>
-        </article>
-      </div>
+      <StrategyBoundaryGrid catalog={catalog} />
 
       {catalog.control?.paper_state_reinitialization_required ? (
         <div className="global-inline-message warning-inline">{tr("The Trader winner changed. Run the protected Paper initialization before restarting Trader.")}</div>
       ) : null}
 
       <div className="strategy-workspace">
-        <aside className="strategy-list-panel">
-          <div className="strategy-list-heading">
-            <strong>{tr("Strategy catalog")}</strong>
-            <button type="button" onClick={() => cloneStrategy(catalog.control.trader_winner)} disabled={Boolean(busy)}>{tr("Clone winner")}</button>
-          </div>
-          <div className="strategy-list">
-            {orderedStrategies.map((item) => {
-              const isResearch = item.id === researchId
-              const isWinner = item.id === winnerId
-              const isCandidate = item.id === candidateId
-              const isPromotedCandidate = item.id === promotedCandidateId
-              return (
-                <article key={item.id} className={`strategy-list-item ${selected.id === item.id ? 'selected' : ''}`}>
-                  <button type="button" className="strategy-list-select" onClick={() => selectDetail(item.id)} disabled={Boolean(busy)}>
-                    <span className="strategy-list-title-row">
-                      <strong>{item.name}</strong>
-                      <small className={`strategy-status status-${item.status}`}>{statusLabel(item.status)}</small>
-                    </span>
-                    <span>{tr("Revision")}{' '}{item.revision} · {tr(item.locked ? 'Protected' : 'Editable')}</span>
-                    <span>{lifecycleSummary(item, isWinner, isCandidate, isPromotedCandidate)}</span>
-                  </button>
-                  <div className="strategy-list-markers">
-                    {isResearch ? <span>{tr("BACKTEST")}</span> : null}
-                    {isCandidate ? <span className="candidate">{tr("CANDIDATE")}</span> : null}
-                    {isPromotedCandidate ? <span className="promoted">{tr("PROMOTED")}</span> : null}
-                    {isWinner ? <span className="winner">{tr("TRADER")}</span> : null}
-                  </div>
-                </article>
-              )
-            })}
-          </div>
-        </aside>
+        <StrategyCatalog
+          catalog={catalog}
+          orderedStrategies={orderedStrategies}
+          selected={selected}
+          busy={busy}
+          researchId={researchId}
+          winnerId={winnerId}
+          candidateId={candidateId}
+          promotedCandidateId={promotedCandidateId}
+          onCloneWinner={cloneStrategy}
+          onSelectDetail={selectDetail}
+        />
 
         <div className="strategy-editor-panel">
           <div className="strategy-editor-header">
@@ -746,40 +537,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
             onSearchMatchCount={setModelParameterMatchCount}
           />
 
-          {selected.status === 'candidate' ? (
-            <div className="strategy-candidate-note">
-              <StarIcon size={18} />
-              <div><strong>{tr("Validated candidate")}</strong><span>{tr("Certified revision")}{' '}{selected.candidate_revision} · {selected.candidate_model?.label || tr('Model snapshot')} · {tr("using backtest")}{' '}{selected.candidate_backtest_id}{tr(". Saving Strategy parameters will return it to draft; model settings remain frozen by the certified job.")}</span></div>
-            </div>
-          ) : null}
-
-          {selected.status === 'superseded_candidate' ? (
-            <div className="strategy-candidate-note historical">
-              <StarIcon size={18} />
-              {selected.historical_lifecycle_status === 'promoted_candidate' ? (
-                <div><strong>{tr("Historical promoted candidate")}</strong><span>{tr("This Strategy previously held the Promoted Candidate role and was replaced by")}{' '}{selected.superseded_by_strategy_id || tr('a newer candidate')} {tr("It remains protected for audit and cloning.")}</span></div>
-              ) : (
-                <div><strong>{tr("Superseded candidate")}</strong><span>{tr("This validated candidate was replaced by")}{' '}{selected.superseded_by_strategy_id || tr('a newer candidate')} {tr("and remains protected for audit and cloning.")}</span></div>
-              )}
-            </div>
-          ) : null}
-
-          {selected.status === 'promoted_candidate' ? (
-            <div className="strategy-candidate-note promoted">
-              <TrophyIcon size={18} />
-              <div><strong>{tr("Promoted candidate")}</strong><span>{tr("This exact validated revision created winner")}{' '}{selected.last_promoted_winner_strategy_id || tr('snapshot')} {tr("and remains protected for audit and cloning.")}</span></div>
-            </div>
-          ) : null}
-
-          {selected.locked ? (
-            <div className="strategy-protection-note">
-              <ShieldIcon size={18} />
-              <div>
-                <strong>{tr(selected.status === 'winner' || selected.status === 'former_winner' ? 'Protected winner snapshot' : 'Protected candidate history')}</strong>
-                <span>{tr("This lifecycle snapshot cannot be edited or deleted. Clone it to continue research.")}</span>
-              </div>
-            </div>
-          ) : null}
+          <StrategyLifecycleNotes selected={selected} />
 
           <form className="strategy-parameter-form" onSubmit={saveStrategy}>
             <div className="strategy-metadata-grid">
@@ -842,97 +600,3 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
     </section>
   )
 }
-
-function StrategyFieldLabel({ id, label, hint, align = 'left' }) {
-  return (
-    <span className="strategy-field-label-with-hint">
-      <span>{tr(label)}</span>
-      <ParameterHint id={id} title={tr(label)} align={align} {...hint} />
-    </span>
-  )
-}
-
-const ParameterField = memo(function ParameterField({ name, value, reference, schema, hintAlign = 'left', disabled, onChange }) {
-  const label = strategyParameterLabel(name, schema?.title || titleFromName(name))
-  const hint = {
-    description: schema?.description ? tr(schema.description) : tr('Controls the {label} value used by this protected research configuration.', { label: tr(label).toLocaleLowerCase() }),
-    relationship: parameterRelationship(name, schema, reference),
-  }
-  const fieldHeading = (
-    <span className="strategy-field-heading">
-      <span className="strategy-field-label-with-hint">
-        <span>{tr(label)}</span>
-        <ParameterHint id={`hint-strategy-parameter-${name}`} title={tr(label)} align={hintAlign} {...hint} />
-      </span>
-      <code>{name}</code>
-    </span>
-  )
-  const enumValues = Array.isArray(schema?.enum) ? schema.enum : []
-  if (enumValues.length) {
-    return (
-      <label>
-        {fieldHeading}
-        <select value={value ?? ''} disabled={disabled} onChange={(event) => onChange(name, event.target.value)}>
-          {enumValues.map((option) => <option key={String(option)} value={option}>{String(option)}</option>)}
-        </select>
-      </label>
-    )
-  }
-  if (typeof reference === 'boolean') {
-    return (
-      <label className="strategy-boolean-field">
-        {fieldHeading}
-        <input type="checkbox" checked={Boolean(value)} disabled={disabled} onChange={(event) => onChange(name, event.target.checked)} />
-      </label>
-    )
-  }
-  if (name === 'assets' && Array.isArray(reference)) {
-    return (
-      <label className="strategy-asset-field">
-        {fieldHeading}
-        <textarea
-          value={value ?? ''}
-          disabled={disabled}
-          rows="2"
-          spellCheck="false"
-          autoComplete="off"
-          autoCapitalize="characters"
-          placeholder={tr('NVDA, AAPL, MSFT or one symbol per line')}
-          onChange={(event) => onChange(name, event.target.value)}
-        />
-        <small>{tr('Enter ticker symbols separated by commas, spaces, semicolons or line breaks. The API normalizes the symbols, removes duplicates and builds the final asset list.')}</small>
-      </label>
-    )
-  }
-  if (Array.isArray(reference)) {
-    return (
-      <label className="strategy-array-field">
-        {fieldHeading}
-        <textarea value={value ?? ''} disabled={disabled} rows="2" spellCheck="false" onChange={(event) => onChange(name, event.target.value)} />
-      </label>
-    )
-  }
-  if (typeof reference === 'number') {
-    return (
-      <label>
-        {fieldHeading}
-        <input
-          type="number"
-          value={value ?? ''}
-          disabled={disabled}
-          step={schema?.type === 'integer' ? '1' : 'any'}
-          min={schema?.minimum}
-          max={schema?.maximum}
-          onChange={(event) => onChange(name, event.target.value)}
-          required
-        />
-      </label>
-    )
-  }
-  return (
-    <label>
-      {fieldHeading}
-      <input value={value ?? ''} disabled={disabled} onChange={(event) => onChange(name, event.target.value)} />
-    </label>
-  )
-})

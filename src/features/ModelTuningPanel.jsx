@@ -3,36 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError, apiFetch, downloadFile } from '../api/http'
 import { API } from '../config/env'
 import { tr } from '../i18n/runtime'
-
-const ACTIVE = new Set(['queued', 'running', 'stop_requested'])
-const PROBABILITY_METHOD = 'champion_probability'
-
-function pct(value, digits = 1) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return '—'
-  return `${(Number(value) * 100).toFixed(digits)}%`
-}
-
-function money(value) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return '—'
-  return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value))
-}
-
-function decimal(value, digits = 3) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return '—'
-  return Number(value).toFixed(digits)
-}
-
-function candidateLabel(candidate) {
-  if (candidate.is_control) return tr('Current Strategy model')
-  if (candidate.kind === 'probability_startup') return `${tr('Startup candidate')} ${candidate.candidate_id}`
-  if (candidate.kind === 'champion_probability') return `${tr('CARO candidate')} ${candidate.candidate_id}`
-  return `${tr('Candidate')} ${candidate.candidate_id}`
-}
-
-function numberOr(value, fallback = 0) {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : fallback
-}
+import { ACTIVE, PROBABILITY_METHOD } from './modelTuning/modelTuningConfig'
+import { candidateLabel, decimal, money, numberOr, pct } from './modelTuning/modelTuningUtils'
 
 export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
   const [catalog, setCatalog] = useState(null)
@@ -48,7 +20,6 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
   const [sharpeTolerance, setSharpeTolerance] = useState('')
   const [drawdownTolerancePct, setDrawdownTolerancePct] = useState('')
   const [minimumWorstFoldPct, setMinimumWorstFoldPct] = useState('')
-  const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [error, setError] = useState('')
@@ -213,11 +184,6 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
   }
 
   async function adopt(candidate) {
-    const normalizedReason = reason.trim()
-    if (normalizedReason.length < 3) {
-      setError(tr('Enter a reason for this change.'))
-      return
-    }
     if (!run?.id || busy) return
     setBusy(true)
     setError('')
@@ -225,12 +191,11 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
     try {
       const response = await apiFetch(`${API}/admin/model-tuning/${encodeURIComponent(run.id)}/candidates/${candidate.candidate_id}/adopt`, {
         method: 'POST',
-        body: { reason: normalizedReason },
+        body: {},
       })
-      setReason('')
       setNotice(tr(response.derived_strategy_created
-        ? 'Research Champion saved as a new working Strategy. The certified Candidate was preserved; run one final normal Backtest before promotion.'
-        : 'Candidate adopted as the Strategy model. Run one final normal Backtest before Candidate/Trader promotion.'))
+        ? 'Tuning result loaded into a new working Strategy and selected for Backtest.'
+        : 'Tuning result loaded into the selected Strategy for Backtest.'))
       await onStrategyModelSaved?.(response.strategy)
       await loadWorkspace()
     } catch (requestError) {
@@ -471,7 +436,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
                 {sortedCandidates.map((candidate) => {
                   const metrics = candidate.metrics || {}
                   const proposal = candidate.proposal || {}
-                  const adoptable = !active && candidate.status === 'completed' && metrics.eligible && (run?.method !== PROBABILITY_METHOD || candidate.champion_gate_passed === true) && !candidate.is_control && run?.adopted_candidate_id !== candidate.candidate_id
+                  const adoptable = !active && candidate.status === 'completed' && !candidate.is_control && run?.adopted_candidate_id !== candidate.candidate_id
                   return (
                     <tr key={candidate.candidate_id} className={`${candidate.is_control ? 'control' : ''} ${candidate.rank === 1 ? 'best' : ''}`}>
                       <td>{candidate.rank ?? '—'}</td>
@@ -487,7 +452,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
                       <td className="model-tuning-row-actions">
                         <button type="button" onClick={() => setSelectedCandidateId(candidate.candidate_id)}>{tr('View')}</button>
                         <button type="button" onClick={() => openCandidateLog(candidate)} disabled={logLoading}>{tr('Log')}</button>
-                        {adoptable ? <button type="button" onClick={() => adopt(candidate)} disabled={busy}>{tr('Adopt')}</button> : run?.adopted_candidate_id === candidate.candidate_id ? <span className="model-tuning-adopted">{tr('Adopted')}</span> : null}
+                        {adoptable ? <button type="button" onClick={() => adopt(candidate)} disabled={busy}>{tr('Use in Backtest')}</button> : run?.adopted_candidate_id === candidate.candidate_id ? <span className="model-tuning-adopted">{tr('Loaded')}</span> : null}
                       </td>
                     </tr>
                   )
@@ -543,13 +508,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
             </div>
           ) : null}
 
-          {!active && sortedCandidates.some((item) => item.status === 'completed' && item.metrics?.eligible && !item.is_control) ? (
-            <label className="model-tuning-reason">
-              <span>{tr('CHANGE REASON')}</span>
-              <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder={tr('Explain why the selected tuning candidate is being adopted')} disabled={busy} />
-            </label>
-          ) : null}
-          <p className="model-tuning-footnote">{tr('Tuning candidates are research summaries only. Adopting one updates the Strategy model configuration, then a normal final Backtest is required before Candidate or Trader promotion.')}</p>
+          <p className="model-tuning-footnote">{tr('Any completed tuning candidate can be used in Backtest. Champion Gate and fold eligibility are informational and do not block manual research actions.')}</p>
         </div>
       ) : null}
 
