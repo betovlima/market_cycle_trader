@@ -382,7 +382,7 @@ a { color: inherit; }
   .market-update-dial { width: 52px; height: 52px; flex-basis: 52px; }
 }
 
-/* v1.12.41 private session and manual access links */
+
 .auth-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 20% 10%, rgba(47,140,255,.12), transparent 36%), #050b15; }
 .auth-card { width: min(560px, 100%); padding: 28px; border: 1px solid var(--border); border-radius: 20px; background: rgba(8,24,43,.96); box-shadow: 0 24px 80px rgba(0,0,0,.38); }
 .auth-brand { display: flex; gap: 18px; align-items: center; }
@@ -393,7 +393,7 @@ a { color: inherit; }
 .auth-error { padding: 10px 12px; border: 1px solid rgba(255,102,114,.4); border-radius: 10px; color: #ff9ca6; background: rgba(255,102,114,.08); }
 .session-controls { display: flex; justify-content: flex-end; align-items: center; gap: 10px; color: var(--muted); font-size: .75rem; }
 .session-controls button { padding: 7px 11px; border: 1px solid var(--border); background: transparent; color: var(--text); }
-/* v1.12.42 Administration layout aligned with Market Cycle Monitor */
+
 .administration-page { padding-bottom: 10px; }
 .global-inline-message { padding: 10px 13px; border-radius: 9px; font-size: .73rem; }
 .error-inline { color: #ffd7da; border: 1px solid rgba(255, 102, 114, .42); background: rgba(91, 24, 34, .65); }
@@ -467,7 +467,7 @@ a { color: inherit; }
 }
 
 
-/* v1.12.44 administrator capital-rotation results */
+
 .rotation-section { display: grid; gap: 14px; }
 .rotation-metrics-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .rotation-note { margin: -2px 0 12px; color: var(--muted); font-size: .72rem; line-height: 1.45; }
@@ -486,7 +486,7 @@ a { color: inherit; }
   .rotation-metrics-grid { grid-template-columns: 1fr; }
 }
 
-/* v1.12.45 analytical dashboards */
+
 .analytics-page { min-width: 0; }
 .analytics-tabs { display: flex; gap: 8px; padding: 6px; border: 1px solid var(--border); border-radius: 12px; background: rgba(7, 19, 34, .82); }
 .analytics-tabs button { min-height: 38px; padding: 0 14px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid transparent; border-radius: 8px; color: var(--muted); background: transparent; cursor: pointer; font-size: .74rem; font-weight: 800; }
@@ -523,7 +523,7 @@ a { color: inherit; }
 @media (max-width: 1180px) { .admin-invite-form { grid-template-columns: 1fr 1fr; } .admin-primary-button { grid-column: 1 / -1; } }
 @media (max-width: 760px) { .admin-invite-form { grid-template-columns: 1fr; } .admin-primary-button { grid-column: auto; } }
 
-/* v1.12.46 analytical table layout, icon filters and rotation pagination */
+
 .analytics-list-panel .panel-heading { align-items: flex-end; }
 .analytics-list-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
 .analytics-list-search { min-width: 210px; height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid rgba(91, 130, 176, .28); border-radius: 9px; color: var(--muted); background: rgba(5, 17, 31, .78); }
@@ -565,7 +565,7 @@ a { color: inherit; }
   .analytics-pagination { align-items: flex-start; flex-direction: column; }
 }
 
-/* v1.12.47 Paper Market connection indicator */
+
 .paper-market-status {
   min-height: 88px;
   display: grid;
@@ -618,7 +618,7 @@ a { color: inherit; }
 }
 
 
-/* v1.12.48 continuous Paper robot indicator */
+
 .robot-status { margin-top: -2px; }
 .robot-status .paper-market-status-meta { min-width: 330px; }
 .robot-status .paper-market-status-meta small { max-width: 420px; text-align: right; line-height: 1.35; }
@@ -628,7 +628,7 @@ a { color: inherit; }
   .robot-status .paper-market-status-meta small { max-width: none; text-align: left; }
 }
 
-/* v1.12.49 Portfolio market-status metric */
+
 .market-status-metric {
   min-width: 0;
   display: grid;
@@ -680,7 +680,7 @@ a { color: inherit; }
   .market-status-metric-icon { width: 42px; height: 42px; }
 }
 
-/* v1.12.50 Portfolio refresh clock and tab loader */
+
 .portfolio-heading-actions {
   display: flex;
   align-items: center;
@@ -722,7 +722,7 @@ a { color: inherit; }
 }
 
 
-/* v1.12.56 simplified Live schedule heading */
+
 .live-schedule-status {
   min-height: 110px;
   grid-template-columns: auto minmax(155px, .34fr) minmax(840px, 2.3fr);
@@ -860,7 +860,7 @@ a { color: inherit; }
 }
 
 
-/* v1.12.55 manual Portfolio refresh feedback */
+
 .portfolio-button-spinner {
   width: 14px;
   height: 14px;
@@ -871,7 +871,7 @@ a { color: inherit; }
   animation: spin .85s linear infinite;
 }
 
-/* v1.12.58 — simplified invitation login */
+
 .verified-access-panel { display: grid; gap: 14px; }
 .verified-access-heading { padding: 14px; border: 1px solid rgba(47,140,255,.28); border-radius: 12px; background: rgba(47,140,255,.08); }
 .verified-access-heading span { display: block; color: var(--accent); font-size: .68rem; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
@@ -904,13 +904,13 @@ a { color: inherit; }
 @media (max-width: 620px) { .identity-invite-form { grid-template-columns: 1fr; } .verified-access-details div { align-items: flex-start; flex-direction: column; gap: 4px; } }
 
 
-/* v1.12.60 — simplified authentication screen */
+
 .unified-auth-card { display: grid; gap: 20px; }
 .unified-auth-card .auth-brand { margin-bottom: 2px; }
 .primary-administrator-label { display: block; margin-top: 4px; color: #78d5a5; font-size: .6rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
 
 
-/* v1.12.61 — responsive administration and session expiration */
+
 .admin-page, .admin-page > *, .status-table-panel, .table-scroll { min-width: 0; max-width: 100%; }
 .session-expiration-warning { margin: 10px auto 0; width: min(1180px, calc(100% - 28px)); padding: 10px 14px; border: 1px solid rgba(255,207,106,.38); border-radius: 9px; color: #ffe0a0; background: rgba(91,62,13,.44); font-size: .74rem; font-weight: 750; }
 .identity-admin-table { min-width: 0; width: 100%; table-layout: fixed; }
@@ -940,7 +940,7 @@ a { color: inherit; }
 }
 
 
-/* v1.12.62 — administrative Trader controls */
+
 .trader-control-panel { padding: 16px; overflow: hidden; }
 .trader-mode-badge { padding: 6px 10px; border: 1px solid var(--border-strong); border-radius: 999px; font-size: .68rem; font-weight: 850; text-transform: uppercase; }
 .trader-mode-badge.mode-active { color: var(--positive); border-color: rgba(24,217,147,.35); background: rgba(24,217,147,.09); }
@@ -963,7 +963,7 @@ a { color: inherit; }
 @media (max-width: 1100px) { .trader-control-grid { grid-template-columns: 1fr; } .trader-control-actions { justify-content: flex-start; } .trader-control-status { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 620px) { .trader-control-status { grid-template-columns: 1fr; } .trader-control-actions button { flex: 1 1 calc(50% - 7px); } }
 
-/* v1.12.63 — administrator system settings */
+
 .system-settings-page { min-width: 0; padding-bottom: 12px; }
 .system-settings-page .page-heading { position: relative; }
 .settings-revision-badge { margin-left: auto; padding: 6px 10px; border: 1px solid rgba(91, 140, 255, .28); border-radius: 999px; color: #9dc7ff; background: rgba(47, 140, 255, .08); font-size: .66rem; font-weight: 800; white-space: nowrap; }
@@ -1021,7 +1021,7 @@ a { color: inherit; }
 }
 
 
-/* v1.12.64 — contextual parameter hints */
+
 .settings-control-label { min-width: 0; display: flex; align-items: center; gap: 6px; }
 .settings-control-label-text { min-width: 0; overflow-wrap: anywhere; }
 .parameter-hint { position: relative; flex: 0 0 auto; display: inline-flex; align-items: center; }
@@ -1043,7 +1043,7 @@ a { color: inherit; }
   .parameter-hint-card { width: min(292px, calc(100vw - 24px)); }
 }
 
-/* Strategy research workspace */
+
 .strategy-lab-panel {
   overflow: visible;
 }
@@ -1566,7 +1566,7 @@ a { color: inherit; }
 }
 
 
-/* v1.12.68 component-scoped settings refresh and protected local drafts */
+
 .strategy-heading-state {
   display: flex;
   align-items: center;
@@ -1618,7 +1618,7 @@ a { color: inherit; }
 }
 
 
-/* v1.12.69 candidate lifecycle */
+
 .strategy-editor-actions .candidate-action {
   border-color: rgba(86, 203, 142, 0.46);
   background: rgba(55, 154, 105, 0.15);
@@ -1652,7 +1652,7 @@ a { color: inherit; }
 }
 
 
-/* v1.12.70 single Candidate and Winner lifecycle */
+
 .strategy-status.status-superseded_candidate,
 .strategy-status.status-promoted_candidate,
 .strategy-status.status-former_winner {
@@ -1671,7 +1671,7 @@ a { color: inherit; }
   color: #9cc9f3;
 }
 
-/* v1.12.71 metadata-only Winner promotion preserves operational state */
+
 
 .strategy-parameter-tools {
   display: flex;
@@ -1828,7 +1828,7 @@ a { color: inherit; }
   .execution-detail-grid .phase { grid-column: span 2; }
 }
 
-/* v1.12.76 — Portfolio workspace compaction and trade-focused layout */
+
 .portfolio-page { gap: 12px; }
 .portfolio-page-heading { margin-bottom: 1px; }
 
@@ -2176,7 +2176,7 @@ a { color: inherit; }
   .portfolio-summary-item:first-child { border-top: 0; }
 }
 
-/* v1.12.78 — Single-box Portfolio workspace with corrected execution markers */
+
 .portfolio-single-workspace {
   gap: 0;
 }
@@ -2623,7 +2623,7 @@ a { color: inherit; }
   .compact-order-scroll { max-height: 210px; }
 }
 
-/* v1.12.79 — Pointer-centered mouse-wheel zoom for Portfolio Evolution */
+
 .portfolio-chart-zoom-controls {
   display: inline-flex;
   align-items: center;
@@ -2672,7 +2672,7 @@ a { color: inherit; }
   }
 }
 
-/* v1.12.80 — unified System Settings workspace and descriptive field hints */
+
 .system-settings-page {
   gap: 0;
 }
@@ -3160,11 +3160,11 @@ a { color: inherit; }
 }
 
 
-/* v1.12.81 — portal-based hints avoid clipping inside strategy groups and compact workspaces */
+
 .parameter-hint-card-portal { max-height: min(72vh, 520px); overflow-y: auto; overscroll-behavior: contain; }
 @media (prefers-reduced-motion: reduce) { .parameter-hint-card-portal { animation: none; } }
 
-/* v1.12.82 — unified Backtest workspace, sortable/paginated lists and contextual metric hints */
+
 .backtest-single-workspace { gap: 0; }
 .backtest-workspace-panel { min-width: 0; padding: 0; overflow: visible; }
 .backtest-workspace-header {
@@ -3335,7 +3335,7 @@ a { color: inherit; }
   .backtest-pagination { align-items: flex-start; flex-direction: column; }
 }
 
-/* v1.12.83 — inline metric hints and interactive Backtest chart zoom/pan/trade points */
+
 .backtest-workspace-metrics .result-metric .backtest-field-label,
 .backtest-rotation-summary .result-metric .backtest-field-label {
   width: max-content;
@@ -3473,7 +3473,7 @@ a { color: inherit; }
   .backtest-chart-controls { white-space: normal; }
 }
 
-/* v1.12.84 — unified Analytics workspaces, compact metrics and sortable/paginated execution tables */
+
 .analytics-single-workspace { gap: 0; }
 .analytics-workspace-panel {
   min-width: 0;
@@ -3934,7 +3934,7 @@ a { color: inherit; }
   .analytics-filter-count { margin-left: 0; align-self: center; }
 }
 
-/* v1.12.85 — unified Administration workspace, contextual hints and sortable/paginated access data */
+
 .administration-page.administration-single-workspace { gap: 0; padding-bottom: 12px; }
 .administration-workspace-panel { min-width: 0; padding: 0; overflow: visible; }
 .administration-workspace-header {
@@ -4186,7 +4186,7 @@ a { color: inherit; }
 }
 
 
-/* v1.12.86 — compact System Settings runtime and model execution workspace */
+
 .settings-runtime-overview {
   display: grid;
   grid-template-columns: .7fr .9fr 1fr .8fr 1.25fr;
@@ -4301,7 +4301,7 @@ a { color: inherit; }
   .settings-model-execution-grid .settings-control-label-text { white-space: normal; }
 }
 
-/* v1.12.87 — compact unified Dashboard workspace, contextual hints and paginated execution history */
+
 .dashboard-single-workspace { gap: 0; }
 .dashboard-workspace-panel {
   min-width: 0;
@@ -4634,7 +4634,7 @@ a { color: inherit; }
   .dashboard-pagination { align-items: flex-start; flex-direction: column; }
 }
 
-/* v1.12.88 — restore consistent grab/grabbing cursors for interactive time-series charts */
+
 .backtest-interactive-chart,
 .portfolio-interactive-chart {
   cursor: grab !important;
@@ -4665,7 +4665,7 @@ a { color: inherit; }
   cursor: pointer !important;
 }
 
-/* v1.12.91 — dashboard trade explorer */
+
 .dashboard-story-section {
   padding: 12px 14px 14px;
   border-top: 1px solid rgba(79, 111, 146, .18);
@@ -4978,7 +4978,7 @@ a { color: inherit; }
 }
 
 
-/* v1.12.92 — selected trade strategy vs buy & hold */
+
 .dashboard-selected-trade-actions {
   display: flex;
   align-items: center;
@@ -5058,7 +5058,7 @@ a { color: inherit; }
   .dashboard-selected-trade-chart { height: 210px; }
 }
 
-/* v1.12.93 — synchronized Backtest Analytics performance explorer */
+
 .analytics-chart-cell-heading > div:first-child {
   min-width: 0;
   display: flex;
@@ -5255,7 +5255,7 @@ a { color: inherit; }
 }
 
 
-/* v1.12.94 — focused Analytics performance + expanded monthly heatmap */
+
 .analytics-heatmap-feature-cell {
   border-top: 1px solid rgba(79, 111, 146, .16) !important;
   padding: 12px 14px 15px;
@@ -5297,7 +5297,7 @@ a { color: inherit; }
   .analytics-heatmap-feature-cell .analytics-heatmap-cell { min-height: 35px; }
 }
 
-/* v1.12.95 — draggable Analytics chart cards */
+
 .analytics-reorderable-performance {
   overflow: visible;
 }
@@ -5453,7 +5453,7 @@ a { color: inherit; }
   }
 }
 
-/* Language selector */
+
 .language-selector {
   display: inline-flex;
   align-items: center;
@@ -5529,7 +5529,7 @@ a { color: inherit; }
 }
 
 
-/* Header language selector occupies the former version/status position. */
+
 .header-language-primary {
   display: flex;
   align-items: center;
@@ -5546,7 +5546,7 @@ a { color: inherit; }
   .app-footer-versions { width: 100%; justify-content: center; }
 }
 
-/* v1.12.100 — S − R indicator and neutral return tone */
+
 .analytics-performance-tooltip b.neutral { color: #9fb7cc; }
 .analytics-difference-hint {
   display: inline-flex;
@@ -5562,7 +5562,7 @@ a { color: inherit; }
   font-size: .56rem;
 }
 
-/* Rotation Inspector — strategy-neutral retrospective diagnostics */
+
 .rotation-inspector-section { display: grid; gap: 14px; }
 .rotation-inspector-unavailable {
   display: grid;
@@ -5663,7 +5663,7 @@ a { color: inherit; }
   .rotation-inspector-table { min-width: 720px; }
 }
 
-/* Assets are edited as plain ticker text. The API owns normalization and list construction. */
+
 .strategy-asset-field {
   grid-column: 1 / -1;
 }
@@ -5706,7 +5706,7 @@ a { color: inherit; }
   color: inherit;
 }
 
-/* v1.12.109 — model-specific research settings */
+
 .model-research-settings-section { display: grid; gap: 14px; }
 .model-research-settings-section .settings-section-heading p { margin: 5px 0 0; max-width: 760px; color: var(--muted); font-size: .82rem; line-height: 1.45; }
 .model-research-heading-meta { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
@@ -5784,7 +5784,7 @@ a { color: inherit; }
   .model-research-history > div { grid-template-columns: 1fr; gap: 3px; }
 }
 
-/* v1.12.112 — Strategy-owned model selection */
+
 .model-research-selector-single { grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr); }
 .model-research-bound-state {
   display: grid;
@@ -5816,7 +5816,7 @@ a { color: inherit; }
 }
 
 
-/* v1.12.113 — portfolio chart measurement ruler */
+
 .portfolio-chart-measure-controls {
   display: inline-flex;
   align-items: center;
@@ -5919,7 +5919,7 @@ a { color: inherit; }
   .portfolio-measurement-result:not(.interval) { grid-column: 1 / -1; padding-top: 5px; border-top: 1px solid rgba(82, 132, 190, .12); }
 }
 
-/* Model tuning — admin research only */
+
 .model-tuning-panel { display: grid; gap: 14px; margin-top: 4px; padding-top: 16px; border-top: 1px solid rgba(79,111,146,.2); }
 .model-tuning-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
 .model-tuning-heading h3 { margin: 3px 0 4px; font-size: 1rem; }
@@ -5965,7 +5965,7 @@ a { color: inherit; }
 @media (max-width: 1050px) { .model-tuning-controls { grid-template-columns: repeat(2,minmax(0,1fr)); } .model-tuning-actions { justify-content: flex-end; } .model-tuning-space-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 680px) { .model-tuning-heading { flex-direction: column; } .model-tuning-controls, .model-tuning-space-grid { grid-template-columns: 1fr; } .model-tuning-actions { justify-content: stretch; } .model-tuning-actions button { flex: 1; } }
 
-/* v1.12.116 — Model Tuning is an execution workspace, not a Settings section. */
+
 .backtest-research-mode-switch { display: inline-flex; align-items: center; padding: 3px; border: 1px solid rgba(79,111,146,.24); border-radius: 9px; background: rgba(7,21,39,.52); }
 .backtest-research-mode-switch button { min-height: 32px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: .74rem; font-weight: 700; cursor: pointer; }
 .backtest-research-mode-switch button.active { background: rgba(47,140,255,.14); color: var(--text); box-shadow: inset 0 0 0 1px rgba(47,140,255,.24); }
@@ -5993,7 +5993,7 @@ a { color: inherit; }
 @media (max-width: 1120px) { .model-tuning-baseline-metrics { grid-template-columns: repeat(3,minmax(0,1fr)); } .model-tuning-settings-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
 @media (max-width: 760px) { .backtest-research-mode-switch { width: 100%; } .backtest-research-mode-switch button { flex: 1; } .model-tuning-context-grid, .model-tuning-baseline-metrics, .model-tuning-settings-grid, .model-tuning-fold-grid { grid-template-columns: 1fr; } }
 
-/* v1.12.117 — Dedicated tuning worker and optional CARO Probability research. */
+
 .model-tuning-context-grid-wide { grid-template-columns: repeat(3,minmax(0,1fr)); }
 .model-tuning-context-grid .worker-online { border-color: rgba(24,217,147,.28); background: rgba(24,217,147,.045); }
 .model-tuning-context-grid .worker-offline { border-color: rgba(255,177,66,.28); background: rgba(255,177,66,.045); }
@@ -6015,7 +6015,7 @@ a { color: inherit; }
 @media (max-width: 1120px) { .model-tuning-context-grid-wide { grid-template-columns: repeat(2,minmax(0,1fr)); } .model-tuning-probability-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
 @media (max-width: 760px) { .model-tuning-context-grid-wide, .model-tuning-method-selector, .model-tuning-probability-grid, .model-tuning-proposal-grid { grid-template-columns: 1fr; } }
 
-/* v1.12.118 — CARO can reuse completed Latin Hypercube evidence inside the integrated research worker. */
+
 .model-tuning-prior-source { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); gap: 10px; margin: 10px 0; }
 .model-tuning-prior-source > label { display: grid; gap: 6px; padding: 10px 11px; border: 1px solid rgba(151,105,255,.22); border-radius: 9px; background: rgba(151,105,255,.035); }
 .model-tuning-prior-source span, .model-tuning-anchor-card span { color: var(--muted); font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
@@ -6038,7 +6038,7 @@ a { color: inherit; }
   text-transform: uppercase;
 }
 
-/* v1.12.119 — persistent admin-only diagnostics for Model Tuning campaigns and candidates. */
+
 .model-tuning-failure-type { color: #ff9e9e !important; font-weight: 700; }
 .model-tuning-candidate-failure { display: grid; grid-template-columns: minmax(160px,.5fr) minmax(0,1.8fr) auto; gap: 10px; align-items: center; padding: 10px 11px; border: 1px solid rgba(255,94,94,.28); border-radius: 8px; background: rgba(255,94,94,.045); }
 .model-tuning-candidate-failure strong { font-size: .78rem; }
@@ -6056,9 +6056,9 @@ a { color: inherit; }
 .model-tuning-log-actions { display: flex; justify-content: flex-end; gap: 8px; }
 @media (max-width: 760px) { .model-tuning-log-overlay { padding: 10px; } .model-tuning-log-dialog { width: 100%; max-height: 94vh; } .model-tuning-candidate-failure { grid-template-columns: 1fr; } .model-tuning-log-actions button { flex: 1; } }
 
-/* v2.0.0 — lifecycle governance: one Candidate, one Promoted Candidate and one Winner. */
 
-/* v2.0.0 lifecycle governance */
+
+
 .strategy-list-markers span.promoted {
   background: rgba(86, 136, 203, 0.16);
   color: #9ec8f2;
@@ -6073,7 +6073,7 @@ a { color: inherit; }
   background: transparent;
 }
 
-/* v2.0.3 — protected Strategy Intelligence inside Dashboard */
+
 .dashboard-intelligence-section {
   min-width: 0;
   padding: 14px;

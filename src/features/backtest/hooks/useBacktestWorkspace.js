@@ -54,7 +54,6 @@ export function useBacktestWorkspace() {
     try {
       return await apiFetch(`${API}/jobs/latest`)
     } catch (requestError) {
-      // A clean installation may not have any job yet. Do not block the UI for that case.
       if (!String(requestError.message || '').includes('404')) {
         setError(requestError.message)
       }
@@ -148,8 +147,6 @@ export function useBacktestWorkspace() {
     setDetail(null)
     setStartingBacktest(true)
     try {
-      // Recheck the server immediately before creating a job. This protects against
-      // another browser tab or a stale client attempting to start a duplicate run.
       const latest = await loadLatestJob()
       if (latest && ACTIVE_JOB_STATUSES.has(latest.status)) {
         setJob(latest)

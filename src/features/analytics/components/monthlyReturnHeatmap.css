@@ -97,7 +97,7 @@
   .analytics-heatmap-cell:not(.empty):focus-visible { transform: none; }
 }
 
-/* v1.12.100 — neutral S − R state */
+
 .analytics-heatmap-cell.neutral {
   color: #bdd0e2;
   background: rgba(102, 130, 156, var(--heat-alpha));

@@ -144,7 +144,7 @@ export function ModelResearchSettingsPanel({
     setReason('')
     setNotice('')
     setError('')
-  }, [strategy?.id, strategy?.revision, savedModelFamily]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [strategy?.id, strategy?.revision, savedModelFamily])
 
   const selectedModel = useMemo(
     () => (payload?.models || []).find((item) => item.id === selectedModelId) || null,

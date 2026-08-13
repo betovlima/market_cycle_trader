@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError, apiFetch, downloadFile } from '../api/http'
 import { API } from '../config/env'
 import { tr } from '../i18n/runtime'
-import { shortDateTime } from '../shared/formatters'
 
 const ACTIVE = new Set(['queued', 'running', 'stop_requested'])
 const PROBABILITY_METHOD = 'champion_probability'
@@ -30,16 +29,6 @@ function candidateLabel(candidate) {
   return `${tr('Candidate')} ${candidate.candidate_id}`
 }
 
-function baselineLabel(item) {
-  const metrics = item?.metrics || {}
-  return `${shortDateTime(item?.finished_at || item?.created_at)} · ${money(metrics.ending_capital)} · ${decimal(metrics.sharpe)}`
-}
-
-function sourceLabel(item) {
-  const best = item?.best_candidate || {}
-  return `${shortDateTime(item?.finished_at)} · ${item?.observation_count || 0} observations · best ${money(best?.metrics?.ending_capital)}`
-}
-
 function numberOr(value, fallback = 0) {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : fallback
@@ -50,10 +39,6 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
   const [strategy, setStrategy] = useState(null)
   const [modelFamily, setModelFamily] = useState('')
   const [baselines, setBaselines] = useState([])
-  const [baselineJobId, setBaselineJobId] = useState('')
-  const [sources, setSources] = useState([])
-  const [sourceRunId, setSourceRunId] = useState('')
-  const [anchorCandidateId, setAnchorCandidateId] = useState('')
   const [run, setRun] = useState(null)
   const [method, setMethod] = useState(PROBABILITY_METHOD)
   const [candidateCount, setCandidateCount] = useState(20)
@@ -90,14 +75,13 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
 
   const loadWorkspace = useCallback(async () => {
     try {
-      const [nextCatalog, control, sourcePayload] = await Promise.all([
+      const [nextCatalog, control] = await Promise.all([
         apiFetch(`${API}/admin/model-tuning/catalog`),
         apiFetch(`${API}/admin/strategies/control`),
-        apiFetch(`${API}/admin/model-tuning/sources?limit=20`),
       ])
-      const strategyId = control?.research_strategy_id
+      const strategyId = control?.candidate_strategy_id || control?.promoted_candidate_strategy_id || control?.research_strategy_id
       const detail = strategyId ? await apiFetch(`${API}/admin/strategies/${encodeURIComponent(strategyId)}`) : null
-      const [baselinePayload, latest] = await Promise.all([
+      const [baselinePayload] = await Promise.all([
         apiFetch(`${API}/admin/model-tuning/baselines?limit=20`),
         loadLatest(),
       ])
@@ -108,9 +92,6 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
       setStrategy(detail)
       setModelFamily(savedModel?.family || '')
       setBaselines(items)
-      const sourceItems = Array.isArray(sourcePayload?.items) ? sourcePayload.items : []
-      setSources(sourceItems)
-      setSourceRunId((current) => current && sourceItems.some((item) => item.run_id === current) ? current : '')
       setCandidateCount(nextCatalog.default_candidate_count || 20)
       setSeed(nextCatalog.default_seed ?? 42)
       setStartupTrials(String(probability.default_startup_trials ?? ''))
@@ -118,12 +99,6 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
       setSharpeTolerance(String(probability.default_sharpe_tolerance ?? ''))
       setDrawdownTolerancePct(String(numberOr(probability.default_drawdown_tolerance) * 100))
       setMinimumWorstFoldPct(String(numberOr(probability.default_min_worst_fold_return) * 100))
-      setBaselineJobId((current) => {
-        const preferred = latest?.baseline_execution?.job_id
-        if (preferred && items.some((item) => item.job_id === preferred)) return preferred
-        if (current && items.some((item) => item.job_id === current)) return current
-        return items[0]?.job_id || ''
-      })
       setError('')
     } catch (requestError) {
       handleError(requestError)
@@ -163,26 +138,12 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
     return items
   }, [run?.candidates])
 
-  const selectedBaseline = useMemo(
-    () => baselines.find((item) => item.job_id === baselineJobId) || null,
-    [baselineJobId, baselines],
-  )
+  const selectedBaseline = baselines[0] || null
 
   const selectedCandidate = useMemo(
     () => sortedCandidates.find((item) => item.candidate_id === selectedCandidateId) || null,
     [selectedCandidateId, sortedCandidates],
   )
-
-  const selectedSource = useMemo(
-    () => sources.find((item) => item.run_id === sourceRunId) || null,
-    [sourceRunId, sources],
-  )
-
-  const selectedAnchor = useMemo(() => {
-    const candidates = selectedSource?.eligible_candidates || []
-    const id = anchorCandidateId === '' ? selectedSource?.best_candidate?.candidate_id : Number(anchorCandidateId)
-    return candidates.find((item) => Number(item.candidate_id) === Number(id)) || selectedSource?.best_candidate || null
-  }, [anchorCandidateId, selectedSource])
 
   const selectedMethod = useMemo(
     () => (catalog?.methods || []).find((item) => item.id === method) || null,
@@ -192,17 +153,17 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
   const active = Boolean(run && ACTIVE.has(run.status))
   const probabilityMode = method === PROBABILITY_METHOD
   const startActionLabel = probabilityMode ? tr('Start Adaptive CARO') : tr('Start Latin Hypercube')
-  const reusingPriorCampaign = probabilityMode && Boolean(selectedSource)
+  const protectedCandidate = Boolean(strategy?.locked && ['candidate', 'promoted_candidate'].includes(String(strategy?.status || '')))
   const canTune = Boolean(
     strategy
-    && !strategy.locked
+    && (!strategy.locked || protectedCandidate)
     && modelFamily === catalog?.model_family
-    && (reusingPriorCampaign ? selectedAnchor : selectedBaseline)
+    && selectedBaseline
   )
 
   async function start() {
     if (!canTune || busy) return
-    if (probabilityMode && !reusingPriorCampaign && numberOr(startupTrials) >= numberOr(candidateCount)) {
+    if (probabilityMode && numberOr(startupTrials) >= numberOr(candidateCount)) {
       setError(tr('Startup trials must be smaller than the total candidate count.'))
       return
     }
@@ -215,14 +176,9 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
         candidate_count: Number(candidateCount),
         seed: Number(seed),
       }
-      if (!reusingPriorCampaign) body.baseline_job_id = baselineJobId
       if (probabilityMode) {
-        if (reusingPriorCampaign) {
-          body.source_tuning_run_id = selectedSource.run_id
-          body.anchor_candidate_id = Number(selectedAnchor.candidate_id)
-        }
         body.probability = {
-          startup_trials: reusingPriorCampaign ? 4 : Number(startupTrials),
+          startup_trials: Number(startupTrials),
           min_capital_improvement: numberOr(minimumCapitalImprovementPct) / 100,
           sharpe_tolerance: numberOr(sharpeTolerance),
           drawdown_tolerance: numberOr(drawdownTolerancePct) / 100,
@@ -232,10 +188,8 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
       const created = await apiFetch(`${API}/admin/model-tuning`, { method: 'POST', body })
       setRun(created)
       setNotice(probabilityMode
-        ? reusingPriorCampaign
-          ? tr('Adaptive CARO started from the selected completed exploration. Adaptive trials begin immediately against the selected Champion anchor.')
-          : tr('Adaptive CARO tuning started. It runs a small Latin Hypercube warm-up and then proposes each next candidate only after learning from completed results.')
-        : tr('Latin Hypercube tuning started in the integrated research worker.'))
+        ? tr('Adaptive CARO started directly from the certified Candidate Backtest. No manual clone or prior exploration is required.')
+        : tr('Latin Hypercube tuning started from the certified Candidate Backtest.'))
     } catch (requestError) {
       handleError(requestError)
     } finally {
@@ -274,7 +228,9 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
         body: { reason: normalizedReason },
       })
       setReason('')
-      setNotice(tr('Candidate adopted as the Strategy model. Run one final normal Backtest before Candidate/Trader promotion.'))
+      setNotice(tr(response.derived_strategy_created
+        ? 'Research Champion saved as a new working Strategy. The certified Candidate was preserved; run one final normal Backtest before promotion.'
+        : 'Candidate adopted as the Strategy model. Run one final normal Backtest before Candidate/Trader promotion.'))
       await onStrategyModelSaved?.(response.strategy)
       await loadWorkspace()
     } catch (requestError) {
@@ -371,16 +327,16 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
 
       {error ? <div className="global-inline-message error-inline">{error}</div> : null}
       {notice ? <div className="global-inline-message success-inline">{notice}</div> : null}
-      {!strategy ? <div className="global-inline-message warning-inline">{tr('Select a Strategy before starting model tuning.')}</div> : null}
-      {strategy?.locked ? <div className="global-inline-message warning-inline">{tr('Clone the protected Strategy before starting model tuning.')}</div> : null}
-      {strategy && modelFamily !== catalog.model_family ? <div className="global-inline-message warning-inline">{tr('Save LightGBM on the selected Strategy before starting model tuning.')}</div> : null}
-      {strategy && modelFamily === catalog.model_family && !baselines.length && !(probabilityMode && sources.length) ? <div className="global-inline-message warning-inline">{tr('Run a normal Simulation Backtest with the saved LightGBM model first. The completed execution becomes the tuning baseline.')}</div> : null}
+      {!strategy ? <div className="global-inline-message warning-inline">{tr('No Candidate or selected Strategy is available for model tuning.')}</div> : null}
+      {strategy?.locked && !protectedCandidate ? <div className="global-inline-message warning-inline">{tr('The protected Strategy is not an eligible Candidate tuning target.')}</div> : null}
+      {strategy && modelFamily !== catalog.model_family ? <div className="global-inline-message warning-inline">{tr('The current tuning target must use LightGBM.')}</div> : null}
+      {strategy && modelFamily === catalog.model_family && !baselines.length ? <div className="global-inline-message warning-inline">{tr('A completed compatible Backtest is required before tuning. Certified Candidate Backtests are detected automatically.')}</div> : null}
 
       <div className="model-tuning-context-grid model-tuning-context-grid-wide">
         <div>
-          <span>{tr('Selected Strategy')}</span>
+          <span>{tr('Tuning target')}</span>
           <strong>{strategy?.name || '—'}</strong>
-          <small>{strategy ? `${tr('Revision')} ${strategy.revision}` : '—'}</small>
+          <small>{strategy ? `${tr(strategy.status)} · ${tr('Revision')} ${strategy.revision}` : '—'}</small>
         </div>
         <div>
           <span>{tr('Saved model')}</span>
@@ -394,48 +350,32 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
         </div>
       </div>
 
-      {!reusingPriorCampaign ? (
-        <div className="model-tuning-baseline">
+      <div className="model-tuning-baseline">
         <div className="model-tuning-results-heading">
           <div>
-            <strong>{tr('Baseline execution')}</strong>
-            <span>{tr(reusingPriorCampaign ? 'The imported campaign supplies the frozen execution context; this baseline selector is not used by CARO.' : 'Choose a completed normal Backtest compatible with the currently saved Strategy and model snapshot.')}</span>
+            <strong>{tr('Automatic baseline')}</strong>
+            <span>{tr('The API uses the certified Candidate Backtest automatically. No clone, baseline selection or prior tuning campaign is required.')}</span>
           </div>
           <button type="button" className="secondary-action compact" onClick={loadWorkspace} disabled={busy || active}>{tr('Refresh')}</button>
         </div>
-        {baselines.length ? (
-          <>
-            <select value={baselineJobId} onChange={(event) => setBaselineJobId(event.target.value)} disabled={active || busy}>
-              {baselines.map((item) => <option key={item.job_id} value={item.job_id}>{baselineLabel(item)}</option>)}
-            </select>
-            {selectedBaseline ? (
-              <div className="model-tuning-baseline-metrics">
-                <div><span>{tr('Execution')}</span><strong>{selectedBaseline.job_id}</strong></div>
-                <div><span>{tr('Capital')}</span><strong>{money(selectedBaseline.metrics?.ending_capital)}</strong></div>
-                <div><span>{tr('CAGR')}</span><strong>{pct(selectedBaseline.metrics?.cagr)}</strong></div>
-                <div><span>{tr('Sharpe')}</span><strong>{decimal(selectedBaseline.metrics?.sharpe)}</strong></div>
-                <div><span>{tr('Max DD')}</span><strong>{pct(selectedBaseline.metrics?.maximum_drawdown)}</strong></div>
-                <div><span>{tr('Worst fold')}</span><strong>{pct(selectedBaseline.metrics?.worst_fold_return)}</strong></div>
-              </div>
-            ) : null}
-          </>
+        {selectedBaseline ? (
+          <div className="model-tuning-baseline-metrics">
+            <div><span>{tr('Execution')}</span><strong>{selectedBaseline.job_id}</strong></div>
+            <div><span>{tr('Capital')}</span><strong>{money(selectedBaseline.metrics?.ending_capital)}</strong></div>
+            <div><span>{tr('CAGR')}</span><strong>{pct(selectedBaseline.metrics?.cagr)}</strong></div>
+            <div><span>{tr('Sharpe')}</span><strong>{decimal(selectedBaseline.metrics?.sharpe)}</strong></div>
+            <div><span>{tr('Max DD')}</span><strong>{pct(selectedBaseline.metrics?.maximum_drawdown)}</strong></div>
+            <div><span>{tr('Worst fold')}</span><strong>{pct(selectedBaseline.metrics?.worst_fold_return)}</strong></div>
+          </div>
         ) : <div className="model-tuning-empty-baseline">{tr('No compatible completed baseline execution was found.')}</div>}
       </div>
-      ) : null}
 
       <div className="model-tuning-method-selector">
         <label>
           <span>{tr('Research method')}</span>
           <select
             value={method}
-            onChange={(event) => {
-              const nextMethod = event.target.value
-              setMethod(nextMethod)
-              if (nextMethod !== PROBABILITY_METHOD) {
-                setSourceRunId('')
-                setAnchorCandidateId('')
-              }
-            }}
+            onChange={(event) => setMethod(event.target.value)}
             disabled={active || busy}
           >
             {(catalog.methods || []).map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
@@ -449,7 +389,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
 
       <div className="model-tuning-controls">
         <label>
-          <span>{tr(probabilityMode && reusingPriorCampaign ? 'New adaptive trials' : probabilityMode ? 'Total research trials' : 'Exploration candidates')}</span>
+          <span>{tr(probabilityMode ? 'Total research trials' : 'Exploration candidates')}</span>
           <input type="number" min={catalog.candidate_count_min} max={catalog.candidate_count_max} step="1" value={candidateCount} disabled={!canTune || active || busy} onChange={(event) => setCandidateCount(event.target.value)} />
         </label>
         <label>
@@ -459,7 +399,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
         <div className="model-tuning-control-note">
           <span>{tr('Validation')}</span>
           <strong>{tr('Chronological walk-forward')}</strong>
-          <small>{probabilityMode ? reusingPriorCampaign ? tr('Imported completed observations + sequential adaptive CARO trials') : tr('Small LHS warm-up + sequential adaptive CARO trials') : tr('1 fresh control rerun + exploration candidates')}</small>
+          <small>{probabilityMode ? tr('Small LHS warm-up + sequential adaptive CARO trials') : tr('1 fresh control rerun + exploration candidates')}</small>
         </div>
         <div className="model-tuning-actions">
           <button type="button" className="primary-action" onClick={start} disabled={!canTune || active || busy}>{busy && !active ? tr('Starting…') : startActionLabel}</button>
@@ -468,49 +408,19 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
       </div>
 
       {probabilityMode ? (
-        <div className="model-tuning-probability-config">
-          <div className="model-tuning-results-heading">
-            <div>
-              <strong>{tr('Champion probability gates')}</strong>
-              <span>{tr('Adaptive CARO starts fresh by default. It uses a small Latin Hypercube warm-up and then learns sequentially after every candidate. A completed prior exploration can still be selected explicitly as optional evidence; it is never auto-selected.')}</span>
+        <details className="model-tuning-space model-tuning-advanced">
+          <summary>{tr('Advanced CARO settings')}<span>{tr('Optional')}</span></summary>
+          <div className="model-tuning-probability-config">
+            <div className="model-tuning-probability-grid">
+              <label><span>{tr('Warm-up Latin Hypercube trials')}</span><input type="number" min="4" step="1" value={startupTrials} disabled={active || busy} onChange={(event) => setStartupTrials(event.target.value)} /></label>
+              <label><span>{tr('Minimum capital improvement (%)')}</span><input type="number" min="0" step="0.1" value={minimumCapitalImprovementPct} disabled={active || busy} onChange={(event) => setMinimumCapitalImprovementPct(event.target.value)} /></label>
+              <label><span>{tr('Sharpe tolerance')}</span><input type="number" min="0" step="0.01" value={sharpeTolerance} disabled={active || busy} onChange={(event) => setSharpeTolerance(event.target.value)} /></label>
+              <label><span>{tr('Drawdown tolerance (pp)')}</span><input type="number" min="0" step="0.1" value={drawdownTolerancePct} disabled={active || busy} onChange={(event) => setDrawdownTolerancePct(event.target.value)} /></label>
+              <label><span>{tr('Minimum worst fold (%)')}</span><input type="number" step="0.1" value={minimumWorstFoldPct} disabled={active || busy} onChange={(event) => setMinimumWorstFoldPct(event.target.value)} /></label>
             </div>
+            <p>{tr('The displayed probability is a research-surrogate estimate of beating the current Champion under this validation protocol. It is not a probability of future market profit.')}</p>
           </div>
-          <div className="model-tuning-prior-source">
-            <label>
-              <span>{tr('Prior exploration')}</span>
-              <select value={sourceRunId} disabled={active || busy} onChange={(event) => { setSourceRunId(event.target.value); setAnchorCandidateId('') }}>
-                <option value="">{tr('None — start CARO independently')}</option>
-                {sources.map((item) => <option key={item.run_id} value={item.run_id}>{sourceLabel(item)}</option>)}
-              </select>
-            </label>
-            {selectedSource ? (
-              <label>
-                <span>{tr('Champion anchor')}</span>
-                <select value={anchorCandidateId === '' ? String(selectedSource.best_candidate?.candidate_id ?? '') : anchorCandidateId} disabled={active || busy} onChange={(event) => setAnchorCandidateId(event.target.value)}>
-                  {(selectedSource.eligible_candidates || []).map((item) => <option key={item.candidate_id} value={item.candidate_id}>{`#${item.candidate_id} · ${money(item.metrics?.ending_capital)} · Sharpe ${decimal(item.metrics?.sharpe)} · DD ${pct(item.metrics?.maximum_drawdown)}`}</option>)}
-                </select>
-              </label>
-            ) : null}
-          </div>
-          {selectedSource && selectedAnchor ? (
-            <div className="model-tuning-anchor-card">
-              <div><span>{tr('Imported observations')}</span><strong>{selectedSource.observation_count}</strong></div>
-              <div><span>{tr('Anchor capital')}</span><strong>{money(selectedAnchor.metrics?.ending_capital)}</strong></div>
-              <div><span>{tr('Anchor Sharpe')}</span><strong>{decimal(selectedAnchor.metrics?.sharpe)}</strong></div>
-              <div><span>{tr('Anchor max DD')}</span><strong>{pct(selectedAnchor.metrics?.maximum_drawdown)}</strong></div>
-              <div><span>{tr('Anchor worst fold')}</span><strong>{pct(selectedAnchor.metrics?.worst_fold_return)}</strong></div>
-              <div><span>{tr('Frozen data through')}</span><strong>{selectedSource.market_data_cutoff_date || '—'}</strong></div>
-            </div>
-          ) : null}
-          <div className="model-tuning-probability-grid">
-            {!reusingPriorCampaign ? <label><span>{tr('Warm-up Latin Hypercube trials')}</span><input type="number" min="4" step="1" value={startupTrials} disabled={active || busy} onChange={(event) => setStartupTrials(event.target.value)} /></label> : null}
-            <label><span>{tr('Minimum capital improvement (%)')}</span><input type="number" min="0" step="0.1" value={minimumCapitalImprovementPct} disabled={active || busy} onChange={(event) => setMinimumCapitalImprovementPct(event.target.value)} /></label>
-            <label><span>{tr('Sharpe tolerance')}</span><input type="number" min="0" step="0.01" value={sharpeTolerance} disabled={active || busy} onChange={(event) => setSharpeTolerance(event.target.value)} /></label>
-            <label><span>{tr('Drawdown tolerance (pp)')}</span><input type="number" min="0" step="0.1" value={drawdownTolerancePct} disabled={active || busy} onChange={(event) => setDrawdownTolerancePct(event.target.value)} /></label>
-            <label><span>{tr('Minimum worst fold (%)')}</span><input type="number" step="0.1" value={minimumWorstFoldPct} disabled={active || busy} onChange={(event) => setMinimumWorstFoldPct(event.target.value)} /></label>
-          </div>
-          <p>{tr('The displayed probability is a research-surrogate estimate of beating the selected Champion under this validation protocol. It is not a probability of future market profit.')}</p>
-        </div>
+        </details>
       ) : null}
 
       <details className="model-tuning-space">
@@ -543,7 +453,6 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
           {run.probability_anchor ? <small>{tr('Champion anchor')} · {run.probability_anchor.candidate_id !== undefined ? `#${run.probability_anchor.candidate_id} · ` : ''}{money(run.probability_anchor.metrics?.ending_capital)} · {run.imported_observation_count || 0} {tr('imported observations')}</small> : null}
           {run.method === PROBABILITY_METHOD && run.probability_state ? <small>{tr('Adaptive state')} · {tr('Champion')} #{run.probability_state.last_champion_candidate_id ?? run.probability_anchor?.candidate_id ?? 0} · {tr('Trust region')} {(Number(run.probability_state.trust_region_radius || 0) * 100).toFixed(1)}% · {tr('Adaptive trials')} {run.probability_state.adaptive_trials_completed || 0} · {tr('No-improvement streak')} {run.probability_state.no_improvement_streak || 0}</small> : null}
           {run.market_data_cutoff_date ? <small>{tr('Frozen market-data cutoff')} · {run.market_data_cutoff_date}</small> : null}
-          {run.source_tuning_run_id && run.adoption_context_compatible === false ? <small>{tr('Imported research context differs from the selected Strategy. Adoption applies model settings for confirmation only; a normal Backtest in the target Strategy remains mandatory.')}</small> : null}
           {run.status === 'stop_requested' ? <small>{tr('Cancelling the active tuning candidate now. Partial research artifacts will be discarded.')}</small> : null}
           {run.active_candidate_ids?.length ? <small>{tr(run.status === 'stop_requested' ? 'Cancelling candidate' : 'Active candidates')} · {run.active_candidate_ids.map((id) => `#${id}`).join(', ')}</small> : null}
         </div>
