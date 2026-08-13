@@ -6328,3 +6328,8 @@ a { color: inherit; }
   .dashboard-strategy-config dd,
   .dashboard-candidate-settings dd { text-align: left; }
 }
+.model-tuning-column-heading { display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.model-tuning-table th:nth-child(2) .model-tuning-column-heading,
+.model-tuning-table th:nth-child(3) .model-tuning-column-heading { justify-content: flex-start; }
+.model-tuning-column-heading .parameter-hint { display: inline-flex; flex: 0 0 auto; }
+.model-tuning-column-heading .parameter-hint-trigger { width: 15px; height: 15px; min-width: 15px; font-size: .55rem; }

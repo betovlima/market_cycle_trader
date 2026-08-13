@@ -192,6 +192,9 @@ export function DecisionTimelineTooltip({ active, payload }) {
     <div><span>{tr('Best utility')}</span><b>{decimal(row.best_score)}</b></div>
     <div><span>{tr('Best cash edge')}</span><b>{decimal(row.best_cash_edge)}</b></div>
     <div><span>{tr('Current cash edge')}</span><b>{decimal(row.current_cash_edge)}</b></div>
+    {Number.isFinite(Number(row.opportunity_probability)) ? <div><span>{tr('Opportunity Probability')}</span><b>{percent(row.opportunity_probability)}</b></div> : null}
+    {Number.isFinite(Number(row.opportunity_confidence)) ? <div><span>{tr('Opportunity Confidence')}</span><b>{percent(row.opportunity_confidence)}</b></div> : null}
+    {Number.isFinite(Number(row.opportunity_threshold)) ? <div><span>{tr(Number.isFinite(Number(row.opportunity_confidence)) ? 'Opportunity confidence threshold' : 'Opportunity threshold')}</span><b>{percent(row.opportunity_threshold)}</b></div> : null}
   </div>
 }
 

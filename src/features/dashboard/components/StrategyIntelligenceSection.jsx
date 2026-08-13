@@ -17,11 +17,17 @@ export function StrategyIntelligenceSection({
   onForecastViewChange,
   forecastRows,
   forecastHasCashEdge,
+  forecastHasOpportunity,
+  forecastOpportunitySignal,
+  forecastUsesOpportunityConfidence,
   decisionRows,
+  decisionHasOpportunity,
+  decisionUsesOpportunityConfidence,
   cashIntervals,
   decisionSpan,
   cashExitThreshold,
   cashEntryThreshold,
+  opportunityThreshold,
   tuning,
   tuningRows,
   tuningControlCapital,
@@ -38,7 +44,7 @@ export function StrategyIntelligenceSection({
             <div>
               <span className="panel-kicker">{tr('ADMIN / TRADER')}</span>
               <h2>{tr('Strategy Intelligence')}</h2>
-              <p>{tr('Interactive model outlook, Risk-Off decisions and tuning research from protected server-side data.')}</p>
+              <p>{tr('Interactive model outlook, decision diagnostics and tuning research from protected server-side data.')}</p>
             </div>
             {researchStrategy ? <div className="dashboard-intelligence-strategy">
               <span>{tr('Selected Strategy')}</span>
@@ -67,6 +73,7 @@ export function StrategyIntelligenceSection({
                     <div><span>{tr('Target')}</span><strong>{forecast.target_asset || 'CASH'}</strong></div>
                     <div><span>{tr('Action')}</span><strong>{String(forecast.action || '—').replaceAll('_', ' ')}</strong></div>
                     <div><span>{tr('Execution')}</span><strong>{forecast.execution_session || '—'}</strong></div>
+                    {forecastHasOpportunity ? <div><span>{tr(forecastUsesOpportunityConfidence ? 'Opportunity Confidence' : 'Opportunity Probability')}</span><strong>{percent(forecastOpportunitySignal)}</strong></div> : null}
                   </div>
                   <div className="dashboard-forecast-chart" style={{ height: forecastView === 'all' ? `${Math.max(310, forecastRows.length * 25)}px` : '310px' }}>
                     {forecastRows.length ? <ResponsiveContainer width="100%" height="100%"><BarChart data={forecastRows} layout="vertical" margin={{ top: 8, right: 18, left: 4, bottom: 6 }} barGap={2}>
@@ -84,29 +91,33 @@ export function StrategyIntelligenceSection({
                     <span>{tr('Cash exit')} <b>{decimal(forecast.cash_exit_threshold)}</b></span>
                     <span>{tr('Cash entry')} <b>{decimal(forecast.cash_entry_threshold)}</b></span>
                     <span>{tr('Switch margin')} <b>{decimal(forecast.effective_switch_margin)}</b></span>
+                    {forecastHasOpportunity ? <span>{tr(forecastUsesOpportunityConfidence ? 'Opportunity confidence threshold' : 'Opportunity threshold')} <b>{percent(forecast.opportunity_threshold)}</b></span> : null}
                   </div>
-                  {!forecastHasCashEdge ? <small className="dashboard-intelligence-note">{tr('This plan predates protected Cash Edge persistence. The next prepared Risk-Off plan will populate the Cash Edge series automatically.')}</small> : null}
+                  {researchStrategy?.configuration?.strategy_mode === 'COMPOUND_ROTATION_SWING_RISK_OFF' && !forecastHasCashEdge ? <small className="dashboard-intelligence-note">{tr('This plan predates protected Cash Edge persistence. The next prepared Risk-Off plan will populate the Cash Edge series automatically.')}</small> : null}
                 </> : <div className="dashboard-story-empty">{tr('No next-open Paper forecast is stored yet. The Dashboard does not contact Alpaca or refresh market data.')}</div>}
               </article>
 
               <article className="dashboard-intelligence-card dashboard-decision-card">
                 <div className="dashboard-intelligence-card-heading">
-                  <div><span className="panel-kicker">{tr('Selected Backtest')}</span><h3>{tr('Risk-Off Decision Timeline')}</h3></div>
+                  <div><span className="panel-kicker">{tr('Selected Backtest')}</span><h3>{tr('Decision Timeline')}</h3></div>
                   <span className="dashboard-intelligence-count">{decisionRows.length} {tr('points')}</span>
                 </div>
                 <div className="dashboard-decision-chart">
                   {decisionRows.length ? <ResponsiveContainer width="100%" height="100%"><ComposedChart data={decisionRows} margin={{ top: 12, right: 16, left: 4, bottom: 6 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="timestamp_value" type="number" scale="time" domain={['dataMin', 'dataMax']} minTickGap={38} tickFormatter={(value) => dashboardAxisLabel(value, decisionSpan)} />
-                    <YAxis tickFormatter={(value) => Number(value).toFixed(2)} />
+                    <YAxis yAxisId="utility" tickFormatter={(value) => Number(value).toFixed(2)} />
+                    {decisionHasOpportunity ? <YAxis yAxisId="probability" orientation="right" domain={[0, 1]} tickFormatter={(value) => `${Math.round(Number(value) * 100)}%`} /> : null}
                     <Tooltip content={<DecisionTimelineTooltip />} />
                     <Legend />
-                    {cashIntervals.map((interval, index) => <ReferenceArea key={`${interval.start}-${index}`} x1={interval.start} x2={interval.end} className="dashboard-cash-area" ifOverflow="extendDomain" />)}
-                    {Number.isFinite(Number(cashExitThreshold)) ? <ReferenceLine y={Number(cashExitThreshold)} strokeDasharray="3 4" label={{ value: tr('Cash exit'), position: 'insideTopRight', fontSize: 10 }} /> : null}
-                    {Number.isFinite(Number(cashEntryThreshold)) && Number(cashEntryThreshold) !== Number(cashExitThreshold) ? <ReferenceLine y={Number(cashEntryThreshold)} strokeDasharray="6 4" label={{ value: tr('Cash entry'), position: 'insideBottomRight', fontSize: 10 }} /> : null}
-                    <Line type="monotone" dataKey="best_score" name={tr('Best Utility')} dot={false} activeDot={{ r: 4 }} strokeWidth={2.1} isAnimationActive={false} />
-                    <Line type="monotone" dataKey="best_cash_edge" name={tr('Best Cash Edge')} dot={false} activeDot={{ r: 4 }} strokeWidth={2.1} isAnimationActive={false} connectNulls />
-                    <Line type="monotone" dataKey="current_cash_edge" name={tr('Current Cash Edge')} dot={false} activeDot={{ r: 4 }} strokeWidth={1.6} strokeDasharray="5 4" isAnimationActive={false} connectNulls />
+                    {cashIntervals.map((interval, index) => <ReferenceArea key={`${interval.start}-${index}`} yAxisId="utility" x1={interval.start} x2={interval.end} className="dashboard-cash-area" ifOverflow="extendDomain" />)}
+                    {Number.isFinite(Number(cashExitThreshold)) ? <ReferenceLine yAxisId="utility" y={Number(cashExitThreshold)} strokeDasharray="3 4" label={{ value: tr('Cash exit'), position: 'insideTopRight', fontSize: 10 }} /> : null}
+                    {Number.isFinite(Number(cashEntryThreshold)) && Number(cashEntryThreshold) !== Number(cashExitThreshold) ? <ReferenceLine yAxisId="utility" y={Number(cashEntryThreshold)} strokeDasharray="6 4" label={{ value: tr('Cash entry'), position: 'insideBottomRight', fontSize: 10 }} /> : null}
+                    {decisionHasOpportunity && Number.isFinite(Number(opportunityThreshold)) ? <ReferenceLine yAxisId="probability" y={Number(opportunityThreshold)} strokeDasharray="4 4" label={{ value: tr(decisionUsesOpportunityConfidence ? 'Opportunity confidence threshold' : 'Opportunity threshold'), position: 'insideTopLeft', fontSize: 10 }} /> : null}
+                    <Line yAxisId="utility" type="monotone" dataKey="best_score" name={tr('Best Utility')} dot={false} activeDot={{ r: 4 }} strokeWidth={2.1} isAnimationActive={false} />
+                    <Line yAxisId="utility" type="monotone" dataKey="best_cash_edge" name={tr('Best Cash Edge')} dot={false} activeDot={{ r: 4 }} strokeWidth={2.1} isAnimationActive={false} connectNulls />
+                    <Line yAxisId="utility" type="monotone" dataKey="current_cash_edge" name={tr('Current Cash Edge')} dot={false} activeDot={{ r: 4 }} strokeWidth={1.6} strokeDasharray="5 4" isAnimationActive={false} connectNulls />
+                    {decisionHasOpportunity ? <Line yAxisId="probability" type="monotone" dataKey="opportunity_signal" name={tr(decisionUsesOpportunityConfidence ? 'Opportunity Confidence' : 'Opportunity Probability')} dot={false} activeDot={{ r: 4 }} strokeWidth={1.8} strokeDasharray="6 3" isAnimationActive={false} connectNulls /> : null}
                   </ComposedChart></ResponsiveContainer> : <div className="dashboard-story-empty">{tr('The selected backtest has no protected decision diagnostics.')}</div>}
                 </div>
                 <div className="dashboard-decision-legend-note"><span className="cash-swatch" />{tr('Shaded periods indicate decisions whose resulting state is CASH.')}</div>

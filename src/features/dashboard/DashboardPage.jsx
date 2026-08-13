@@ -443,14 +443,28 @@ export function DashboardPage({ workspace, session, onOpenBacktest, canRunBackte
     return forecastView === 'all' ? rows : rows.slice(0, 10)
   }, [forecast?.asset_forecast, forecastView])
   const forecastHasCashEdge = forecastRows.some((row) => Number.isFinite(Number(row.cash_edge)))
+  const forecastUsesOpportunityConfidence = Number.isFinite(Number(forecast?.opportunity_confidence))
+  const forecastOpportunitySignal = forecastUsesOpportunityConfidence
+    ? Number(forecast.opportunity_confidence)
+    : (Number.isFinite(Number(forecast?.opportunity_probability)) ? Number(forecast.opportunity_probability) : null)
+  const forecastHasOpportunity = Number.isFinite(Number(forecastOpportunitySignal))
 
   const decisionRows = useMemo(() => (intelligence?.decision_history?.rows || [])
-    .map((row) => ({ ...row, timestamp_value: timestampValue(row.decision_date || row.timestamp) }))
+    .map((row) => ({
+      ...row,
+      timestamp_value: timestampValue(row.decision_date || row.timestamp),
+      opportunity_signal: Number.isFinite(Number(row.opportunity_confidence))
+        ? Number(row.opportunity_confidence)
+        : (Number.isFinite(Number(row.opportunity_probability)) ? Number(row.opportunity_probability) : null),
+    }))
     .filter((row) => row.timestamp_value !== null), [intelligence?.decision_history?.rows])
   const cashIntervals = useMemo(() => buildCashIntervals(decisionRows), [decisionRows])
   const decisionSpan = decisionRows.length > 1 ? decisionRows[decisionRows.length - 1].timestamp_value - decisionRows[0].timestamp_value : 0
   const cashExitThreshold = decisionRows.find((row) => Number.isFinite(Number(row.cash_exit_threshold)))?.cash_exit_threshold ?? forecast?.cash_exit_threshold
   const cashEntryThreshold = decisionRows.find((row) => Number.isFinite(Number(row.cash_entry_threshold)))?.cash_entry_threshold ?? forecast?.cash_entry_threshold
+  const decisionHasOpportunity = decisionRows.some((row) => Number.isFinite(Number(row.opportunity_signal)))
+  const decisionUsesOpportunityConfidence = decisionRows.some((row) => Number.isFinite(Number(row.opportunity_confidence)))
+  const opportunityThreshold = decisionRows.find((row) => Number.isFinite(Number(row.opportunity_threshold)))?.opportunity_threshold ?? forecast?.opportunity_threshold
 
   const tuning = intelligence?.tuning || null
   const tuningRows = useMemo(() => (tuning?.candidates || [])
@@ -511,11 +525,17 @@ export function DashboardPage({ workspace, session, onOpenBacktest, canRunBackte
           onForecastViewChange={setForecastView}
           forecastRows={forecastRows}
           forecastHasCashEdge={forecastHasCashEdge}
+          forecastHasOpportunity={forecastHasOpportunity}
+          forecastOpportunitySignal={forecastOpportunitySignal}
+          forecastUsesOpportunityConfidence={forecastUsesOpportunityConfidence}
           decisionRows={decisionRows}
+          decisionHasOpportunity={decisionHasOpportunity}
+          decisionUsesOpportunityConfidence={decisionUsesOpportunityConfidence}
           cashIntervals={cashIntervals}
           decisionSpan={decisionSpan}
           cashExitThreshold={cashExitThreshold}
           cashEntryThreshold={cashEntryThreshold}
+          opportunityThreshold={opportunityThreshold}
           tuning={tuning}
           tuningRows={tuningRows}
           tuningControlCapital={tuningControlCapital}

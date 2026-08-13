@@ -445,6 +445,14 @@ export function BacktestPage({ workspace, canExportResults = false, canRunResear
               <Metric id="hint-max-drawdown" label={tr("Max Drawdown")} value={percent(metrics.maximum_drawdown)} note={tr('Reference {value}', { value: percent(metrics.reference_maximum_drawdown) })} tone="red" hint={METRIC_HINTS.maximum_drawdown} />
               <Metric id="hint-session-win-rate" label={tr("Session Win Rate")} value={percent(metrics.session_win_rate)} note={tr('{value} market exposure', { value: percent(metrics.market_exposure) })} tone="blue" hint={METRIC_HINTS.session_win_rate} />
             </section>
+            {metrics.average_cash_weight != null ? (
+              <section className="backtest-workspace-metrics">
+                <Metric id="hint-average-cash-weight" label={tr("Average CASH Weight")} value={percent(metrics.average_cash_weight)} note={tr('{value} market exposure', { value: percent(metrics.market_exposure) })} tone="blue" hint={METRIC_HINTS.average_cash_weight} />
+                <Metric id="hint-average-assets-held" label={tr("Average Assets Held")} value={metrics.average_assets_held == null ? '—' : Number(metrics.average_assets_held).toFixed(2)} note={tr('Simultaneous risky positions')} tone="green" hint={METRIC_HINTS.average_assets_held} />
+                <Metric id="hint-maximum-assets-held" label={tr("Maximum Assets Held")} value={metrics.maximum_assets_held == null ? '—' : Number(metrics.maximum_assets_held).toFixed(0)} note={tr('Largest simultaneous allocation')} tone="purple" hint={METRIC_HINTS.maximum_assets_held} />
+                <Metric id="hint-allocation-rebalances" label={tr("Allocation Rebalances")} value={metrics.allocation_rebalances == null ? '—' : Number(metrics.allocation_rebalances).toFixed(0)} note={tr('Capital movement sessions')} tone="blue" hint={METRIC_HINTS.allocation_rebalances} />
+              </section>
+            ) : null}
 
             <section className="backtest-workspace-main">
               <article className="backtest-performance-section">

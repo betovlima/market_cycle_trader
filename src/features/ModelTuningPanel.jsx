@@ -3,8 +3,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError, apiFetch, downloadFile } from '../api/http'
 import { API } from '../config/env'
 import { tr } from '../i18n/runtime'
+import { ParameterHint } from '../shared/components/ParameterHint'
+import { CANDIDATE_RANKING_HINTS } from './modelTuning/modelTuningCandidateHints'
 import { ACTIVE, PROBABILITY_METHOD } from './modelTuning/modelTuningConfig'
 import { candidateLabel, decimal, money, numberOr, pct } from './modelTuning/modelTuningUtils'
+
+function CandidateRankingHeader({ label, align = 'left' }) {
+  const hint = CANDIDATE_RANKING_HINTS[label]
+  return <th>
+    <span className="model-tuning-column-heading">
+      <span>{tr(label)}</span>
+      {hint ? <ParameterHint id={`model-tuning-column-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} title={tr(label)} align={align} {...hint} /> : null}
+    </span>
+  </th>
+}
 
 export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
   const [catalog, setCatalog] = useState(null)
@@ -429,7 +441,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
           </div>
           <div className="model-tuning-table-scroll">
             <table className="model-tuning-table">
-              <thead><tr><th>{tr('Rank')}</th><th>{tr('Candidate')}</th><th>{tr('Status')}</th><th>{tr('Capital')}</th><th>{tr('CAGR')}</th><th>{tr('Sharpe')}</th><th>{tr('Max DD')}</th><th>{tr('Worst fold')}</th>{run?.method === PROBABILITY_METHOD ? <><th>{tr('Champion gate')}</th><th>{tr('P(beat)')}</th><th>{tr('Expected improvement')}</th></> : null}<th>{tr('Score')}</th><th /></tr></thead>
+              <thead><tr><CandidateRankingHeader label="Rank" /><CandidateRankingHeader label="Candidate" /><CandidateRankingHeader label="Status" /><CandidateRankingHeader label="Capital" /><CandidateRankingHeader label="CAGR" /><CandidateRankingHeader label="Sharpe" /><CandidateRankingHeader label="Max DD" /><CandidateRankingHeader label="Worst fold" />{run?.method === PROBABILITY_METHOD ? <><CandidateRankingHeader label="Champion gate" /><CandidateRankingHeader label="P(beat)" /><CandidateRankingHeader label="Expected improvement" align="right" /></> : null}<CandidateRankingHeader label="Score" align="right" /><th /></tr></thead>
               <tbody>
                 {sortedCandidates.map((candidate) => {
                   const metrics = candidate.metrics || {}
