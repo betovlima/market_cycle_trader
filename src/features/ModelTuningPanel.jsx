@@ -6,6 +6,7 @@ import { tr } from '../i18n/runtime'
 import { ParameterHint } from '../shared/components/ParameterHint'
 import { CANDIDATE_RANKING_HINTS } from './modelTuning/modelTuningCandidateHints'
 import { ACTIVE, PROBABILITY_METHOD } from './modelTuning/modelTuningConfig'
+import { ModelTuningHistory } from './modelTuning/components/ModelTuningHistory'
 import { candidateLabel, decimal, money, numberOr, pct } from './modelTuning/modelTuningUtils'
 
 function CandidateRankingHeader({ label, align = 'left' }) {
@@ -24,6 +25,8 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
   const [modelFamily, setModelFamily] = useState('')
   const [baselines, setBaselines] = useState([])
   const [run, setRun] = useState(null)
+  const [history, setHistory] = useState([])
+  const [historyLoading, setHistoryLoading] = useState(false)
   const [method, setMethod] = useState(PROBABILITY_METHOD)
   const [candidateCount, setCandidateCount] = useState(20)
   const [seed, setSeed] = useState(42)
@@ -56,6 +59,21 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
     return latest || null
   }, [])
 
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true)
+    try {
+      const payload = await apiFetch(`${API}/admin/model-tuning/history?limit=100`)
+      const items = Array.isArray(payload?.items) ? payload.items : []
+      setHistory(items)
+      return items
+    } catch (requestError) {
+      handleError(requestError)
+      return []
+    } finally {
+      setHistoryLoading(false)
+    }
+  }, [handleError])
+
   const loadWorkspace = useCallback(async () => {
     try {
       const [nextCatalog, control] = await Promise.all([
@@ -67,6 +85,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
       const [baselinePayload] = await Promise.all([
         apiFetch(`${API}/admin/model-tuning/baselines?limit=20`),
         loadLatest(),
+        loadHistory(),
       ])
       const items = Array.isArray(baselinePayload?.items) ? baselinePayload.items : []
       const savedModel = detail?.research_model_configuration || detail?.research_model || null
@@ -86,7 +105,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
     } catch (requestError) {
       handleError(requestError)
     }
-  }, [handleError, loadLatest])
+  }, [handleError, loadHistory, loadLatest])
 
   useEffect(() => {
     loadWorkspace()
@@ -143,6 +162,22 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
     && modelFamily === catalog?.model_family
     && selectedBaseline
   )
+
+  async function openHistoricalCampaign(runId) {
+    if (!runId || historyLoading) return
+    setHistoryLoading(true)
+    setError('')
+    setNotice('')
+    try {
+      const selected = await apiFetch(`${API}/admin/model-tuning/${encodeURIComponent(runId)}`)
+      setRun(selected)
+      setSelectedCandidateId(null)
+    } catch (requestError) {
+      handleError(requestError)
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
 
   async function start() {
     if (!canTune || busy) return
@@ -205,7 +240,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
         method: 'POST',
         body: {},
       })
-      setNotice(tr('A new Strategy was created with the tuning result and selected as BACKTEST. After a successful Backtest it becomes the active CANDIDATE automatically.'))
+      setNotice(tr('A new Strategy was created from the frozen tuning result and selected as BACKTEST. After a successful Backtest it becomes the active CANDIDATE automatically.'))
       await onStrategyModelSaved?.(response.strategy)
       await loadWorkspace()
     } catch (requestError) {
@@ -324,6 +359,14 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
           <small>{tr('One research candidate at a time; LightGBM still uses the CPU threads configured by the model/runtime.')}</small>
         </div>
       </div>
+
+      <ModelTuningHistory
+        items={history}
+        selectedRunId={run?.id}
+        loading={historyLoading}
+        onOpen={openHistoricalCampaign}
+        onRefresh={loadHistory}
+      />
 
       <div className="model-tuning-baseline">
         <div className="model-tuning-results-heading">
@@ -446,7 +489,8 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
                 {sortedCandidates.map((candidate) => {
                   const metrics = candidate.metrics || {}
                   const proposal = candidate.proposal || {}
-                  const adoptable = !active && candidate.status === 'completed' && !candidate.is_control && run?.adopted_candidate_id !== candidate.candidate_id
+                  const adoptable = !active && candidate.status === 'completed' && !candidate.is_control
+                  const previouslyPromoted = (run?.adoption_history || []).some((item) => Number(item.candidate_id) === Number(candidate.candidate_id))
                   return (
                     <tr key={candidate.candidate_id} className={`${candidate.is_control ? 'control' : ''} ${candidate.rank === 1 ? 'best' : ''}`}>
                       <td>{candidate.rank ?? '—'}</td>
@@ -462,7 +506,8 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
                       <td className="model-tuning-row-actions">
                         <button type="button" onClick={() => setSelectedCandidateId(candidate.candidate_id)}>{tr('View')}</button>
                         <button type="button" onClick={() => openCandidateLog(candidate)} disabled={logLoading}>{tr('Log')}</button>
-                        {adoptable ? <button type="button" onClick={() => adopt(candidate)} disabled={busy}>{tr('Use in Backtest')}</button> : run?.adopted_candidate_id === candidate.candidate_id ? <span className="model-tuning-adopted">{tr('Loaded')}</span> : null}
+                        {previouslyPromoted ? <span className="model-tuning-adopted">{tr('Promoted')}</span> : null}
+                        {adoptable ? <button type="button" onClick={() => adopt(candidate)} disabled={busy}>{tr(previouslyPromoted ? 'Promote again' : 'Promote to Backtest')}</button> : null}
                       </td>
                     </tr>
                   )
