@@ -6980,11 +6980,6 @@ a { color: inherit; }
       calc(20 * var(--size)) calc(-5 * var(--size)) var(--color-2);
   }
 }
-@keyframes modelTuningCandidateNameRunning {
-  0%, 100% { color: #f5a35c; text-shadow: 0 0 9px rgba(245,163,92,.08); }
-  40% { color: #58e6a8; text-shadow: 0 0 9px rgba(88,230,168,.08); }
-  72% { color: #66a9ff; text-shadow: 0 0 9px rgba(102,169,255,.08); }
-}
 .model-tuning-candidate-card-title {
   display: grid;
   gap: 2px;
@@ -6993,7 +6988,14 @@ a { color: inherit; }
 .model-tuning-candidate-card-header .model-tuning-candidate-card-title {
   padding: 0;
 }
-.model-tuning-candidate-card-title > strong {
+.model-tuning-candidate-name-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  overflow: visible;
+}
+.model-tuning-candidate-name-row > strong {
   min-width: 0;
   overflow: hidden;
   color: var(--candidate-accent);
@@ -7002,7 +7004,58 @@ a { color: inherit; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.model-tuning-candidate-name.running { animation: modelTuningCandidateNameRunning 2.4s ease-in-out infinite; }
+.model-tuning-caro-status-loader {
+  --size: .55px;
+
+  width: calc(16 * var(--size));
+  height: calc(16 * var(--size));
+  border-radius: 50%;
+  display: block;
+  flex: 0 0 auto;
+  margin-left: 3px;
+  position: relative;
+  color: #f5a35c;
+  background: currentColor;
+  box-sizing: border-box;
+  animation: modelTuningCaroStatusColor 2.4s ease-in-out infinite;
+}
+.model-tuning-caro-status-loader::before,
+.model-tuning-caro-status-loader::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: calc(2 * var(--size)) solid currentColor;
+  box-sizing: border-box;
+  animation: modelTuningCaroRipple 1.4s ease-out infinite;
+}
+.model-tuning-caro-status-loader::after {
+  animation-delay: -0.7s;
+}
+@keyframes modelTuningCaroStatusColor {
+  0%, 100% { color: #f5a35c; }
+  40% { color: #58e6a8; }
+  72% { color: #66a9ff; }
+}
+.model-tuning-caro-status-complete {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  margin-left: 3px;
+  border-radius: 50%;
+  background: #58e6a8;
+  box-shadow: 0 0 0 2px rgba(88,230,168,.12), 0 0 8px rgba(88,230,168,.34);
+}
+@keyframes modelTuningCaroRipple {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
 .model-tuning-candidate-name.completed { color: #58e6a8; }
 .model-tuning-candidate-card.control .model-tuning-candidate-name.completed { color: var(--candidate-accent); }
 .model-tuning-candidate-name.queued,
