@@ -599,7 +599,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
                       ? 'exploration'
                       : ''
               const status = candidate.status || 'unknown'
-              const isCaroCandidate = !candidate.is_control && candidate.kind === 'champion_probability'
+              const hasExecutionStatusIndicator = !candidate.is_control && ['probability_startup', 'unified_exploration', 'champion_probability'].includes(candidate.kind)
               const statusLabelKey = {
                 running: 'Running',
                 queued: 'Queued',
@@ -620,8 +620,8 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
                   <header className="model-tuning-candidate-card-header">
                     <div className="model-tuning-candidate-card-title model-tuning-candidate-card-title-header">
                       <div className="model-tuning-candidate-name-row">
-                        {isCaroCandidate && status === 'running' ? <span className="model-tuning-caro-status-loader" aria-hidden="true" /> : null}
-                        {isCaroCandidate && status === 'completed' ? <span className="model-tuning-caro-status-complete" aria-hidden="true" /> : null}
+                        {hasExecutionStatusIndicator && status === 'running' ? <span className="model-tuning-caro-status-loader" aria-hidden="true" /> : null}
+                        {hasExecutionStatusIndicator && status === 'completed' ? <span className="model-tuning-caro-status-complete" aria-hidden="true" /> : null}
                         <strong className={`model-tuning-candidate-name ${status}`} title={candidateLabel(candidate)}>{candidateLabel(candidate)}</strong>
                       </div>
                       <small>
