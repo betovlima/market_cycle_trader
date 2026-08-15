@@ -23,9 +23,9 @@ export function StrategyLifecycleNotes({ selected }) {
             <div className="strategy-candidate-note historical">
               <StarIcon size={18} />
               {selected.historical_lifecycle_status === 'promoted_candidate' ? (
-                <div><strong>{tr("Historical promoted candidate")}</strong><span>{tr("This Strategy previously held the Promoted Candidate role and was replaced by")}{' '}{selected.superseded_by_strategy_id || tr('a newer candidate')} {tr("It remains protected for audit and cloning.")}</span></div>
+                <div><strong>{tr("Historical promoted candidate")}</strong><span>{tr("This Strategy previously held the Promoted Candidate role and was replaced by")}{' '}{selected.superseded_by_strategy_id || tr('a newer candidate')} {tr("It remains available for audit and cloning, and may be deleted when no longer needed.")}</span></div>
               ) : (
-                <div><strong>{tr("Superseded candidate")}</strong><span>{tr("This validated candidate was replaced by")}{' '}{selected.superseded_by_strategy_id || tr('a newer candidate')} {tr("and remains protected for audit and cloning.")}</span></div>
+                <div><strong>{tr("Superseded candidate")}</strong><span>{tr("This validated candidate was replaced by")}{' '}{selected.superseded_by_strategy_id || tr('a newer candidate')} {tr("and remains available for audit and cloning. It may be deleted when no longer needed.")}</span></div>
               )}
             </div>
           ) : null}
@@ -33,7 +33,7 @@ export function StrategyLifecycleNotes({ selected }) {
           {selected.status === 'promoted_candidate' ? (
             <div className="strategy-candidate-note promoted">
               <TrophyIcon size={18} />
-              <div><strong>{tr("Promoted candidate")}</strong><span>{tr("This exact validated revision created winner")}{' '}{selected.last_promoted_winner_strategy_id || tr('snapshot')} {tr("and remains protected for audit and cloning.")}</span></div>
+              <div><strong>{tr("Promoted candidate")}</strong><span>{tr("This exact validated revision created winner")}{' '}{selected.last_promoted_winner_strategy_id || tr('snapshot')} {tr("and remains available for audit and cloning. It may be deleted when no longer needed.")}</span></div>
             </div>
           ) : null}
 
@@ -42,7 +42,7 @@ export function StrategyLifecycleNotes({ selected }) {
               <ShieldIcon size={18} />
               <div>
                 <strong>{tr(selected.status === 'winner' || selected.status === 'former_winner' ? 'Protected winner snapshot' : 'Protected candidate history')}</strong>
-                <span>{tr("This lifecycle snapshot cannot be edited or deleted. Clone it to continue research.")}</span>
+                <span>{tr("This lifecycle snapshot cannot be edited. Historical snapshots may be deleted; only the current Trader winner and current Candidate are protected from deletion.")}</span>
               </div>
             </div>
           ) : null}

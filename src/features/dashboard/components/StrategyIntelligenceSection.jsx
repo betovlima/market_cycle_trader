@@ -44,7 +44,6 @@ export function StrategyIntelligenceSection({
             <div>
               <span className="panel-kicker">{tr('ADMIN / TRADER')}</span>
               <h2>{tr('Strategy Intelligence')}</h2>
-              <p>{tr('Interactive model outlook, decision diagnostics and tuning research from protected server-side data.')}</p>
             </div>
             {researchStrategy ? <div className="dashboard-intelligence-strategy">
               <span>{tr('Selected Strategy')}</span>
@@ -120,7 +119,6 @@ export function StrategyIntelligenceSection({
                     {decisionHasOpportunity ? <Line yAxisId="probability" type="monotone" dataKey="opportunity_signal" name={tr(decisionUsesOpportunityConfidence ? 'Opportunity Confidence' : 'Opportunity Probability')} dot={false} activeDot={{ r: 4 }} strokeWidth={1.8} strokeDasharray="6 3" isAnimationActive={false} connectNulls /> : null}
                   </ComposedChart></ResponsiveContainer> : <div className="dashboard-story-empty">{tr('The selected backtest has no protected decision diagnostics.')}</div>}
                 </div>
-                <div className="dashboard-decision-legend-note"><span className="cash-swatch" />{tr('Shaded periods indicate decisions whose resulting state is CASH.')}</div>
               </article>
             </div>
 
@@ -128,7 +126,7 @@ export function StrategyIntelligenceSection({
 
             <article className="dashboard-intelligence-card dashboard-tuning-card">
               <div className="dashboard-intelligence-card-heading">
-                <div><span className="panel-kicker">{tr('Research')}</span><h3>{tr('Model Tuning Candidates')}</h3><p>{tr('Click a completed Candidate bar to inspect its retained portfolio curve.')}</p></div>
+                <div><span className="panel-kicker">{tr('Research')}</span><h3>{tr('Model Tuning Candidates')}</h3></div>
                 {tuning ? <div className="dashboard-tuning-status"><strong>{String(tuning.method || '').replaceAll('_', ' ')}</strong><span>{tr(tuning.status)} · {Number(tuning.progress || 0).toFixed(0)}%</span>{tuning.method === PROBABILITY_METHOD && tuning.probability_state ? <small>{tr('Champion')} #{tuning.probability_state.last_champion_candidate_id ?? tuning.probability_anchor?.candidate_id ?? 0} · {tr('Trust region')} {(Number(tuning.probability_state.trust_region_radius || 0) * 100).toFixed(1)}% · {tr('Adaptive trials')} {tuning.probability_state.adaptive_trials_completed || 0}</small> : null}</div> : null}
               </div>
               {tuning && tuningRows.length ? <div className="dashboard-tuning-layout">

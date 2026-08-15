@@ -22,7 +22,7 @@ export const ADMIN_HINTS = {
   restricted: 'Records that are expired, revoked, blocked or still use the legacy unverified access model.',
   guestName: 'Friendly name used by the Administrator to identify the person receiving this access invitation.',
   authorizedEmail: 'Google account that is authorized to claim the generated invitation. A different Google identity cannot claim it.',
-  role: 'Permission profile granted after identity verification. Viewer is limited to backtests, Trader also receives Portfolio access, and Administrator receives full administration access.',
+  role: 'Permission profile assigned to the invitation.',
   duration: 'How long the generated access authorization remains valid before it expires.',
   sessions: 'Maximum number of simultaneously active authenticated sessions allowed for this access record.',
   status: 'Current lifecycle state of the invitation or identity-bound access record.',

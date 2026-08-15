@@ -54,7 +54,6 @@ export function CandidateTable({ candidates }) {
       <div>
         <span className="eyebrow">{tr('CANDIDATE POOL')}</span>
         <h3>{tr('Candidate assets')}</h3>
-        <p>{tr('Assets are screened in small batches for data quality, liquidity and structural price-path risk before they can become candidates. Newer listings can remain on the watchlist when their history is still limited.')}</p>
       </div>
       <strong>{tr('{count} results', { count: filtered.length })}</strong>
     </div>

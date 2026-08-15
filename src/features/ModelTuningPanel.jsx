@@ -1,36 +1,88 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { ApiError, apiFetch, downloadFile } from '../api/http'
+import { hasCapability } from '../auth/capabilities'
 import { API } from '../config/env'
 import { tr } from '../i18n/runtime'
 import { ParameterHint } from '../shared/components/ParameterHint'
 import { CANDIDATE_RANKING_HINTS } from './modelTuning/modelTuningCandidateHints'
 import { ACTIVE, PROBABILITY_METHOD } from './modelTuning/modelTuningConfig'
-import { ModelTuningHistory } from './modelTuning/components/ModelTuningHistory'
 import { candidateLabel, decimal, money, numberOr, pct } from './modelTuning/modelTuningUtils'
 
-function CandidateRankingHeader({ label, align = 'left' }) {
+function CandidateCardMetric({ candidateId, label, value, tone = '' }) {
   const hint = CANDIDATE_RANKING_HINTS[label]
-  return <th>
-    <span className="model-tuning-column-heading">
-      <span>{tr(label)}</span>
-      {hint ? <ParameterHint id={`model-tuning-column-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} title={tr(label)} align={align} {...hint} /> : null}
-    </span>
-  </th>
+  return (
+    <div className={`model-tuning-candidate-metric ${tone}`}>
+      <span className="model-tuning-candidate-metric-label">
+        <span>{tr(label)}</span>
+        {hint ? <ParameterHint id={`model-tuning-card-${candidateId}-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} title={tr(label)} {...hint} /> : null}
+      </span>
+      <strong>{value}</strong>
+    </div>
+  )
 }
 
-export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
+function tuningSettingValue(value) {
+  if (typeof value === 'number') {
+    if (Number.isInteger(value)) return String(value)
+    return Number(value).toPrecision(7).replace(/0+$/, '').replace(/\.$/, '')
+  }
+  if (typeof value === 'boolean') return value ? tr('Yes') : tr('No')
+  return value == null ? '—' : String(value)
+}
+
+function CandidateParametersGrid({ settings }) {
+  const entries = Object.entries(settings || {})
+  if (!entries.length) return null
+  return (
+    <div className="model-tuning-parameters-dialog-grid">
+      {entries.map(([name, value]) => (
+        <div key={name} className="model-tuning-parameters-dialog-row">
+          <span title={name}>{name}</span>
+          <strong>{tuningSettingValue(value)}</strong>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function signedMetricTone(value) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed === 0) return 'neutral'
+  return parsed > 0 ? 'positive' : 'negative'
+}
+
+function probabilityMetricTone(value) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return 'neutral'
+  if (parsed >= 0.65) return 'positive'
+  if (parsed >= 0.35) return 'warning'
+  return 'negative'
+}
+
+function TuningContextLabel({ id, label, description, align = 'left' }) {
+  return (
+    <span className="model-tuning-context-label">
+      <span>{tr(label)}</span>
+      {description ? <ParameterHint id={id} title={tr(label)} description={description} align={align} /> : null}
+    </span>
+  )
+}
+
+export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrategyModelSaved }) {
+  const canStartTuning = hasCapability(capabilities, 'tuning.start')
+  const canStopTuning = hasCapability(capabilities, 'tuning.stop')
+  const canExportTuning = hasCapability(capabilities, 'tuning.export')
+  const canViewTuningLogs = hasCapability(capabilities, 'tuning.logs.view')
+  const canPromoteTuning = hasCapability(capabilities, 'tuning.promote')
   const [catalog, setCatalog] = useState(null)
   const [strategy, setStrategy] = useState(null)
   const [modelFamily, setModelFamily] = useState('')
   const [baselines, setBaselines] = useState([])
   const [run, setRun] = useState(null)
-  const [history, setHistory] = useState([])
-  const [historyLoading, setHistoryLoading] = useState(false)
   const [method, setMethod] = useState(PROBABILITY_METHOD)
   const [candidateCount, setCandidateCount] = useState(20)
   const [seed, setSeed] = useState(42)
-  const [startupTrials, setStartupTrials] = useState('')
   const [minimumCapitalImprovementPct, setMinimumCapitalImprovementPct] = useState('')
   const [sharpeTolerance, setSharpeTolerance] = useState('')
   const [drawdownTolerancePct, setDrawdownTolerancePct] = useState('')
@@ -40,6 +92,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [selectedCandidateId, setSelectedCandidateId] = useState(null)
+  const [parameterCandidateId, setParameterCandidateId] = useState(null)
   const [logView, setLogView] = useState(null)
   const [logLoading, setLogLoading] = useState(false)
   const [logError, setLogError] = useState('')
@@ -50,6 +103,10 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
       onSessionExpired?.()
       return
     }
+    if (requestError instanceof ApiError && requestError.status === 403) {
+      setError('')
+      return
+    }
     setError(tr(requestError.message || 'Unable to manage model tuning.'))
   }, [onSessionExpired])
 
@@ -58,21 +115,6 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
     setRun(latest || null)
     return latest || null
   }, [])
-
-  const loadHistory = useCallback(async () => {
-    setHistoryLoading(true)
-    try {
-      const payload = await apiFetch(`${API}/admin/model-tuning/history?limit=100`)
-      const items = Array.isArray(payload?.items) ? payload.items : []
-      setHistory(items)
-      return items
-    } catch (requestError) {
-      handleError(requestError)
-      return []
-    } finally {
-      setHistoryLoading(false)
-    }
-  }, [handleError])
 
   const loadWorkspace = useCallback(async () => {
     try {
@@ -85,7 +127,6 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
       const [baselinePayload] = await Promise.all([
         apiFetch(`${API}/admin/model-tuning/baselines?limit=20`),
         loadLatest(),
-        loadHistory(),
       ])
       const items = Array.isArray(baselinePayload?.items) ? baselinePayload.items : []
       const savedModel = detail?.research_model_configuration || detail?.research_model || null
@@ -96,7 +137,6 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
       setBaselines(items)
       setCandidateCount(nextCatalog.default_candidate_count || 20)
       setSeed(nextCatalog.default_seed ?? 42)
-      setStartupTrials(String(probability.default_startup_trials ?? ''))
       setMinimumCapitalImprovementPct(String(numberOr(probability.default_min_capital_improvement) * 100))
       setSharpeTolerance(String(probability.default_sharpe_tolerance ?? ''))
       setDrawdownTolerancePct(String(numberOr(probability.default_drawdown_tolerance) * 100))
@@ -105,7 +145,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
     } catch (requestError) {
       handleError(requestError)
     }
-  }, [handleError, loadHistory, loadLatest])
+  }, [handleError, loadLatest])
 
   useEffect(() => {
     loadWorkspace()
@@ -132,6 +172,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
   const sortedCandidates = useMemo(() => {
     const items = [...(run?.candidates || [])]
     items.sort((left, right) => {
+      if (Boolean(left.is_control) !== Boolean(right.is_control)) return left.is_control ? -1 : 1
       const leftRank = left.rank ?? Number.MAX_SAFE_INTEGER
       const rightRank = right.rank ?? Number.MAX_SAFE_INTEGER
       if (leftRank !== rightRank) return leftRank - rightRank
@@ -141,10 +182,58 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
   }, [run?.candidates])
 
   const selectedBaseline = baselines[0] || null
+  const activeRun = Boolean(run && ACTIVE.has(run.status))
+
+  const baselineControlCandidate = useMemo(() => {
+    if (!selectedBaseline) return null
+    return {
+      candidate_id: 0,
+      kind: 'control',
+      is_control: true,
+      status: 'completed',
+      rank: null,
+      metrics: selectedBaseline.metrics || {},
+      proposal: null,
+      job_id: selectedBaseline.job_id,
+      source_job_id: selectedBaseline.job_id,
+      baseline_reused: true,
+      baseline_preview: true,
+      settings_hash: selectedBaseline.model_settings_hash || '',
+    }
+  }, [selectedBaseline])
+
+  const runControlCandidate = useMemo(
+    () => sortedCandidates.find((candidate) => candidate.is_control) || null,
+    [sortedCandidates],
+  )
+  const runBaselineJobId = String(run?.baseline_execution?.job_id || runControlCandidate?.source_job_id || runControlCandidate?.job_id || '')
+  const currentBaselineJobId = String(selectedBaseline?.job_id || '')
+  const runMatchesCurrentBaseline = !currentBaselineJobId || !runBaselineJobId || currentBaselineJobId === runBaselineJobId
+
+  const displayedCandidates = useMemo(() => {
+    const control = activeRun ? (runControlCandidate || baselineControlCandidate) : (baselineControlCandidate || runControlCandidate)
+    const challengers = (activeRun || runMatchesCurrentBaseline)
+      ? sortedCandidates.filter((candidate) => !candidate.is_control)
+      : []
+    return control ? [control, ...challengers] : challengers
+  }, [activeRun, baselineControlCandidate, runControlCandidate, runMatchesCurrentBaseline, sortedCandidates])
+
+  const visibleCandidates = useMemo(
+    () => displayedCandidates.filter((candidate) => {
+      if (candidate.is_control || candidate.status !== 'pending') return true
+      return Number(candidate.candidate_id) === Number(run?.current_candidate_id)
+    }),
+    [displayedCandidates, run?.current_candidate_id],
+  )
 
   const selectedCandidate = useMemo(
-    () => sortedCandidates.find((item) => item.candidate_id === selectedCandidateId) || null,
-    [selectedCandidateId, sortedCandidates],
+    () => displayedCandidates.find((item) => item.candidate_id === selectedCandidateId) || null,
+    [displayedCandidates, selectedCandidateId],
+  )
+
+  const parameterCandidate = useMemo(
+    () => displayedCandidates.find((item) => item.candidate_id === parameterCandidateId) || null,
+    [displayedCandidates, parameterCandidateId],
   )
 
   const selectedMethod = useMemo(
@@ -152,39 +241,25 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
     [catalog?.methods, method],
   )
 
-  const active = Boolean(run && ACTIVE.has(run.status))
+  const active = activeRun
+  const candidateCardMethod = run?.id && runMatchesCurrentBaseline ? run.method : method
   const probabilityMode = method === PROBABILITY_METHOD
-  const startActionLabel = probabilityMode ? tr('Start Adaptive CARO') : tr('Start Latin Hypercube')
+  const adaptiveMode = probabilityMode
+  const gateTuning = ['absolute_utility_cash_gate', 'joint_model_absolute_utility_cash_gate'].includes(String(run?.tuning_scope || catalog?.tuning_scope || ''))
+  const startActionLabel = probabilityMode ? tr('Start Unified CARO') : tr('Start Latin Hypercube')
   const protectedCandidate = Boolean(strategy?.locked && ['candidate', 'promoted_candidate'].includes(String(strategy?.status || '')))
   const canTune = Boolean(
-    strategy
+    canStartTuning
+    && strategy
     && (!strategy.locked || protectedCandidate)
     && modelFamily === catalog?.model_family
     && selectedBaseline
   )
 
-  async function openHistoricalCampaign(runId) {
-    if (!runId || historyLoading) return
-    setHistoryLoading(true)
-    setError('')
-    setNotice('')
-    try {
-      const selected = await apiFetch(`${API}/admin/model-tuning/${encodeURIComponent(runId)}`)
-      setRun(selected)
-      setSelectedCandidateId(null)
-    } catch (requestError) {
-      handleError(requestError)
-    } finally {
-      setHistoryLoading(false)
-    }
-  }
+
 
   async function start() {
     if (!canTune || busy) return
-    if (probabilityMode && numberOr(startupTrials) >= numberOr(candidateCount)) {
-      setError(tr('Startup trials must be smaller than the total candidate count.'))
-      return
-    }
     setBusy(true)
     setError('')
     setNotice('')
@@ -194,9 +269,8 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
         candidate_count: Number(candidateCount),
         seed: Number(seed),
       }
-      if (probabilityMode) {
+      if (adaptiveMode) {
         body.probability = {
-          startup_trials: Number(startupTrials),
           min_capital_improvement: numberOr(minimumCapitalImprovementPct) / 100,
           sharpe_tolerance: numberOr(sharpeTolerance),
           drawdown_tolerance: numberOr(drawdownTolerancePct) / 100,
@@ -206,7 +280,7 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
       const created = await apiFetch(`${API}/admin/model-tuning`, { method: 'POST', body })
       setRun(created)
       setNotice(probabilityMode
-        ? tr('Adaptive CARO started directly from the certified Candidate Backtest. No manual clone or prior exploration is required.')
+        ? tr('Unified CARO started from the certified Candidate Backtest. Exploration and probabilistic refinement are selected automatically throughout the campaign.')
         : tr('Latin Hypercube tuning started from the certified Candidate Backtest.'))
     } catch (requestError) {
       handleError(requestError)
@@ -326,11 +400,10 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
 
   return (
     <section className="model-tuning-panel model-tuning-workspace">
-      <div className="model-tuning-heading">
+      <div className="model-tuning-heading model-tuning-heading-compact">
         <div>
           <span className="panel-kicker">{tr('MODEL TUNING')}</span>
-          <h3>{tr('Model research')}</h3>
-          <p>{tr('Use Adaptive CARO for the normal search: fresh Control, a small Latin Hypercube warm-up, then sequential probabilistic candidates that learn after every completed Backtest. Full Latin Hypercube remains available only for static exploration and sensitivity analysis.')}</p>
+          <h3>{tr('Probabilistic parameter research')}</h3>
         </div>
         <div className="model-tuning-method-badge">{selectedMethod?.label || tr('Model Tuning')}</div>
       </div>
@@ -340,103 +413,124 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
       {!strategy ? <div className="global-inline-message warning-inline">{tr('No Candidate or selected Strategy is available for model tuning.')}</div> : null}
       {strategy?.locked && !protectedCandidate ? <div className="global-inline-message warning-inline">{tr('The protected Strategy is not an eligible Candidate tuning target.')}</div> : null}
       {strategy && modelFamily !== catalog.model_family ? <div className="global-inline-message warning-inline">{tr('The current tuning target must use LightGBM.')}</div> : null}
-      {strategy && modelFamily === catalog.model_family && !baselines.length ? <div className="global-inline-message warning-inline">{tr('A completed compatible Backtest is required before tuning. Certified Candidate Backtests are detected automatically.')}</div> : null}
+      {strategy && modelFamily === catalog.model_family && !baselines.length ? <div className="global-inline-message warning-inline">{tr("A completed certified Candidate Backtest is required before tuning. Adaptive CARO always uses the active Candidate's certified execution as its baseline.")}</div> : null}
 
       <div className="model-tuning-context-grid model-tuning-context-grid-wide">
-        <div>
-          <span>{tr('Tuning target')}</span>
-          <strong>{strategy?.name || '—'}</strong>
+        <div className="model-tuning-context-card model-tuning-target-card">
+          <TuningContextLabel
+            id="model-tuning-hint-target"
+            label="Tuning target"
+            description="The active Candidate Strategy whose certified Backtest is used as the starting point for this research campaign."
+          />
+          <strong title={strategy?.name || ''}>{strategy?.name || '—'}</strong>
           <small>{strategy ? `${tr(strategy.status)} · ${tr('Revision')} ${strategy.revision}` : '—'}</small>
         </div>
-        <div>
-          <span>{tr('Saved model')}</span>
+        <div className="model-tuning-context-card model-tuning-scope-card">
+          <TuningContextLabel
+            id="model-tuning-hint-scope"
+            label="Tuning scope"
+            description={catalog?.tuning_scope_description || 'Defines exactly which parameters Adaptive CARO may change while the remaining experiment stays frozen.'}
+          />
+          <strong title={tr(catalog?.tuning_scope_label || 'LightGBM model parameters')}>{tr(catalog?.tuning_scope_label || 'LightGBM model parameters')}</strong>
+          <small>{catalog?.joint_optimization ? `${(catalog.tuned_parameters || []).length} ${tr('parameters')} · ${(catalog.tuned_model_parameters || []).length} LightGBM · ${(catalog.tuned_strategy_parameters || []).length} MARKET/CASH` : `${(catalog?.tuned_parameters || []).length || catalog?.search_space?.length || 0} ${tr('parameters')}`}</small>
+        </div>
+        <div className="model-tuning-context-card">
+          <TuningContextLabel
+            id="model-tuning-hint-saved-model"
+            label="Saved model"
+            description="Model family currently saved with the Candidate Strategy. Joint CARO may tune the supported LightGBM hyperparameters, while fixed model settings remain unchanged."
+          />
           <strong>{strategy?.research_model_configuration?.label || strategy?.research_model?.label || '—'}</strong>
           <small>{modelFamily || '—'}</small>
         </div>
-        <div className="worker-online">
-          <span>{tr('Execution')}</span>
+        <div className="model-tuning-context-card worker-online">
+          <TuningContextLabel
+            id="model-tuning-hint-execution"
+            label="Execution"
+            description="Candidates run sequentially through the integrated API worker. Each LightGBM training still uses the CPU thread configuration saved in the model/runtime."
+            align="right"
+          />
           <strong>{tr('Integrated API worker')}</strong>
-          <small>{tr('One research candidate at a time; LightGBM still uses the CPU threads configured by the model/runtime.')}</small>
+          <small>{tr('One candidate at a time')}</small>
         </div>
       </div>
 
-      <ModelTuningHistory
-        items={history}
-        selectedRunId={run?.id}
-        loading={historyLoading}
-        onOpen={openHistoricalCampaign}
-        onRefresh={loadHistory}
-      />
-
-      <div className="model-tuning-baseline">
-        <div className="model-tuning-results-heading">
-          <div>
-            <strong>{tr('Automatic baseline')}</strong>
-            <span>{tr('The API uses the certified Candidate Backtest automatically. No clone, baseline selection or prior tuning campaign is required.')}</span>
+      <div className="model-tuning-baseline model-tuning-baseline-compact">
+        <div className="model-tuning-baseline-head">
+          <div className="model-tuning-baseline-title">
+            <span className="model-tuning-context-label">
+              <span>{tr('Certified Candidate baseline')}</span>
+              <ParameterHint
+                id="model-tuning-hint-baseline"
+                title={tr('Certified Candidate baseline')}
+                description={tr('The API uses the certified Candidate Backtest automatically. No clone, baseline selection or prior tuning campaign is required.')}
+              />
+            </span>
+            <strong title={selectedBaseline?.job_id || ''}>{selectedBaseline?.job_id || tr('No compatible completed baseline execution was found.')}</strong>
           </div>
-          <button type="button" className="secondary-action compact" onClick={loadWorkspace} disabled={busy || active}>{tr('Refresh')}</button>
+          <button type="button" className="secondary-action compact model-tuning-refresh" onClick={loadWorkspace} disabled={busy || active}>{tr('Refresh')}</button>
         </div>
         {selectedBaseline ? (
-          <div className="model-tuning-baseline-metrics">
-            <div><span>{tr('Execution')}</span><strong>{selectedBaseline.job_id}</strong></div>
+          <div className="model-tuning-baseline-metrics model-tuning-baseline-metrics-compact">
             <div><span>{tr('Capital')}</span><strong>{money(selectedBaseline.metrics?.ending_capital)}</strong></div>
             <div><span>{tr('CAGR')}</span><strong>{pct(selectedBaseline.metrics?.cagr)}</strong></div>
             <div><span>{tr('Sharpe')}</span><strong>{decimal(selectedBaseline.metrics?.sharpe)}</strong></div>
             <div><span>{tr('Max DD')}</span><strong>{pct(selectedBaseline.metrics?.maximum_drawdown)}</strong></div>
             <div><span>{tr('Worst fold')}</span><strong>{pct(selectedBaseline.metrics?.worst_fold_return)}</strong></div>
           </div>
-        ) : <div className="model-tuning-empty-baseline">{tr('No compatible completed baseline execution was found.')}</div>}
+        ) : null}
       </div>
 
-      <div className="model-tuning-method-selector">
+      <div className="model-tuning-method-selector model-tuning-method-selector-compact">
         <label>
-          <span>{tr('Research method')}</span>
+          <span className="model-tuning-context-label">
+            <span>{tr('Research method')}</span>
+            <ParameterHint
+              id="model-tuning-hint-method"
+              title={selectedMethod?.label || tr('Research method')}
+              description={selectedMethod?.description || ''}
+            />
+          </span>
           <select
             value={method}
             onChange={(event) => setMethod(event.target.value)}
-            disabled={active || busy}
+            disabled={!canStartTuning || active || busy}
           >
             {(catalog.methods || []).map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
           </select>
         </label>
-        <div>
-          <strong>{selectedMethod?.label || '—'}</strong>
-          <span>{tr(selectedMethod?.description || '')}</span>
-        </div>
+        <div className="model-tuning-method-summary"><strong>{selectedMethod?.label || '—'}</strong></div>
       </div>
 
       <div className="model-tuning-controls">
         <label>
-          <span>{tr(probabilityMode ? 'Total research trials' : 'Exploration candidates')}</span>
-          <input type="number" min={catalog.candidate_count_min} max={catalog.candidate_count_max} step="1" value={candidateCount} disabled={!canTune || active || busy} onChange={(event) => setCandidateCount(event.target.value)} />
+          <span>{tr(probabilityMode ? 'Research budget (trials)' : 'Exploration candidates')}</span>
+          <input type="number" min={catalog.candidate_count_min} max={catalog.candidate_count_max} step="1" value={candidateCount} disabled={!canStartTuning || !canTune || active || busy} onChange={(event) => setCandidateCount(event.target.value)} />
         </label>
         <label>
           <span>{tr('Sampling seed')}</span>
-          <input type="number" min="0" step="1" value={seed} disabled={!canTune || active || busy} onChange={(event) => setSeed(event.target.value)} />
+          <input type="number" min="0" step="1" value={seed} disabled={!canStartTuning || !canTune || active || busy} onChange={(event) => setSeed(event.target.value)} />
         </label>
         <div className="model-tuning-control-note">
           <span>{tr('Validation')}</span>
           <strong>{tr('Chronological walk-forward')}</strong>
-          <small>{probabilityMode ? tr('Small LHS warm-up + sequential adaptive CARO trials') : tr('1 fresh control rerun + exploration candidates')}</small>
         </div>
-        <div className="model-tuning-actions">
-          <button type="button" className="primary-action" onClick={start} disabled={!canTune || active || busy}>{busy && !active ? tr('Starting…') : startActionLabel}</button>
-          <button type="button" className="secondary-action" onClick={stop} disabled={!active || busy || run?.status === 'stop_requested'}>{run?.status === 'stop_requested' ? tr('Stopping…') : tr('Stop')}</button>
-        </div>
+        {(canStartTuning || canStopTuning) ? <div className="model-tuning-actions">
+          {canStartTuning ? <button type="button" className="primary-action" onClick={start} disabled={!canTune || active || busy}>{busy && !active ? tr('Starting…') : startActionLabel}</button> : null}
+          {canStopTuning ? <button type="button" className="secondary-action" onClick={stop} disabled={!active || busy || run?.status === 'stop_requested'}>{run?.status === 'stop_requested' ? tr('Stopping…') : tr('Stop')}</button> : null}
+        </div> : null}
       </div>
 
-      {probabilityMode ? (
+      {adaptiveMode ? (
         <details className="model-tuning-space model-tuning-advanced">
           <summary>{tr('Advanced CARO settings')}<span>{tr('Optional')}</span></summary>
           <div className="model-tuning-probability-config">
             <div className="model-tuning-probability-grid">
-              <label><span>{tr('Warm-up Latin Hypercube trials')}</span><input type="number" min="4" step="1" value={startupTrials} disabled={active || busy} onChange={(event) => setStartupTrials(event.target.value)} /></label>
-              <label><span>{tr('Minimum capital improvement (%)')}</span><input type="number" min="0" step="0.1" value={minimumCapitalImprovementPct} disabled={active || busy} onChange={(event) => setMinimumCapitalImprovementPct(event.target.value)} /></label>
-              <label><span>{tr('Sharpe tolerance')}</span><input type="number" min="0" step="0.01" value={sharpeTolerance} disabled={active || busy} onChange={(event) => setSharpeTolerance(event.target.value)} /></label>
-              <label><span>{tr('Drawdown tolerance (pp)')}</span><input type="number" min="0" step="0.1" value={drawdownTolerancePct} disabled={active || busy} onChange={(event) => setDrawdownTolerancePct(event.target.value)} /></label>
-              <label><span>{tr('Minimum worst fold (%)')}</span><input type="number" step="0.1" value={minimumWorstFoldPct} disabled={active || busy} onChange={(event) => setMinimumWorstFoldPct(event.target.value)} /></label>
+              <label><span>{tr('Minimum capital improvement (%)')}</span><input type="number" min="0" step="0.1" value={minimumCapitalImprovementPct} disabled={!canStartTuning || active || busy} onChange={(event) => setMinimumCapitalImprovementPct(event.target.value)} /></label>
+              <label><span>{tr('Sharpe tolerance')}</span><input type="number" min="0" step="0.01" value={sharpeTolerance} disabled={!canStartTuning || active || busy} onChange={(event) => setSharpeTolerance(event.target.value)} /></label>
+              <label><span>{tr('Drawdown tolerance (pp)')}</span><input type="number" min="0" step="0.1" value={drawdownTolerancePct} disabled={!canStartTuning || active || busy} onChange={(event) => setDrawdownTolerancePct(event.target.value)} /></label>
+              <label><span>{tr('Minimum worst fold (%)')}</span><input type="number" step="0.1" value={minimumWorstFoldPct} disabled={!canStartTuning || active || busy} onChange={(event) => setMinimumWorstFoldPct(event.target.value)} /></label>
             </div>
-            <p>{tr('The displayed probability is a research-surrogate estimate of beating the current Champion under this validation protocol. It is not a probability of future market profit.')}</p>
           </div>
         </details>
       ) : null}
@@ -458,66 +552,141 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
           <div className="model-tuning-progress-row">
             <div>
               <strong>{tr('Campaign')} {run.id}</strong>
-              <span>{tr(run.status)} · {run.completed_candidates}/{run.total_candidates} {tr('completed')}{run.cancelled_candidates ? ` · ${run.cancelled_candidates} ${tr('cancelled')}` : ''} · {(catalog.methods || []).find((item) => item.id === run.method)?.label || run.method}</span>
+              <span>{tr(run.status)} · {run.research_completed_candidates ?? run.completed_candidates}/{run.research_total_candidates ?? run.total_candidates} {tr('completed')}{run.cancelled_candidates ? ` · ${run.cancelled_candidates} ${tr('cancelled')}` : ''} · {tr(run.tuning_scope_label || catalog?.tuning_scope_label || '')} · {(catalog.methods || []).find((item) => item.id === run.method)?.label || run.method}</span>
             </div>
             <div className="model-tuning-run-actions">
-              <button type="button" className="secondary-action compact" onClick={openCampaignLog} disabled={logLoading}>{tr('Campaign log')}</button>
-              {!active ? <button type="button" className="secondary-action compact" onClick={exportCampaign} disabled={exporting}>{tr(exporting ? 'Exporting…' : 'Export Campaign')}</button> : null}
+              {canViewTuningLogs ? <button type="button" className="secondary-action compact" onClick={openCampaignLog} disabled={logLoading}>{tr('Campaign log')}</button> : null}
+              {canExportTuning && !active ? <button type="button" className="secondary-action compact" onClick={exportCampaign} disabled={exporting}>{tr(exporting ? 'Exporting…' : 'Export Campaign')}</button> : null}
               <strong>{Number(run.progress || 0).toFixed(1)}%</strong>
             </div>
           </div>
           <div className="model-tuning-progress-track"><i style={{ width: `${Math.max(0, Math.min(100, Number(run.progress || 0)))}%` }} /></div>
           {run.baseline_execution ? <small>{tr('Baseline')} · {run.baseline_execution.job_id} · {money(run.baseline_execution.metrics?.ending_capital)}</small> : null}
           {run.probability_anchor ? <small>{tr('Champion anchor')} · {run.probability_anchor.candidate_id !== undefined ? `#${run.probability_anchor.candidate_id} · ` : ''}{money(run.probability_anchor.metrics?.ending_capital)} · {run.imported_observation_count || 0} {tr('imported observations')}</small> : null}
-          {run.method === PROBABILITY_METHOD && run.probability_state ? <small>{tr('Adaptive state')} · {tr('Champion')} #{run.probability_state.last_champion_candidate_id ?? run.probability_anchor?.candidate_id ?? 0} · {tr('Trust region')} {(Number(run.probability_state.trust_region_radius || 0) * 100).toFixed(1)}% · {tr('Adaptive trials')} {run.probability_state.adaptive_trials_completed || 0} · {tr('No-improvement streak')} {run.probability_state.no_improvement_streak || 0}</small> : null}
+          {run.method === PROBABILITY_METHOD && run.probability_state ? <small>{tr('Unified state')} · {tr('Champion')} #{run.probability_state.last_champion_candidate_id ?? run.probability_anchor?.candidate_id ?? 0} · {tr('Exploration trials')} {run.probability_state.exploration_trials_completed || 0} · {tr('Adaptive trials')} {run.probability_state.adaptive_trials_completed || 0} · {tr('Trust region')} {(Number(run.probability_state.trust_region_radius || 0) * 100).toFixed(1)}% · {tr('No-improvement streak')} {run.probability_state.no_improvement_streak || 0}</small> : null}
           {run.market_data_cutoff_date ? <small>{tr('Frozen market-data cutoff')} · {run.market_data_cutoff_date}</small> : null}
           {run.status === 'stop_requested' ? <small>{tr('Cancelling the active tuning candidate now. Partial research artifacts will be discarded.')}</small> : null}
           {run.active_candidate_ids?.length ? <small>{tr(run.status === 'stop_requested' ? 'Cancelling candidate' : 'Active candidates')} · {run.active_candidate_ids.map((id) => `#${id}`).join(', ')}</small> : null}
         </div>
       ) : null}
 
-      {sortedCandidates.length ? (
+      {visibleCandidates.length ? (
         <div className="model-tuning-results-wrap">
           <div className="model-tuning-results-heading">
-            <div><strong>{tr('Candidate ranking')}</strong><span>{tr('Ranked by the Strategy risk-adjusted compound score; every walk-forward fold must be positive.')}</span></div>
-            {run?.best_candidate_id !== null && run?.best_candidate_id !== undefined ? <small>{tr('Best')} #{run.best_candidate_id}</small> : null}
+            <div><strong>{tr('Candidate ranking')}</strong></div>
+            {runMatchesCurrentBaseline && run?.best_candidate_id !== null && run?.best_candidate_id !== undefined ? <small>{tr('Best')} #{run.best_candidate_id}</small> : null}
           </div>
-          <div className="model-tuning-table-scroll">
-            <table className="model-tuning-table">
-              <thead><tr><CandidateRankingHeader label="Rank" /><CandidateRankingHeader label="Candidate" /><CandidateRankingHeader label="Status" /><CandidateRankingHeader label="Capital" /><CandidateRankingHeader label="CAGR" /><CandidateRankingHeader label="Sharpe" /><CandidateRankingHeader label="Max DD" /><CandidateRankingHeader label="Worst fold" />{run?.method === PROBABILITY_METHOD ? <><CandidateRankingHeader label="Champion gate" /><CandidateRankingHeader label="P(beat)" /><CandidateRankingHeader label="Expected improvement" align="right" /></> : null}<CandidateRankingHeader label="Score" align="right" /><th /></tr></thead>
-              <tbody>
-                {sortedCandidates.map((candidate) => {
-                  const metrics = candidate.metrics || {}
-                  const proposal = candidate.proposal || {}
-                  const adoptable = !active && candidate.status === 'completed' && !candidate.is_control
-                  const previouslyPromoted = (run?.adoption_history || []).some((item) => Number(item.candidate_id) === Number(candidate.candidate_id))
-                  return (
-                    <tr key={candidate.candidate_id} className={`${candidate.is_control ? 'control' : ''} ${candidate.rank === 1 ? 'best' : ''}`}>
-                      <td>{candidate.rank ?? '—'}</td>
-                      <td><strong>{candidateLabel(candidate)}</strong>{candidate.is_control ? <small>{tr('Control')}</small> : candidate.kind === 'champion_probability' ? <small>{tr('Adaptive')}</small> : null}</td>
-                      <td>{tr(candidate.status)}{candidate.job_progress !== undefined ? <small>{Number(candidate.job_progress).toFixed(0)}%</small> : null}{candidate.status === 'failed' ? <small className="model-tuning-failure-type">{candidate.failure_type || tr('See log')}</small> : null}</td>
-                      <td>{money(metrics.ending_capital)}</td>
-                      <td>{pct(metrics.cagr)}</td>
-                      <td>{decimal(metrics.sharpe)}</td>
-                      <td>{pct(metrics.maximum_drawdown)}</td>
-                      <td>{pct(metrics.worst_fold_return)}</td>
-                      {run?.method === PROBABILITY_METHOD ? <><td>{candidate.status === 'completed' ? tr(candidate.champion_gate_passed ? 'Beat' : 'Did not beat') : '—'}</td><td>{pct(proposal.estimated_probability_beats_champion)}</td><td>{pct(proposal.estimated_expected_improvement)}</td></> : null}
-                      <td>{decimal(metrics.risk_adjusted_compound_score, 4)}</td>
-                      <td className="model-tuning-row-actions">
-                        <button type="button" onClick={() => setSelectedCandidateId(candidate.candidate_id)}>{tr('View')}</button>
-                        <button type="button" onClick={() => openCandidateLog(candidate)} disabled={logLoading}>{tr('Log')}</button>
-                        {previouslyPromoted ? <span className="model-tuning-adopted">{tr('Promoted')}</span> : null}
-                        {adoptable ? <button type="button" onClick={() => adopt(candidate)} disabled={busy}>{tr(previouslyPromoted ? 'Promote again' : 'Promote to Backtest')}</button> : null}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+          <div className="model-tuning-candidate-grid" aria-label={tr('Candidate ranking')}>
+            {visibleCandidates.map((candidate) => {
+              const metrics = candidate.metrics || {}
+              const proposal = candidate.proposal || {}
+              const adoptable = !active && candidate.status === 'completed' && !candidate.is_control
+              const previouslyPromoted = (run?.adoption_history || []).some((item) => Number(item.candidate_id) === Number(candidate.candidate_id))
+              const typeLabel = candidate.is_control
+                ? tr('Control')
+                : candidate.kind === 'champion_probability'
+                  ? tr('Adaptive')
+                  : candidate.kind === 'unified_exploration'
+                    ? tr('Exploration')
+                    : tr('Candidate')
+              const tone = candidate.is_control
+                ? 'control'
+                : candidate.rank === 1
+                  ? 'best'
+                  : candidate.kind === 'champion_probability'
+                    ? 'adaptive'
+                    : candidate.kind === 'unified_exploration'
+                      ? 'exploration'
+                      : ''
+              const status = candidate.status || 'unknown'
+              const statusLabelKey = {
+                running: 'Running',
+                queued: 'Queued',
+                pending: 'Pending',
+                completed: 'Completed',
+                failed: 'Failed',
+                cancelled: 'Cancelled',
+              }[status] || 'Status'
+              const jobProgress = Math.max(0, Math.min(100, Number(candidate.job_progress || 0)))
+              const jobProgressLabel = `${jobProgress.toFixed(0)}%`
+              const statusTitle = candidate.status === 'running'
+                ? `${tr(statusLabelKey)} · ${jobProgressLabel}`
+                : tr(statusLabelKey)
+              const hasParameters = Object.keys(candidate.settings || {}).length > 0
+              const showResults = candidate.is_control || ['completed', 'failed', 'cancelled'].includes(status)
+              return (
+                <article key={candidate.candidate_id} className={`model-tuning-candidate-card ${tone} ${status}`}>
+                  <header className="model-tuning-candidate-card-header">
+                    <div className="model-tuning-candidate-card-title model-tuning-candidate-card-title-header">
+                      <strong className={`model-tuning-candidate-name ${status}`} title={candidateLabel(candidate)}>{candidateLabel(candidate)}</strong>
+                      <small>
+                        {candidate.is_control && candidate.baseline_reused
+                          ? `${tr('Certified Backtest reused')} · ${candidate.source_job_id || candidate.job_id || '—'}`
+                          : `#${candidate.candidate_id} · ${typeLabel}`}
+                      </small>
+                    </div>
+                    {candidate.status === 'running' ? (
+                      <span
+                        className="loader"
+                        role="status"
+                        aria-label={statusTitle}
+                        title={statusTitle}
+                      >
+                        <span className="loader-percent" aria-hidden="true">{jobProgressLabel}</span>
+                      </span>
+                    ) : null}
+                  </header>
+
+
+                  {!candidate.is_control && ['pending', 'queued', 'running'].includes(status) && candidateCardMethod === PROBABILITY_METHOD && candidate.kind === 'champion_probability' ? (
+                    <div className="model-tuning-candidate-preflight">
+                      <CandidateCardMetric candidateId={candidate.candidate_id} label="P(beat)" value={pct(proposal.estimated_probability_beats_champion)} tone={probabilityMetricTone(proposal.estimated_probability_beats_champion)} />
+                      <CandidateCardMetric candidateId={candidate.candidate_id} label="Expected improvement" value={pct(proposal.estimated_expected_improvement)} tone={signedMetricTone(proposal.estimated_expected_improvement)} />
+                    </div>
+                  ) : null}
+
+                  {showResults ? (
+                    <div className="model-tuning-candidate-metrics">
+                      <CandidateCardMetric candidateId={candidate.candidate_id} label="Capital" value={money(metrics.ending_capital)} tone="capital" />
+                      <CandidateCardMetric candidateId={candidate.candidate_id} label="CAGR" value={pct(metrics.cagr)} tone={signedMetricTone(metrics.cagr)} />
+                      <CandidateCardMetric candidateId={candidate.candidate_id} label="Sharpe" value={decimal(metrics.sharpe)} tone={signedMetricTone(metrics.sharpe)} />
+                      <CandidateCardMetric candidateId={candidate.candidate_id} label="Max DD" value={pct(metrics.maximum_drawdown)} tone={signedMetricTone(metrics.maximum_drawdown)} />
+                      <CandidateCardMetric candidateId={candidate.candidate_id} label="Worst fold" value={pct(metrics.worst_fold_return)} tone={signedMetricTone(metrics.worst_fold_return)} />
+                      <CandidateCardMetric candidateId={candidate.candidate_id} label="Market Exposure" value={pct(metrics.market_exposure)} tone="info" />
+                      <CandidateCardMetric candidateId={candidate.candidate_id} label="CASH Days" value={metrics.cash_days == null ? '—' : Number(metrics.cash_days).toFixed(0)} tone="cash" />
+                      {candidateCardMethod === PROBABILITY_METHOD && !candidate.is_control ? <CandidateCardMetric candidateId={candidate.candidate_id} label="P(beat)" value={pct(proposal.estimated_probability_beats_champion)} tone={probabilityMetricTone(proposal.estimated_probability_beats_champion)} /> : null}
+                      {candidateCardMethod === PROBABILITY_METHOD && !candidate.is_control ? <CandidateCardMetric candidateId={candidate.candidate_id} label="Expected improvement" value={pct(proposal.estimated_expected_improvement)} tone={signedMetricTone(proposal.estimated_expected_improvement)} /> : null}
+                      <CandidateCardMetric candidateId={candidate.candidate_id} label="Score" value={decimal(metrics.risk_adjusted_compound_score, 4)} tone={signedMetricTone(metrics.risk_adjusted_compound_score)} />
+                    </div>
+                  ) : null}
+
+                  {candidate.status === 'failed' ? <small className="model-tuning-candidate-card-error">{candidate.failure_type || candidate.failure_message || tr('See log')}</small> : null}
+
+                  <footer className="model-tuning-candidate-card-actions">
+                    {hasParameters ? <button type="button" onClick={() => setParameterCandidateId(candidate.candidate_id)}>{tr('Parameters')}</button> : null}
+                    <button type="button" onClick={() => setSelectedCandidateId(candidate.candidate_id)}>{tr('View')}</button>
+                    {canViewTuningLogs && !candidate.baseline_preview ? <button type="button" onClick={() => openCandidateLog(candidate)} disabled={logLoading}>{tr('Log')}</button> : null}
+                    {previouslyPromoted ? <span className="model-tuning-adopted">{tr('Promoted')}</span> : null}
+                    {canPromoteTuning && adoptable ? <button type="button" onClick={() => adopt(candidate)} disabled={busy}>{tr(previouslyPromoted ? 'Promote again' : 'Promote to Backtest')}</button> : null}
+                  </footer>
+                </article>
+              )
+            })}
           </div>
 
-          {selectedCandidate ? (
-            <div className="model-tuning-candidate-detail">
+
+
+        </div>
+      ) : null}
+
+      {selectedCandidate ? (
+        <div
+          className="model-tuning-candidate-detail-overlay"
+          role="presentation"
+          onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedCandidateId(null) }}
+        >
+          <div className="model-tuning-candidate-detail-dialog" role="dialog" aria-modal="true" aria-label={`${tr('View')} · ${candidateLabel(selectedCandidate)}`}>
+            <div className="model-tuning-candidate-detail-body">
               <div className="model-tuning-results-heading">
                 <div><strong>{candidateLabel(selectedCandidate)}</strong><span>{selectedCandidate.settings_hash}</span></div>
                 <button type="button" className="secondary-action compact" onClick={() => setSelectedCandidateId(null)}>{tr('Close')}</button>
@@ -549,21 +718,45 @@ export function ModelTuningPanel({ onSessionExpired, onStrategyModelSaved }) {
                 <div className="model-tuning-candidate-failure">
                   <strong>{selectedCandidate.failure_type || tr('Candidate failed')}</strong>
                   <span>{selectedCandidate.failure_message || selectedCandidate.error || tr('Open the execution log for the technical details.')}</span>
-                  <button type="button" className="secondary-action compact" onClick={() => openCandidateLog(selectedCandidate)} disabled={logLoading}>{tr('Open log')}</button>
+                  {canViewTuningLogs && !selectedCandidate.baseline_preview ? <button type="button" className="secondary-action compact" onClick={() => openCandidateLog(selectedCandidate)} disabled={logLoading}>{tr('Open log')}</button> : null}
                 </div>
               ) : null}
-              <div className="model-tuning-settings-grid">
-                {Object.entries(selectedCandidate.settings || {}).map(([name, value]) => <div key={name}><span>{name}</span><strong>{String(value)}</strong></div>)}
-              </div>
+              {gateTuning && selectedCandidate.metrics ? (
+                <div className="model-tuning-proposal-grid">
+                  <div><span>{tr('Market Exposure')}</span><strong>{pct(selectedCandidate.metrics.market_exposure)}</strong></div>
+                  <div><span>{tr('CASH Days')}</span><strong>{selectedCandidate.metrics.cash_days == null ? '—' : Number(selectedCandidate.metrics.cash_days).toFixed(0)}</strong></div>
+                  <div><span>{tr('Cash Gate Overrides')}</span><strong>{selectedCandidate.metrics.cash_gate_changed_base_action_sessions ?? '—'}</strong></div>
+                  <div><span>{tr('Net Cash-Gate Diagnostic')}</span><strong>{pct(selectedCandidate.metrics.cash_gate_net_avoided_return_sum)}</strong></div>
+                </div>
+              ) : null}
               {selectedCandidate.metrics?.folds?.length ? (
                 <div className="model-tuning-fold-grid">
                   {selectedCandidate.metrics.folds.map((fold) => <div key={fold.fold_id}><span>{tr('Fold')} {fold.fold_id}</span><strong>{pct(fold.strategy_return)}</strong><small>{tr('Max DD')} {pct(fold.maximum_drawdown)}</small></div>)}
                 </div>
               ) : null}
+            
             </div>
-          ) : null}
+          </div>
+        </div>
+      ) : null}
 
-          <p className="model-tuning-footnote">{tr('Any completed tuning candidate can be used in Backtest. Champion Gate and fold eligibility are informational and do not block manual research actions.')}</p>
+      {parameterCandidate ? (
+        <div
+          className="model-tuning-parameters-overlay"
+          role="presentation"
+          onMouseDown={(event) => { if (event.target === event.currentTarget) setParameterCandidateId(null) }}
+        >
+          <div className="model-tuning-parameters-dialog" role="dialog" aria-modal="true" aria-label={`${tr('Parameters')} · ${candidateLabel(parameterCandidate)}`}>
+            <div className="model-tuning-parameters-dialog-heading">
+              <div>
+                <span>{tr('Parameters')}</span>
+                <strong>{candidateLabel(parameterCandidate)}</strong>
+                {parameterCandidate.settings_hash ? <small>{parameterCandidate.settings_hash}</small> : null}
+              </div>
+              <button type="button" className="secondary-action compact" onClick={() => setParameterCandidateId(null)}>{tr('Close')}</button>
+            </div>
+            <CandidateParametersGrid settings={parameterCandidate.settings} />
+          </div>
         </div>
       ) : null}
 

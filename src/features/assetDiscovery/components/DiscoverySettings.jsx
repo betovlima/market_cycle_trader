@@ -47,7 +47,6 @@ export function DiscoverySettings({ settings, busy, onSave }) {
       <div>
         <span className="eyebrow">{tr('AUTOMATION')}</span>
         <h3>{tr('Discovery schedule')}</h3>
-        <p>{tr('Run small candidate batches after market hours without competing with the main simulation workflow.')}</p>
       </div>
       <span className="asset-discovery-next-run">{tr('Next automatic run')}: <strong>{settings?.next_scheduled_at ? shortDateTime(settings.next_scheduled_at) : tr('Disabled')}</strong></span>
     </div>

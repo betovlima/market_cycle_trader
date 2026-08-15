@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { apiFetch, downloadFile } from '../../../api/http'
+import { hasCapability } from '../../../auth/capabilities'
 import { API } from '../../../config/env'
 import {
   BacktestIcon,
@@ -25,7 +26,11 @@ import { backtestAxisLabel, sortRows, toggleSort } from '../backtestUtils'
 import { BacktestChartTooltip, BacktestTradeEventDot, FilterButton, ListToolbar, Metric, MetricLabel, Pagination, SortableHeader, StatusBadge } from './BacktestPrimitives'
 import { RotationPanel } from './RotationPanel'
 
-export function BacktestPage({ workspace, canExportResults = false, canRunResearchModels = false, onSessionExpired }) {
+export function BacktestPage({ workspace, capabilities = {}, onSessionExpired }) {
+  const canExportResults = hasCapability(capabilities, 'backtest.export')
+  const canViewResearchModels = hasCapability(capabilities, 'research_models.view')
+  const canStartBacktest = hasCapability(capabilities, 'backtest.start')
+  const canViewTuning = hasCapability(capabilities, 'tuning.view')
   const {
     job,
     dashboard,
@@ -61,7 +66,7 @@ export function BacktestPage({ workspace, canExportResults = false, canRunResear
 
   useEffect(() => {
     let active = true
-    if (!canRunResearchModels) {
+    if (!canViewResearchModels) {
       setSelectedStrategyModel(null)
       setStrategyContextError('')
       return () => { active = false }
@@ -76,14 +81,18 @@ export function BacktestPage({ workspace, canExportResults = false, canRunResear
       .catch((requestError) => {
         if (!active) return
         setSelectedStrategyModel(null)
+        if (requestError?.status === 403) {
+          setStrategyContextError('')
+          return
+        }
         setStrategyContextError(requestError.message || 'Unable to load the model saved with the selected Strategy.')
       })
     return () => { active = false }
-  }, [canRunResearchModels, dashboard?.selected_backtest_strategy_name])
+  }, [canViewResearchModels, dashboard?.selected_backtest_strategy_name])
 
   useEffect(() => {
     let active = true
-    if (!canRunResearchModels) {
+    if (!canViewResearchModels) {
       setResearchExecutionModels({})
       return () => { active = false }
     }
@@ -98,7 +107,7 @@ export function BacktestPage({ workspace, canExportResults = false, canRunResear
         if (active) setResearchExecutionModels({})
       })
     return () => { active = false }
-  }, [canRunResearchModels, job?.id, detail?.id, dashboard?.recent_backtests?.[0]?.id])
+  }, [canViewResearchModels, job?.id, detail?.id, dashboard?.recent_backtests?.[0]?.id])
 
   useEffect(() => {
     let active = true
@@ -330,11 +339,11 @@ export function BacktestPage({ workspace, canExportResults = false, canRunResear
     const normalizedQuery = historyQuery.trim().toLowerCase()
     const rows = (dashboard?.recent_backtests || []).map((item) => ({
       ...item,
-      research_model_label: canRunResearchModels ? (researchExecutionModels[item.id]?.model_label || 'Baseline') : '',
+      research_model_label: canViewResearchModels ? (researchExecutionModels[item.id]?.model_label || 'Baseline') : '',
     })).filter((item) => {
       if (historyStatus !== 'all' && String(item.status || '').toLowerCase() !== historyStatus) return false
       if (!normalizedQuery) return true
-      const haystack = `${item.strategy_profile_name || 'Unknown test'} ${canRunResearchModels ? item.research_model_label : ''}`.toLowerCase()
+      const haystack = `${item.strategy_profile_name || 'Unknown test'} ${canViewResearchModels ? item.research_model_label : ''}`.toLowerCase()
       return haystack.includes(normalizedQuery)
     })
     return sortRows(rows, historySort, {
@@ -348,7 +357,7 @@ export function BacktestPage({ workspace, canExportResults = false, canRunResear
       position_changes: (item) => item.metrics?.position_changes == null ? null : Number(item.metrics.position_changes),
       duration_seconds: (item) => item.duration_seconds == null ? null : Number(item.duration_seconds),
     })
-  }, [canRunResearchModels, dashboard, historyQuery, historySort, historyStatus, researchExecutionModels])
+  }, [canViewResearchModels, dashboard, historyQuery, historySort, historyStatus, researchExecutionModels])
 
   const historyPages = Math.max(1, Math.ceil(historyRows.length / HISTORY_PAGE_SIZE))
   const currentHistoryPage = Math.min(historyPage, historyPages)
@@ -360,10 +369,10 @@ export function BacktestPage({ workspace, canExportResults = false, canRunResear
 
   useEffect(() => { setHistoryPage(1) }, [historyQuery, historySort, historyStatus])
 
-  const savedResearchModelLabel = canRunResearchModels ? (selectedStrategyModel?.label || '') : ''
-  const activeResearchModelLabel = canRunResearchModels && job?.id ? (researchExecutionModels[job.id]?.model_label || savedResearchModelLabel) : ''
-  const displayedResearchModelLabel = canRunResearchModels && detail?.id ? (researchExecutionModels[detail.id]?.model_label || '') : ''
-  const historyColumnCount = canRunResearchModels ? 9 : 8
+  const savedResearchModelLabel = canViewResearchModels ? (selectedStrategyModel?.label || '') : ''
+  const activeResearchModelLabel = canViewResearchModels && job?.id ? (researchExecutionModels[job.id]?.model_label || savedResearchModelLabel) : ''
+  const displayedResearchModelLabel = canViewResearchModels && detail?.id ? (researchExecutionModels[detail.id]?.model_label || '') : ''
+  const historyColumnCount = canViewResearchModels ? 9 : 8
 
   async function exportResults() {
     if (!canExportResults || !detail?.id || exporting) return
@@ -389,7 +398,6 @@ export function BacktestPage({ workspace, canExportResults = false, canRunResear
             <div className="page-title-icon"><BacktestIcon size={20} /></div>
             <div>
               <h2>{tr("Backtest")}</h2>
-              <p>{tr("Execute and analyze protected historical simulations.")}</p>
               <div className="backtest-context-line" aria-live="polite">
                 <span>{tr(running ? 'Evaluating' : 'Selected test')}:</span>
                 <strong title={activeStrategyName}>{activeStrategyName}</strong>
@@ -400,13 +408,13 @@ export function BacktestPage({ workspace, canExportResults = false, canRunResear
             </div>
           </div>
           <div className="backtest-workspace-actions">
-            {canRunResearchModels ? (
+            {(canViewResearchModels || canViewTuning) ? (
               <div className="backtest-research-mode-switch" role="tablist" aria-label={tr('Research workspace')}>
                 <button type="button" role="tab" aria-selected={researchWorkspaceMode === 'simulation'} className={researchWorkspaceMode === 'simulation' ? 'active' : ''} onClick={() => setResearchWorkspaceMode('simulation')}>{tr('Simulation Backtest')}</button>
-                <button type="button" role="tab" aria-selected={researchWorkspaceMode === 'tuning'} className={researchWorkspaceMode === 'tuning' ? 'active' : ''} onClick={() => setResearchWorkspaceMode('tuning')}>{tr('Model Tuning')}</button>
+                {canViewTuning ? <button type="button" role="tab" aria-selected={researchWorkspaceMode === 'tuning'} className={researchWorkspaceMode === 'tuning' ? 'active' : ''} onClick={() => setResearchWorkspaceMode('tuning')}>{tr('Model Tuning')}</button> : null}
               </div>
             ) : null}
-            {canRunResearchModels && researchWorkspaceMode === 'simulation' ? (
+            {canViewResearchModels && researchWorkspaceMode === 'simulation' ? (
               <div className="research-model-control research-model-readonly" aria-label={tr('Model saved with selected Strategy')}>
                 <span>{tr('Saved model')}</span>
                 <strong>{savedResearchModelLabel || tr('Unavailable')}</strong>
@@ -418,14 +426,15 @@ export function BacktestPage({ workspace, canExportResults = false, canRunResear
                 {tr(exporting ? 'Exporting…' : 'Export Results')}
               </button>
             ) : null}
-            {researchWorkspaceMode === 'simulation' ? <button type="button" className="primary-action compact" onClick={() => runBacktest()} disabled={startDisabled}>
+            {researchWorkspaceMode === 'simulation' && canStartBacktest ? <button type="button" className="primary-action compact" onClick={() => runBacktest()} disabled={startDisabled}>
               <PlayIcon /> {tr(restoringExecution ? 'Checking Execution' : startingBacktest ? 'Starting…' : running ? 'Simulation Running' : 'Start New Backtest')}
             </button> : null}
           </div>
         </header>
 
-        {researchWorkspaceMode === 'tuning' && canRunResearchModels ? (
+        {researchWorkspaceMode === 'tuning' && canViewTuning ? (
           <ModelTuningPanel
+            capabilities={capabilities}
             onSessionExpired={onSessionExpired}
             onStrategyModelSaved={(updated) => setSelectedStrategyModel(updated?.research_model_configuration || updated?.research_model || null)}
           />
@@ -451,6 +460,44 @@ export function BacktestPage({ workspace, canExportResults = false, canRunResear
                 <Metric id="hint-average-assets-held" label={tr("Average Assets Held")} value={metrics.average_assets_held == null ? '—' : Number(metrics.average_assets_held).toFixed(2)} note={tr('Simultaneous risky positions')} tone="green" hint={METRIC_HINTS.average_assets_held} />
                 <Metric id="hint-maximum-assets-held" label={tr("Maximum Assets Held")} value={metrics.maximum_assets_held == null ? '—' : Number(metrics.maximum_assets_held).toFixed(0)} note={tr('Largest simultaneous allocation')} tone="purple" hint={METRIC_HINTS.maximum_assets_held} />
                 <Metric id="hint-allocation-rebalances" label={tr("Allocation Rebalances")} value={metrics.allocation_rebalances == null ? '—' : Number(metrics.allocation_rebalances).toFixed(0)} note={tr('Capital movement sessions')} tone="blue" hint={METRIC_HINTS.allocation_rebalances} />
+                {metrics.compound_risk_overlay_enabled ? <Metric id="hint-risk-overlay-decisions" label={tr("Risk Overlay Decisions")} value={Number(metrics.risk_overlay_decisions || 0).toFixed(0)} note={tr('Top-1/CASH risk sizing')} tone="blue" hint={METRIC_HINTS.risk_overlay_decisions} /> : null}
+                {metrics.compound_risk_overlay_enabled ? <Metric id="hint-risk-overlay-full" label={tr("Risk Overlay Full Exposure")} value={Number(metrics.risk_overlay_full_exposure_decisions || 0).toFixed(0)} note={tr('Capital compound preserved')} tone="green" hint={METRIC_HINTS.risk_overlay_full_exposure_decisions} /> : null}
+                {metrics.compound_risk_overlay_enabled ? <Metric id="hint-risk-overlay-reduced" label={tr("Risk Overlay Reduced Exposure")} value={Number(metrics.risk_overlay_reduced_exposure_decisions || 0).toFixed(0)} note={tr('Part of capital moved to CASH')} tone="blue" hint={METRIC_HINTS.risk_overlay_reduced_exposure_decisions} /> : null}
+                {metrics.compound_risk_overlay_enabled ? <Metric id="hint-risk-overlay-fallbacks" label={tr("Risk Overlay Technical Fallbacks")} value={Number(metrics.risk_overlay_technical_fallbacks || 0).toFixed(0)} note={tr('Must be zero in a clean run')} tone={Number(metrics.risk_overlay_technical_fallbacks || 0) > 0 ? "red" : "green"} hint={METRIC_HINTS.risk_overlay_technical_fallbacks} /> : null}
+                {metrics.average_primary_weight != null ? <Metric id="hint-average-primary-weight" label={tr("Average Top-1 Weight")} value={percent(metrics.average_primary_weight)} note={tr('Share of total compounded capital')} tone="green" hint={METRIC_HINTS.average_primary_weight} /> : null}
+                {metrics.average_primary_share_of_risk != null ? <Metric id="hint-average-primary-share" label={tr("Top-1 Share of Risk")} value={percent(metrics.average_primary_share_of_risk)} note={tr('Share of risky capital excluding CASH')} tone="purple" hint={METRIC_HINTS.average_primary_share_of_risk} /> : null}
+                {metrics.average_secondary_weight != null ? <Metric id="hint-average-secondary-weight" label={tr("Average Secondary Weight")} value={percent(metrics.average_secondary_weight)} note={tr('Optional Top-2/Top-3 capital')} tone="blue" hint={METRIC_HINTS.average_secondary_weight} /> : null}
+              </section>
+            ) : null}
+            {metrics.absolute_utility_cash_gate_enabled ? (
+              <section className="backtest-workspace-metrics">
+                <Metric id="hint-absolute-utility-decisions" label={tr("Absolute Utility Decisions")} value={Number(metrics.absolute_utility_gate_decisions || 0).toFixed(0)} note={tr('{value} market exposure', { value: percent(metrics.market_exposure) })} tone="blue" hint={METRIC_HINTS.absolute_utility_gate_decisions} />
+                <Metric id="hint-absolute-utility-accepted" label={tr("Market Accepted")} value={Number(metrics.absolute_utility_gate_accepted || 0).toFixed(0)} note={tr('{value} acceptance rate', { value: percent(metrics.absolute_utility_gate_acceptance_rate) })} tone="green" hint={METRIC_HINTS.absolute_utility_gate_accepted} />
+                <Metric id="hint-absolute-utility-rejected" label={tr("CASH Rejected")} value={Number(metrics.absolute_utility_gate_rejected || 0).toFixed(0)} note={tr('{count} CASH sessions', { count: Number(metrics.cash_days || 0).toFixed(0) })} tone="blue" hint={METRIC_HINTS.absolute_utility_gate_rejected} />
+                <Metric id="hint-absolute-utility-entry" label={tr("Utility Entry Floor")} value={metrics.absolute_utility_entry_threshold == null ? '—' : Number(metrics.absolute_utility_entry_threshold).toFixed(6)} note={tr('CASH → market threshold')} tone="green" hint={METRIC_HINTS.absolute_utility_entry_threshold} />
+                <Metric id="hint-absolute-utility-exit" label={tr("Utility Exit Floor")} value={metrics.absolute_utility_exit_threshold == null ? '—' : Number(metrics.absolute_utility_exit_threshold).toFixed(6)} note={tr('Market → CASH threshold')} tone="blue" hint={METRIC_HINTS.absolute_utility_exit_threshold} />
+                <Metric id="hint-absolute-cash-overrides" label={tr("Cash Gate Overrides")} value={Number(metrics.cash_gate_changed_base_action_sessions || 0).toFixed(0)} note={tr('{entries} entries · {exits} exits', { entries: Number(metrics.cash_gate_entries || 0).toFixed(0), exits: Number(metrics.cash_gate_exits || 0).toFixed(0) })} tone="purple" hint={METRIC_HINTS.cash_gate_changed_base_action_sessions} />
+                <Metric id="hint-absolute-cash-avoided" label={tr("Avoided-Loss Sessions")} value={Number(metrics.cash_gate_counterfactual_negative_sessions || 0).toFixed(0)} note={tr('Base action fell next session')} tone="green" hint={METRIC_HINTS.cash_gate_counterfactual_negative_sessions} />
+                <Metric id="hint-absolute-cash-missed" label={tr("Missed-Gain Sessions")} value={Number(metrics.cash_gate_counterfactual_positive_sessions || 0).toFixed(0)} note={tr('Base action rose next session')} tone="red" hint={METRIC_HINTS.cash_gate_counterfactual_positive_sessions} />
+                <Metric id="hint-absolute-cash-net" label={tr("Net Cash-Gate Diagnostic")} value={percent(metrics.cash_gate_net_avoided_return_sum)} note={tr('Avoided loss minus missed gain')} tone={Number(metrics.cash_gate_net_avoided_return_sum || 0) >= 0 ? "green" : "red"} hint={METRIC_HINTS.cash_gate_net_avoided_return_sum} />
+              </section>
+            ) : null}
+            {metrics.opportunity_cash_gate_enabled ? (
+              <section className="backtest-workspace-metrics">
+                <Metric id="hint-cash-gate-decisions" label={tr("Cash Gate Decisions")} value={Number(metrics.opportunity_gate_decisions || 0).toFixed(0)} note={tr('{value} market exposure', { value: percent(metrics.market_exposure) })} tone="blue" hint={METRIC_HINTS.opportunity_gate_decisions} />
+                <Metric id="hint-cash-gate-accepted" label={tr("Cash Gate Accepted")} value={Number(metrics.opportunity_gate_accepted || 0).toFixed(0)} note={tr('{value} acceptance rate', { value: percent(metrics.opportunity_gate_acceptance_rate) })} tone="green" hint={METRIC_HINTS.opportunity_gate_accepted} />
+                <Metric id="hint-cash-gate-rejected" label={tr("Cash Gate Rejected")} value={Number(metrics.opportunity_gate_rejected || 0).toFixed(0)} note={tr('{count} CASH sessions', { count: Number(metrics.cash_days || 0).toFixed(0) })} tone="blue" hint={METRIC_HINTS.opportunity_gate_rejected} />
+                <Metric id="hint-cash-gate-entry-threshold" label={tr("Entry Growth Probability")} value={percent(metrics.opportunity_entry_threshold_mean)} note={tr('CASH → market threshold')} tone="green" hint={METRIC_HINTS.opportunity_entry_threshold_mean} />
+                <Metric id="hint-cash-gate-exit-threshold" label={tr("Exit Growth Probability")} value={percent(metrics.opportunity_exit_threshold_mean)} note={tr('Market → CASH threshold')} tone="blue" hint={METRIC_HINTS.opportunity_exit_threshold_mean} />
+                <Metric id="hint-cash-gate-refreshes" label={tr("Adaptive Gate Refreshes")} value={Number(metrics.opportunity_gate_adaptive_refreshes || 0).toFixed(0)} note={tr('Every 21 matured OOS sessions')} tone="purple" hint={METRIC_HINTS.opportunity_gate_adaptive_refreshes} />
+                <Metric id="hint-cash-gate-b0-prior" label={tr("B0 Prior Sessions")} value={Number(metrics.opportunity_gate_regularized_sessions || 0).toFixed(0)} note={tr('CASH lacked conservative alpha')} tone="green" hint={METRIC_HINTS.opportunity_gate_regularized_sessions} />
+                <Metric id="hint-cash-gate-target-horizon" label={tr("Gate Target Horizon")} value={metrics.opportunity_target_horizon_sessions == null ? '—' : Number(metrics.opportunity_target_horizon_sessions).toFixed(0)} note={tr('Next execution sessions')} tone="blue" hint={METRIC_HINTS.opportunity_target_horizon_sessions} />
+                <Metric id="hint-cash-gate-overrides" label={tr("Cash Gate Overrides")} value={Number(metrics.cash_gate_changed_base_action_sessions || 0).toFixed(0)} note={tr('{entries} entries · {exits} exits', { entries: Number(metrics.cash_gate_entries || 0).toFixed(0), exits: Number(metrics.cash_gate_exits || 0).toFixed(0) })} tone="purple" hint={METRIC_HINTS.cash_gate_changed_base_action_sessions} />
+                <Metric id="hint-cash-gate-avoided" label={tr("Avoided-Loss Sessions")} value={Number(metrics.cash_gate_counterfactual_negative_sessions || 0).toFixed(0)} note={tr('Base action fell next session')} tone="green" hint={METRIC_HINTS.cash_gate_counterfactual_negative_sessions} />
+                <Metric id="hint-cash-gate-missed" label={tr("Missed-Gain Sessions")} value={Number(metrics.cash_gate_counterfactual_positive_sessions || 0).toFixed(0)} note={tr('Base action rose next session')} tone="red" hint={METRIC_HINTS.cash_gate_counterfactual_positive_sessions} />
+                <Metric id="hint-cash-gate-avoided-return" label={tr("Avoided-Loss Diagnostic")} value={percent(metrics.cash_gate_avoided_loss_return_sum)} note={tr('Non-compounded counterfactual sum')} tone="green" hint={METRIC_HINTS.cash_gate_avoided_loss_return_sum} />
+                <Metric id="hint-cash-gate-missed-return" label={tr("Missed-Gain Diagnostic")} value={percent(metrics.cash_gate_missed_gain_return_sum)} note={tr('Non-compounded counterfactual sum')} tone="red" hint={METRIC_HINTS.cash_gate_missed_gain_return_sum} />
+                <Metric id="hint-cash-gate-net-return" label={tr("Net Cash-Gate Diagnostic")} value={percent(metrics.cash_gate_net_avoided_return_sum)} note={tr('Avoided loss minus missed gain')} tone={Number(metrics.cash_gate_net_avoided_return_sum || 0) >= 0 ? "green" : "red"} hint={METRIC_HINTS.cash_gate_net_avoided_return_sum} />
               </section>
             ) : null}
 
@@ -522,7 +569,6 @@ export function BacktestPage({ workspace, canExportResults = false, canRunResear
           <section className="backtest-workspace-section empty-result backtest-empty-result">
             <BacktestIcon size={32} />
             <h2>{tr("No completed result selected")}</h2>
-            <p>{tr("Start a new backtest or review the available execution history below.")}</p>
           </section>
         )}
 
@@ -551,7 +597,7 @@ export function BacktestPage({ workspace, canExportResults = false, canRunResear
                 <tr>
                   <SortableHeader label={tr("Date")} field="created_at" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.created_at} />
                   <SortableHeader label={tr("Test")} field="strategy_profile_name" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.strategy_profile_name} />
-                  {canRunResearchModels ? <SortableHeader label={tr("Model")} field="research_model_label" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} /> : null}
+                  {canViewResearchModels ? <SortableHeader label={tr("Model")} field="research_model_label" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} /> : null}
                   <SortableHeader label={tr("Status")} field="status" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.status} />
                   <SortableHeader label={tr("Total Return")} field="simulation_return" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.simulation_return} />
                   <SortableHeader label={tr("Sharpe Ratio")} field="sharpe" sort={historySort} onSort={(key) => setHistorySort((current) => toggleSort(current, key))} hint={HISTORY_HINTS.sharpe} />
@@ -565,7 +611,7 @@ export function BacktestPage({ workspace, canExportResults = false, canRunResear
                   <tr key={item.id} className={detail?.id === item.id ? 'selected-row' : ''}>
                     <td>{shortDateTime(item.created_at)}</td>
                     <td className="backtest-name-cell" title={item.strategy_profile_name || tr('Unknown test')}>{item.strategy_profile_name || tr('Unknown test')}</td>
-                    {canRunResearchModels ? <td>{item.research_model_label || tr('Baseline')}</td> : null}
+                    {canViewResearchModels ? <td>{item.research_model_label || tr('Baseline')}</td> : null}
                     <td><StatusBadge status={item.status} /></td>
                     <td className={item.metrics?.simulation_return == null ? '' : Number(item.metrics.simulation_return) >= 0 ? 'positive' : 'negative'}>{percent(item.metrics?.simulation_return)}</td>
                     <td>{item.metrics?.sharpe == null ? '—' : Number(item.metrics.sharpe).toFixed(3)}</td>

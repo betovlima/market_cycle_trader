@@ -17,7 +17,8 @@ export function decimal(value, digits = 3) {
 
 export function candidateLabel(candidate) {
   if (candidate.is_control) return tr('Current Strategy model')
-  if (candidate.kind === 'probability_startup') return `${tr('Startup candidate')} ${candidate.candidate_id}`
+  if (candidate.kind === 'probability_startup') return `${tr('Exploration candidate')} ${candidate.candidate_id}`
+  if (candidate.kind === 'unified_exploration') return `${tr('Exploration candidate')} ${candidate.candidate_id}`
   if (candidate.kind === 'champion_probability') return `${tr('CARO candidate')} ${candidate.candidate_id}`
   return `${tr('Candidate')} ${candidate.candidate_id}`
 }

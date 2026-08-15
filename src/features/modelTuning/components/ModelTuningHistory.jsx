@@ -9,7 +9,8 @@ function when(value) {
 }
 
 function methodLabel(method) {
-  return method === 'champion_probability' ? tr('Adaptive CARO') : tr('Latin Hypercube')
+  if (method === 'latin_hypercube_then_caro') return tr('Latin Hypercube → Adaptive CARO (legacy)')
+  return method === 'champion_probability' ? tr('Unified Adaptive CARO') : tr('Latin Hypercube')
 }
 
 export function ModelTuningHistory({ items, selectedRunId, loading, onOpen, onRefresh }) {
@@ -32,9 +33,9 @@ export function ModelTuningHistory({ items, selectedRunId, loading, onOpen, onRe
               <article key={item.id} className={`model-tuning-history-card ${selected ? 'selected' : ''}`}>
                 <div className="model-tuning-history-main">
                   <div>
-                    <strong>{item.strategy_profile_name || tr('Strategy')}</strong>
-                    <span>{methodLabel(item.method)} · {tr(item.status || 'unknown')} · {when(item.finished_at || item.created_at)}</span>
-                    <small>{item.id}</small>
+                    <strong title={item.strategy_profile_name || tr('Strategy')}>{item.strategy_profile_name || tr('Strategy')}</strong>
+                    <span title={`${methodLabel(item.method)} · ${tr(item.status || 'unknown')} · ${when(item.finished_at || item.created_at)}`}>{methodLabel(item.method)} · {tr(item.status || 'unknown')} · {when(item.finished_at || item.created_at)}</span>
+                    <small title={item.id}>{item.id}</small>
                   </div>
                   <div className="model-tuning-history-best">
                     <span>{tr('Best candidate')}</span>

@@ -3,26 +3,18 @@ import { LanguageSelector } from '../../../i18n/LanguageSelector'
 import { AnalyticsIcon, BacktestIcon, DashboardIcon, PortfolioIcon, SearchIcon, SettingsIcon } from '../../../shared/components/Icons'
 import appLogoUrl from '../../../assets/market-cycle-trader-logo.png'
 
-const VIEWER_NAV_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard', Icon: DashboardIcon },
-  { id: 'backtest', label: 'Backtest', Icon: BacktestIcon },
-  { id: 'analytics', label: 'Analytics', Icon: AnalyticsIcon },
+const NAV_ITEMS = [
+  { id: 'dashboard', label: 'Dashboard', Icon: DashboardIcon, capability: 'dashboard.view' },
+  { id: 'backtest', label: 'Backtest', Icon: BacktestIcon, capability: 'backtest.view' },
+  { id: 'analytics', label: 'Analytics', Icon: AnalyticsIcon, capability: 'analytics.view' },
+  { id: 'portfolio', label: 'Portfolio', Icon: PortfolioIcon, capability: 'portfolio.view' },
+  { id: 'asset-discovery', label: 'Asset Discovery', Icon: SearchIcon, capability: 'asset_discovery.view' },
+  { id: 'administration', label: 'Administration', Icon: DashboardIcon, capability: 'administration.view' },
+  { id: 'system-settings', label: 'Settings', Icon: SettingsIcon, capability: 'settings.view' },
 ]
 
-const TRADER_NAV_ITEMS = [
-  ...VIEWER_NAV_ITEMS,
-  { id: 'portfolio', label: 'Portfolio', Icon: PortfolioIcon },
-]
-
-const ADMIN_NAV_ITEMS = [
-  ...TRADER_NAV_ITEMS,
-  { id: 'asset-discovery', label: 'Asset Discovery', Icon: SearchIcon },
-  { id: 'administration', label: 'Administration', Icon: DashboardIcon },
-  { id: 'system-settings', label: 'Settings', Icon: SettingsIcon },
-]
-
-export function AppHeader({ activeTab, onTabChange, session, onLogout }) {
-  const navItems = session?.role === 'admin' ? ADMIN_NAV_ITEMS : session?.role === 'trader' ? TRADER_NAV_ITEMS : VIEWER_NAV_ITEMS
+export function AppHeader({ activeTab, onTabChange, session, capabilities = {}, onLogout }) {
+  const navItems = NAV_ITEMS.filter(({ capability }) => capabilities?.[capability] === true)
   return (
     <header className="app-header">
       <div className="brand-area">
@@ -33,7 +25,6 @@ export function AppHeader({ activeTab, onTabChange, session, onLogout }) {
         <div className="brand-copy">
           <h1>{tr("Market Cycle Trader")}</h1>
           <div className="brand-subtitle">{tr("Historical Market Simulation")}</div>
-          <p>{tr("Run protected simulations and review authorized performance results.")}</p>
         </div>
       </div>
 
@@ -49,7 +40,7 @@ export function AppHeader({ activeTab, onTabChange, session, onLogout }) {
             </button>
           ))}
         </nav>
-        <div className="session-controls"><span>{session?.display_name || session?.role}</span><button type="button" onClick={onLogout}>{tr("Sign out")}</button></div>
+        <div className="session-controls"><span>{session?.display_name || tr('User')}</span><button type="button" onClick={onLogout}>{tr("Sign out")}</button></div>
       </div>
     </header>
   )

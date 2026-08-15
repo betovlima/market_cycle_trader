@@ -23,7 +23,7 @@ export function BacktestHistorySection({
 }) {
   return (
 <section className="dashboard-history-section">
-          <div className="dashboard-section-heading"><div><span className="panel-kicker">{tr("History")}</span><h2>{tr("Recent Backtests")}</h2><p>{tr("Filter, sort and review recent simulation executions without expanding the page vertically.")}</p></div><span className="panel-count">{filteredRows.length} {tr(filteredRows.length === 1 ? "result" : "results")}</span></div>
+          <div className="dashboard-section-heading"><div><span className="panel-kicker">{tr("History")}</span><h2>{tr("Recent Backtests")}</h2></div><span className="panel-count">{filteredRows.length} {tr(filteredRows.length === 1 ? "result" : "results")}</span></div>
           <div className="dashboard-history-toolbar">
             <label className="dashboard-list-search"><SearchIcon size={15} /><input type="search" value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={tr("Filter execution history")} aria-label={tr("Filter execution history")} /></label>
             <div className="dashboard-status-filters" role="group" aria-label={tr("Backtest status filter")}>

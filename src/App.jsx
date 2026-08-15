@@ -1,7 +1,8 @@
 import { tr } from './i18n/runtime'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { apiFetch } from './api/http'
+import { hasCapability } from './auth/capabilities'
 import { API, FRONT_VERSION } from './config/env'
 import { useI18n } from './i18n/I18nProvider'
 import { AppHeader } from './features/backtest/components/AppHeader'
@@ -15,13 +16,36 @@ import { DashboardPage } from './features/dashboard/DashboardPage'
 import { LoginPage } from './features/LoginPage'
 import { PaperPortfolioDashboard } from './features/paperPortfolio/PaperPortfolioDashboard'
 
+const TAB_CAPABILITIES = {
+  dashboard: 'dashboard.view',
+  backtest: 'backtest.view',
+  analytics: 'analytics.view',
+  'asset-discovery': 'asset_discovery.view',
+  portfolio: 'portfolio.view',
+  administration: 'administration.view',
+  'system-settings': 'settings.view',
+}
+
+function isPermissionDeniedMessage(message) {
+  const value = String(message || '').toLowerCase()
+  return value.includes('administrator access required')
+    || value.includes('trader or administrator access required')
+    || value.includes('permission denied')
+    || value.includes('forbidden')
+}
+
 function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefresh }) {
   const workspace = useBacktestWorkspace()
   const [activeTab, setActiveTab] = useState('dashboard')
+  const capabilities = session?.capabilities || {}
+  const allowedTabs = useMemo(
+    () => Object.entries(TAB_CAPABILITIES).filter(([, capability]) => hasCapability(capabilities, capability)).map(([tab]) => tab),
+    [capabilities],
+  )
 
   useEffect(() => {
-    if (workspace.running) setActiveTab('backtest')
-  }, [workspace.running])
+    if (workspace.running && hasCapability(capabilities, 'backtest.view')) setActiveTab('backtest')
+  }, [capabilities, workspace.running])
 
   useEffect(() => {
     let active = true
@@ -44,29 +68,24 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
     : null
 
   useEffect(() => {
-    const allowed = session.role === 'admin'
-      ? ['dashboard', 'backtest', 'analytics', 'asset-discovery', 'portfolio', 'administration', 'system-settings']
-      : session.role === 'trader'
-        ? ['dashboard', 'backtest', 'analytics', 'portfolio']
-        : ['dashboard', 'backtest', 'analytics']
-    if (!allowed.includes(activeTab)) setActiveTab('dashboard')
-  }, [activeTab, session.role])
+    if (allowedTabs.includes(activeTab)) return
+    setActiveTab(allowedTabs.includes('dashboard') ? 'dashboard' : (allowedTabs[0] || 'dashboard'))
+  }, [activeTab, allowedTabs])
 
   return <div className="app-frame">
-    <AppHeader activeTab={activeTab} onTabChange={setActiveTab} session={session} onLogout={onLogout} />
+    <AppHeader activeTab={activeTab} onTabChange={setActiveTab} session={session} capabilities={capabilities} onLogout={onLogout} />
     {idleRemaining !== null && idleRemaining <= 300 ? <div className="session-expiration-warning">{tr("Your session will expire soon.")}</div> : null}
-    {workspace.error ? <div className="global-error"><strong>{tr("Unable to load data")}</strong><span>{tr(workspace.error)}</span><button type="button" onClick={() => workspace.setError('')}>×</button></div> : null}
+    {workspace.error && !isPermissionDeniedMessage(workspace.error) ? <div className="global-error"><strong>{tr("Unable to load data")}</strong><span>{tr(workspace.error)}</span><button type="button" onClick={() => workspace.setError('')}>×</button></div> : null}
     <main className="workspace-main">
-      {activeTab === 'dashboard' ? <DashboardPage workspace={workspace} session={session} onOpenBacktest={() => setActiveTab('backtest')} canRunBacktest /> : null}
-      {activeTab === 'backtest' ? <BacktestPage workspace={workspace} canExportResults={session.role === 'admin'} canRunResearchModels={session.role === 'admin'} onSessionExpired={onSessionExpired} /> : null}
-      {activeTab === 'analytics' ? <AnalyticsPage session={session} dashboard={workspace.dashboard} /> : null}
-      {activeTab === 'asset-discovery' && session.role === 'admin' ? <AssetDiscoveryPage onSessionExpired={onSessionExpired} /> : null}
-      {activeTab === 'portfolio' && ['admin', 'trader'].includes(session.role) ? <PaperPortfolioDashboard /> : null}
-      {activeTab === 'administration' && session.role === 'admin' ? <AdministrationPage onSessionExpired={onSessionExpired} /> : null}
-      {activeTab === 'system-settings' && session.role === 'admin' ? <SystemSettingsPage onSessionExpired={onSessionExpired} /> : null}
+      {activeTab === 'dashboard' && hasCapability(capabilities, 'dashboard.view') ? <DashboardPage workspace={workspace} capabilities={capabilities} onOpenBacktest={() => setActiveTab('backtest')} /> : null}
+      {activeTab === 'backtest' && hasCapability(capabilities, 'backtest.view') ? <BacktestPage workspace={workspace} capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
+      {activeTab === 'analytics' && hasCapability(capabilities, 'analytics.view') ? <AnalyticsPage capabilities={capabilities} dashboard={workspace.dashboard} /> : null}
+      {activeTab === 'asset-discovery' && hasCapability(capabilities, 'asset_discovery.view') ? <AssetDiscoveryPage onSessionExpired={onSessionExpired} /> : null}
+      {activeTab === 'portfolio' && hasCapability(capabilities, 'portfolio.view') ? <PaperPortfolioDashboard /> : null}
+      {activeTab === 'administration' && hasCapability(capabilities, 'administration.view') ? <AdministrationPage onSessionExpired={onSessionExpired} /> : null}
+      {activeTab === 'system-settings' && hasCapability(capabilities, 'settings.view') ? <SystemSettingsPage onSessionExpired={onSessionExpired} /> : null}
     </main>
     <footer className="app-footer">
-      <span>{tr("All activity is simulated. Private configuration remains server-side.")}</span>
       <span className="app-footer-divider" aria-hidden="true">•</span>
       <span className="app-footer-versions">
         <span>{tr("API v")}{workspace.apiVersion}</span>

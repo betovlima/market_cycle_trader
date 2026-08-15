@@ -54,7 +54,6 @@ export function TradeStorySection({
             <div>
               <div className="dashboard-heading-title"><span className="panel-kicker">{tr("Trade Story")}</span><ParameterHint id="dashboard-hint-portfolio-growth" title={tr("Portfolio Growth")} description={DASHBOARD_HINTS.portfolioGrowth} /></div>
               <h2>{tr("Portfolio Growth")}</h2>
-              <p>{tr("Start with a clean equity curve, then inspect executions only when you need them.")}</p>
             </div>
             <label className="dashboard-story-select"><span>{tr("Completed backtest")}</span><select value={storyJobId} onChange={(event) => onStoryJobChange(event.target.value)}>{completedStoryJobs.length ? completedStoryJobs.map((item) => <option key={item.id} value={item.id}>{shortDateTime(item.created_at)}</option>) : <option value="">{tr("No completed backtest")}</option>}</select></label>
           </div>

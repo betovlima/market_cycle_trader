@@ -24,8 +24,8 @@ export const STRATEGY_FIELD_HINTS = {
     relationship: 'Filtering changes only what is visible in this page; it never changes the strategy configuration.',
   },
   changeReason: {
-    description: 'Audit note explaining why this strategy revision is being changed.',
-    relationship: 'A valid note is required before saving an editable draft revision.',
+    description: 'Optional audit note explaining why this strategy revision is being changed.',
+    relationship: 'Saving an editable draft revision does not require a note; provide one only when it adds useful research context.',
   },
 }
 
@@ -44,6 +44,6 @@ export const BOUNDARY_HINTS = {
   },
   lifecycle: {
     description: 'Lifecycle protection keeps only one active Candidate, one active Promoted Candidate and one protected Trader Winner at a time.',
-    relationship: 'Older candidates, promoted candidates and winners remain protected as historical snapshots for audit and cloning.',
+    relationship: 'Only the current Candidate and current Trader winner are protected from deletion. Historical candidates, promoted candidates and former winners may be deleted when no longer needed.',
   },
 }

@@ -25,7 +25,6 @@ export function AssetDiscoveryPage({ onSessionExpired }) {
         <div>
           <span className="eyebrow">{tr('RESEARCH UNIVERSE')}</span>
           <h2>{tr('Asset Discovery')}</h2>
-          <p>{tr('Discover and prepare candidate assets for later research without changing the active Winner universe. New listings are evaluated with all history actually available.')}</p>
         </div>
         <div className="asset-discovery-header-meta"><span>{tr('Historical base')}</span><strong>{run?.status === 'running' ? tr('Refreshing incrementally') : tr('Cached and incremental')}</strong></div>
       </header>
@@ -48,7 +47,6 @@ export function AssetDiscoveryPage({ onSessionExpired }) {
       <CandidateTable candidates={discovery.candidates} />
       <RunHistory runs={discovery.runs} />
 
-      <div className="asset-discovery-boundary-note"><strong>{tr('Safety boundary')}</strong><span>{tr('Candidate discovery only prepares assets for later analysis. It never adds, removes or promotes assets in the Winner automatically.')}</span></div>
     </div>
   </section>
 }

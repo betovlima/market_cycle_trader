@@ -113,13 +113,13 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
 
   const hasUnsavedStrategyChanges = useMemo(() => {
     if (!selected || selected.locked) return false
-    if (name !== (selected.name || '') || description !== (selected.description || '') || changeNote.trim().length > 0) return true
+    if (name !== (selected.name || '') || description !== (selected.description || '')) return true
 
     const editorKeys = Object.keys(editorValues)
     const baselineKeys = Object.keys(baselineEditorValues)
     if (editorKeys.length !== baselineKeys.length) return true
     return editorKeys.some((field) => !Object.is(editorValues[field], baselineEditorValues[field]))
-  }, [baselineEditorValues, changeNote, description, editorValues, name, selected])
+  }, [baselineEditorValues, description, editorValues, name, selected])
 
   const hasUnsavedChanges = hasUnsavedStrategyChanges || modelHasUnsavedChanges
 
@@ -180,11 +180,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
   async function saveStrategy(event) {
     event.preventDefault()
     if (!selected || selected.locked) return
-    const note = changeNote.trim()
-    if (note.length < 3) {
-      setError(tr('Enter a change reason for the strategy revision.'))
-      return
-    }
+    const note = changeNote.trim() || null
     let configuration
     let assetsInput
     try {
@@ -355,12 +351,8 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
     }
   }
 
-  async function deleteDraft(strategy) {
+  async function deleteStrategy(strategy) {
     if (strategy.id === selected?.id && hasUnsavedChanges && !confirmDiscardDraft()) return
-    if (activeJob) {
-      setError(tr('Wait for the active backtest to finish before deleting a test strategy.'))
-      return
-    }
     if (!window.confirm(tr('Delete the research strategy "{name}"?', { name: strategy.name }))) return
     setBusy(`delete:${strategy.id}`)
     setError('')
@@ -368,7 +360,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
     try {
       await apiFetch(`${API}/admin/strategies/${encodeURIComponent(strategy.id)}`, {
         method: 'DELETE',
-        body: { confirm_delete: true, note: `Delete unused ${strategy.status || 'draft'} strategy ${strategy.name}` },
+        body: { confirm_delete: true, note: `Delete ${strategy.status || 'draft'} strategy ${strategy.name}` },
       })
       setNotice(tr('Research strategy deleted.'))
       await loadCatalog()
@@ -459,7 +451,6 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
         <div>
           <span className="panel-kicker">{tr("STRATEGIES")}</span>
           <h2>{tr("Research strategies and Trader winner")}</h2>
-          <p>{tr("Create and tune test strategies without changing the strategy used by Trader.")}</p>
         </div>
         <div className="strategy-heading-state">
           {hasUnsavedChanges ? <span className="strategy-unsaved-badge">{tr("Unsaved changes")}</span> : null}
@@ -471,7 +462,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
       {notice ? <div className="global-inline-message success-inline">{notice}</div> : null}
       {hasActiveBacktest ? (
         <div className="global-inline-message warning-inline">
-          {tr("Backtest")}{' '}{activeJob.id} {tr("is")}{' '}{statusLabel(activeJob.status)}{tr(". You may clone and edit test strategies, but strategy selection, deletion, promotion and a new backtest remain locked until it finishes.")}</div>
+          {tr("Backtest")}{' '}{activeJob.id} {tr("is")}{' '}{statusLabel(activeJob.status)}{tr(". You may clone and edit test strategies, but strategy selection, promotion and a new backtest remain locked until it finishes. The strategy used by the running backtest cannot be deleted until it finishes.")}</div>
       ) : null}
 
       <StrategyBoundaryGrid catalog={catalog} />
@@ -506,7 +497,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
               {selected.id !== researchId ? <button type="button" onClick={() => useForBacktest(selected)} disabled={Boolean(busy) || hasActiveBacktest}>{tr("Use for backtest")}</button> : null}
               {!selected.locked && selected.status === 'draft' ? <button type="button" className="candidate-action" title={tr(canMarkCandidate ? 'Make the latest completed run for the selected model the single active Candidate' : 'Save XGBoost or LightGBM on this Strategy and complete its backtest first')} onClick={() => markAsCandidate(selected)} disabled={Boolean(busy) || !canMarkCandidate}>{tr("Mark as candidate")}</button> : null}
               {selected.id !== winnerId ? <button type="button" className="promote-action" title={tr(canPromote ? 'Promote metadata only, preserving the current position and next scheduled pipeline' : 'Mark a completed exact revision as candidate before promotion')} onClick={() => promoteToTrader(selected)} disabled={Boolean(busy) || !canPromote}>{tr("Promote to Trader winner")}</button> : null}
-              {!selected.locked && selected.status === 'draft' && selected.id !== researchId ? <button type="button" className="danger" onClick={() => deleteDraft(selected)} disabled={Boolean(busy) || hasActiveBacktest}>{tr("Delete draft")}</button> : null}
+              {selected.id !== winnerId && selected.id !== candidateId ? <button type="button" className="danger" onClick={() => deleteStrategy(selected)} disabled={Boolean(busy)}>{tr("Delete strategy")}</button> : null}
             </div>
           </div>
 
@@ -579,8 +570,8 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
             {!selected.locked ? (
               <div className="strategy-save-row">
                 <label>
-                  <StrategyFieldLabel id="hint-strategy-change-reason" label={tr("Change reason")} hint={STRATEGY_FIELD_HINTS.changeReason} />
-                  <input value={changeNote} onChange={(event) => setChangeNote(event.target.value)} maxLength={500} required />
+                  <StrategyFieldLabel id="hint-strategy-change-reason" label={tr("Change reason (optional)")} hint={STRATEGY_FIELD_HINTS.changeReason} />
+                  <input value={changeNote} onChange={(event) => setChangeNote(event.target.value)} maxLength={500} placeholder={tr('Optional audit note')} />
                 </label>
                 <div className="strategy-save-actions">
                   <small>{tr(hasUnsavedStrategyChanges ? selected.status === 'candidate' ? 'Unsaved edits are local. Saving them will create a new draft revision.' : 'Local draft preserved until you save or leave this strategy.' : 'No unsaved Strategy parameter changes.')}</small>

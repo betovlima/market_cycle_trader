@@ -1,4 +1,5 @@
 import { tr } from '../../i18n/runtime'
+import { hasCapability } from '../../auth/capabilities'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   CartesianGrid,
@@ -273,7 +274,6 @@ function BacktestAnalytics({ dashboard }) {
         <SectionHeading
           kicker={tr("TRADE ANALYSIS")}
           title={tr("Attribution and rotation quality")}
-          description={tr("Inspect realized performance by asset or by origin → destination rotation without exposing strategy signals.")}
           action={<AnalyticsTableTabs value={dataView} onChange={setDataView} items={[{ value: 'assets', label: 'By asset', count: assetRows.length }, { value: 'rotations', label: 'Rotations', count: rotationRows.length }]} />}
         />
         {dataView === 'assets' ? <>
@@ -302,7 +302,7 @@ function BacktestAnalytics({ dashboard }) {
       </section>
 
       <section className="analytics-workspace-section analytics-resilience-section">
-        <SectionHeading kicker={tr("RESILIENCE")} title={tr("Holding quality, concentration and drawdown anatomy")} description={tr("Compact diagnostics that show whether results depend on holding duration, a small number of positions or isolated drawdown episodes.")} />
+        <SectionHeading kicker={tr("RESILIENCE")} title={tr("Holding quality, concentration and drawdown anatomy")} />
         <div className="analytics-resilience-grid">
           <div className="analytics-subsection">
             <div className="analytics-subsection-heading"><span>{tr("HOLDING PERIOD")}</span><strong>{tr("Performance by duration")}</strong></div>
@@ -393,7 +393,7 @@ function PortfolioAnalytics() {
       </section>
 
       <section className="analytics-workspace-section">
-        <SectionHeading kicker={tr("PAPER PERFORMANCE")} title={tr("Portfolio evolution and current risk")} description={tr("Current Paper account evolution from stored snapshots, with current position and execution quality in the same workspace.")} />
+        <SectionHeading kicker={tr("PAPER PERFORMANCE")} title={tr("Portfolio evolution and current risk")} />
         <div className="analytics-portfolio-grid">
           <ChartCell kicker={tr("PAPER EQUITY")} title={tr("Portfolio value history")} className="analytics-chart-primary">
             {data.history?.length ? <div className="analytics-chart analytics-chart-large"><ResponsiveContainer width="100%" height="100%"><LineChart data={data.history}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="recorded_at" tickFormatter={shortDate} minTickGap={38} /><YAxis tickFormatter={(value) => `$${Math.round(value / 1000)}k`} /><Tooltip labelFormatter={shortDateTime} formatter={(value) => money(value)} /><Line type="monotone" dataKey="portfolio_value" name={tr("Portfolio value")} dot={false} strokeWidth={2} stroke="var(--accent)" /></LineChart></ResponsiveContainer></div> : <ChartEmpty>{tr("No portfolio snapshots stored yet.")}</ChartEmpty>}
@@ -411,7 +411,7 @@ function PortfolioAnalytics() {
       </section>
 
       <section className="analytics-workspace-section analytics-data-section">
-        <SectionHeading kicker={tr("RECENT EXECUTIONS")} title={tr("Paper orders")} description={tr("Search, filter, sort and page through Paper order activity already available to Analytics.")} />
+        <SectionHeading kicker={tr("RECENT EXECUTIONS")} title={tr("Paper orders")} />
         <AnalyticsListToolbar query={orderQuery} onQueryChange={setOrderQuery} outcome={orderSide} onOutcomeChange={setOrderSide} status={orderStatus} onStatusChange={setOrderStatus} mode="side" resultCount={orderRows.length} searchPlaceholder={tr("Filter symbol, side or status")} />
         <div className="table-wrap"><table className="dashboard-table analytics-table analytics-table-wide"><thead><tr>
           <SortableTh label={tr("Time")} sortKey="created_at" activeKey={orderSort.key} direction={orderSort.direction} onSort={toggleOrderSort} />
@@ -427,8 +427,8 @@ function PortfolioAnalytics() {
   </>
 }
 
-export function AnalyticsPage({ session, dashboard }) {
-  const canViewPortfolio = ['admin', 'trader'].includes(session.role)
+export function AnalyticsPage({ capabilities = {}, dashboard }) {
+  const canViewPortfolio = hasCapability(capabilities, 'portfolio.view')
   const [section, setSection] = useState('backtest')
 
   useEffect(() => { if (!canViewPortfolio && section === 'portfolio') setSection('backtest') }, [canViewPortfolio, section])
@@ -436,7 +436,7 @@ export function AnalyticsPage({ session, dashboard }) {
   return <section className="page-stack analytics-page analytics-single-workspace">
     <section className="data-panel analytics-workspace-panel">
       <header className="analytics-workspace-header">
-        <div className="analytics-workspace-title"><div className="page-title-icon"><AnalyticsIcon size={21} /></div><div><h2>{tr("Analytics")}</h2><p>{tr("Explain performance, risk, consistency and execution without exposing the strategy.")}</p></div></div>
+        <div className="analytics-workspace-title"><div className="page-title-icon"><AnalyticsIcon size={21} /></div><div><h2>{tr("Analytics")}</h2></div></div>
         <div className="analytics-tabs compact-tabs">
           <button type="button" className={section === 'backtest' ? 'active' : ''} onClick={() => setSection('backtest')}><ActivityIcon size={17} />{tr("Backtest Analytics")}</button>
           {canViewPortfolio ? <button type="button" className={section === 'portfolio' ? 'active' : ''} onClick={() => setSection('portfolio')}><PortfolioIcon size={17} />{tr("Portfolio Analytics")}</button> : null}

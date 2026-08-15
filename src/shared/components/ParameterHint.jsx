@@ -12,6 +12,7 @@ export function ParameterHint({
   description,
   relationship = '',
   example = '',
+  details = [],
   align = 'left',
 }) {
   const triggerRef = useRef(null)
@@ -20,7 +21,8 @@ export function ParameterHint({
   const [open, setOpen] = useState(false)
   const [position, setPosition] = useState({ left: EDGE_GAP, top: EDGE_GAP, placement: 'bottom' })
 
-  const hasContent = Boolean(description || relationship || example)
+  const normalizedDetails = Array.isArray(details) ? details.filter((item) => item && (item.label || item.value)) : []
+  const hasContent = Boolean(description || relationship || example || normalizedDetails.length)
 
   const cancelClose = useCallback(() => {
     if (closeTimerRef.current) {
@@ -73,7 +75,7 @@ export function ParameterHint({
     updatePosition()
     const frame = window.requestAnimationFrame(updatePosition)
     return () => window.cancelAnimationFrame(frame)
-  }, [open, updatePosition, description, relationship, example])
+  }, [open, updatePosition, description, relationship, example, normalizedDetails.length])
 
   useEffect(() => {
     if (!open) return undefined
@@ -122,6 +124,17 @@ export function ParameterHint({
     >
       <strong>{tr(title)}</strong>
       {description ? <span className="parameter-hint-description">{tr(description)}</span> : null}
+      {normalizedDetails.length ? (
+        <span className="parameter-hint-detail-list">
+          {normalizedDetails.map((item, index) => (
+            <span key={`${item.label || 'detail'}-${index}`} className={`parameter-hint-detail-row ${item.tone || ''}`}>
+              <span>{tr(item.label || '')}</span>
+              <strong>{tr(item.value ?? '')}</strong>
+              {item.description ? <small>{tr(item.description)}</small> : null}
+            </span>
+          ))}
+        </span>
+      ) : null}
       {relationship ? (
         <>
           <span className="parameter-hint-section-label">{tr("Details")}</span>

@@ -261,7 +261,6 @@ export function SystemSettingsPage({ onSessionExpired }) {
             <div className="page-title-icon"><SettingsIcon size={22} /></div>
             <div>
               <h2>{tr("System Settings")}</h2>
-              <p>{tr("Runtime controls, research strategies, Trader operation and audit history in one workspace.")}</p>
             </div>
           </div>
           <div className="settings-workspace-actions">

@@ -1,13 +1,13 @@
 export const CANDIDATE_RANKING_HINTS = {
   Rank: {
-    description: 'Position among completed eligible candidates. Eligibility requires every walk-forward fold to have a positive return. Rank is not ordered by Capital: the primary key is Score, then Capital, then Sharpe as tie-breakers.',
-    relationship: 'Rank order = Score descending → Capital descending → Sharpe descending. Eligible = completed AND every fold return > 0.',
-    example: 'A candidate with Score -2.50 ranks above one with Score -2.60 even if its Capital is lower, because -2.50 is the higher Score.',
+    description: 'Position among completed eligible candidates. In Unified CARO, observed Champion-Gate passers rank above the Control, the Control is the baseline tier, and challengers that did not beat the gate remain below it. Inside each tier, realized Capital is prioritized before risk-quality tie-breakers.',
+    relationship: 'Unified CARO rank = Champion Gate tier → Capital → Sharpe → Max DD → Worst fold → Score. Eligible = completed AND every fold return > 0.',
+    example: 'A challenger that finishes below the Control in Capital, Sharpe, Max DD and Worst fold cannot outrank the Control merely because its legacy Score is numerically higher.',
   },
   Candidate: {
-    description: 'Identifies which configuration was evaluated and how it entered the campaign. Control is the reference Strategy, Startup candidates come from the Latin Hypercube warm-up, and CARO candidates are proposed adaptively from completed observations.',
-    relationship: 'No financial formula. Candidate = campaign-local identifier + proposal type + exact model settings stored for that evaluation.',
-    example: 'Control #0 is the reference; Startup #3 is a warm-up sample; CARO #10 is an adaptive proposal created after learning from earlier completed candidates.',
+    description: 'Identifies which configuration was evaluated and how it entered the campaign. Control is the reference Strategy, Exploration candidates are space-filling proposals selected by Unified CARO, and CARO candidates are probabilistic refinements proposed from completed observations.',
+    relationship: 'No financial formula. Candidate = campaign-local identifier + proposal type + exact model/Strategy settings stored for that evaluation.',
+    example: 'Control #0 is the reference; Exploration #3 fills a sparse part of the search space; CARO #10 is an adaptive proposal created after learning from earlier completed candidates.',
   },
   Status: {
     description: 'Execution state of the candidate Backtest. Metrics should be considered final only when the candidate is completed.',
@@ -40,7 +40,7 @@ export const CANDIDATE_RANKING_HINTS = {
     example: 'For fold returns +58%, +120% and +24%, Worst fold = +24%. If one fold is -5%, Worst fold = -5% and the candidate receives no Rank.',
   },
   'Champion gate': {
-    description: 'Research robustness comparison against the current Champion anchor. It reports whether the completed candidate simultaneously satisfies the configured capital, Sharpe, drawdown and worst-fold thresholds. It is informational for manual Backtest use and is not a Winner decision.',
+    description: 'Research robustness comparison against the current Champion anchor. The Control is the baseline itself, so its status is shown as Baseline rather than Beat/Did not beat. Challengers report whether they simultaneously satisfy the configured capital, Sharpe, drawdown and worst-fold thresholds. It is informational for manual Backtest use and is not a Winner decision.',
     relationship: 'Beat = Capital ≥ Champion Capital × (1 + minimum capital improvement) AND Sharpe ≥ Champion Sharpe - tolerance AND Max DD ≥ Champion Max DD - drawdown tolerance AND Worst fold > configured minimum.',
     example: 'If the Champion has $600k and minimum capital improvement is 3%, the candidate needs at least $618k, while also satisfying the other three robustness conditions.',
   },
@@ -55,8 +55,8 @@ export const CANDIDATE_RANKING_HINTS = {
     example: 'A simulated scenario 5% above the required capital contributes about 0.05 only if its risk conditions pass; otherwise that scenario contributes 0. The average across scenarios is Expected improvement.',
   },
   Score: {
-    description: 'Strategy risk-adjusted compound score used as the primary Candidate Ranking metric. It accumulates log portfolio growth while penalizing negative daily returns and increases in drawdown. Higher is better, even when values are negative.',
+    description: 'Legacy Strategy risk-adjusted compound score retained as a diagnostic and final tie-breaker. It accumulates log portfolio growth while penalizing negative daily returns and increases in drawdown. It no longer has enough priority to place an economically dominated challenger above the Control.',
     relationship: 'Score = Σ[ log(V_t/V_t-1) - downside_penalty × max(0, -log(V_t/V_t-1)) - drawdown_penalty × max(0, D_t - D_t-1) ], where D_t = 1 - V_t / peak_t.',
-    example: 'Two candidates can finish with similar Capital but receive different Scores if one reached that result through larger downside moves or repeated drawdown deterioration. This is why Rank can differ from Capital order.',
+    example: 'Two otherwise similar candidates can still use Score as the final tie-breaker, but Score cannot by itself override the Champion tier and the realized Capital/risk-quality ordering.'
   },
 }

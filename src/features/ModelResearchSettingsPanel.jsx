@@ -255,7 +255,6 @@ export function ModelResearchSettingsPanel({
         <div>
           <span className="panel-kicker">{tr('MODEL PARAMETERS')}</span>
           <h2>{tr('Model saved with this Strategy')}</h2>
-          <p>{tr('Choose the algorithm and its parameters here. Backtest uses this saved model automatically and cannot override it.')}</p>
         </div>
         <div className="model-research-heading-meta">
           {savedModel?.settings_hash ? <span className="settings-revision-badge">{tr('Model hash')} {savedModel.settings_hash.slice(0, 10)}…</span> : null}
@@ -295,7 +294,6 @@ export function ModelResearchSettingsPanel({
               <button type="submit" className="admin-primary-button" disabled={saving || !dirty}>{tr(saving ? 'Saving…' : 'Save Strategy model')}</button>
             </div>
           ) : null}
-          <p className="model-research-snapshot-note">{tr('The algorithm and parameter values are saved with this Strategy. Backtest only reads this immutable model snapshot; it does not select or override the algorithm.')}</p>
         </form>
       ) : null}
 

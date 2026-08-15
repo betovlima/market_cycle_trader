@@ -388,7 +388,7 @@ export function PaperPortfolioDashboard() {
           <header className="portfolio-workspace-header">
             <div className="portfolio-workspace-title">
               <div className="page-title-icon"><PortfolioIcon size={18} /></div>
-              <div><h2>{tr("Portfolio")}</h2><p>{tr("Account evolution, current position and recent Paper executions.")}</p></div>
+              <div><h2>{tr("Portfolio")}</h2></div>
             </div>
             <div className="portfolio-workspace-actions">
               <span>{lastUpdated ? tr('Updated {time}', { time: lastUpdated.toLocaleTimeString(getIntlLocale()) }) : tr('Read-only snapshot')}</span>

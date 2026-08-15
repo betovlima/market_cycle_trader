@@ -2,6 +2,7 @@ import { tr } from '../../i18n/runtime'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { apiFetch } from '../../api/http'
+import { hasCapability } from '../../auth/capabilities'
 import { API } from '../../config/env'
 import { DashboardIcon, PlayIcon, ShieldIcon } from '../../shared/components/Icons'
 import { money, percent, relativeTime, shortDateTime } from '../../shared/formatters'
@@ -13,7 +14,7 @@ import { BacktestHistorySection } from './components/BacktestHistorySection'
 import { StrategyIntelligenceSection } from './components/StrategyIntelligenceSection'
 import { TradeStorySection } from './components/TradeStorySection'
 
-export function DashboardPage({ workspace, session, onOpenBacktest, canRunBacktest = false }) {
+export function DashboardPage({ workspace, capabilities = {}, onOpenBacktest }) {
   const { dashboard, loadingDashboard, running, restoringExecution, startingBacktest, startDisabled, runBacktest } = workspace
   const best = dashboard?.best_performance
   const last = dashboard?.last_backtest
@@ -37,7 +38,8 @@ export function DashboardPage({ workspace, session, onOpenBacktest, canRunBackte
   const chartInteractionRef = useRef(null)
   const panStateRef = useRef(null)
 
-  const canViewStrategyIntelligence = ['admin', 'trader'].includes(String(session?.role || '').toLowerCase())
+  const canViewStrategyIntelligence = hasCapability(capabilities, 'dashboard.strategy_intelligence.view')
+  const canRunBacktest = hasCapability(capabilities, 'backtest.start')
   const [intelligence, setIntelligence] = useState(null)
   const [intelligenceLoading, setIntelligenceLoading] = useState(false)
   const [intelligenceError, setIntelligenceError] = useState('')
@@ -499,7 +501,7 @@ export function DashboardPage({ workspace, session, onOpenBacktest, canRunBackte
         <div className="dashboard-workspace-header">
           <div className="dashboard-workspace-title">
             <div className="page-title-icon"><DashboardIcon size={21} /></div>
-            <div><h2>{tr("Dashboard")}</h2><p>{tr("Portfolio growth, trade-by-trade storytelling and recent simulation history.")}</p></div>
+            <div><h2>{tr("Dashboard")}</h2></div>
           </div>
           <div className="dashboard-header-actions">
             <span className="dashboard-protected-badge"><ShieldIcon size={15} />{tr("Protected configuration")}</span>

@@ -70,19 +70,19 @@ export function BacktestChartTooltip({ active, payload }) {
   )
 }
 
-export function MetricLabel({ id, label, hint }) {
+export function MetricLabel({ id, label, hint, hintDetails = [] }) {
   return (
     <span className="backtest-field-label">
       <span>{tr(label)}</span>
-      {hint ? <ParameterHint id={id} title={tr(label)} description={hint} /> : null}
+      {hint || hintDetails.length ? <ParameterHint id={id} title={tr(label)} description={hint} details={hintDetails} /> : null}
     </span>
   )
 }
 
-export function Metric({ id, label, value, note, tone = '', hint = '' }) {
+export function Metric({ id, label, value, note, tone = '', hint = '', hintDetails = [] }) {
   return (
     <article className={`result-metric ${tone}`}>
-      <MetricLabel id={id} label={label} hint={hint} />
+      <MetricLabel id={id} label={label} hint={hint} hintDetails={hintDetails} />
       <strong>{value}</strong>
       <small>{typeof note === 'string' ? tr(note) : note}</small>
     </article>

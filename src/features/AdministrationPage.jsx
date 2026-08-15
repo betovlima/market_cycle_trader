@@ -305,7 +305,6 @@ export function AdministrationPage({ onSessionExpired }) {
             <div className="page-title-icon"><ShieldIcon size={22} /></div>
             <div>
               <h2>{tr("Administration")}</h2>
-              <p>{tr("Generate identity-bound access, manage active records and inspect audited access activity.")}</p>
             </div>
           </div>
           <div className="administration-workspace-actions">
@@ -329,7 +328,6 @@ export function AdministrationPage({ onSessionExpired }) {
             <div>
               <span className="panel-kicker">{tr("IDENTITY-VERIFIED ACCESS")}</span>
               <h2>{tr("Generate access invitation")}</h2>
-              <p>{tr("Create one Google-identity-bound invitation without exposing any application strategy details.")}</p>
             </div>
             <span className="admin-readonly-badge"><EyeIcon size={14} /> {tr("Google account required")}</span>
           </div>
@@ -365,9 +363,9 @@ export function AdministrationPage({ onSessionExpired }) {
                 }}
                 required
               >
-                <option value="viewer">{tr("Viewer · Backtest only")}</option>
-                <option value="trader">{tr("Trader · Backtest and Portfolio")}</option>
-                <option value="admin">{tr("Administrator · Full administration")}</option>
+                <option value="viewer">{tr("Viewer")}</option>
+                <option value="trader">{tr("Trader")}</option>
+                <option value="admin">{tr("Administrator")}</option>
               </select>
             </label>
             <label>
@@ -408,7 +406,6 @@ export function AdministrationPage({ onSessionExpired }) {
             <div>
               <span className="panel-kicker">{tr("ACCESS CONTROL & AUDIT")}</span>
               <h2>{tr("Access records")}</h2>
-              <p>{tr("Filter, sort and review identity-bound access records or the corresponding audit history.")}</p>
             </div>
             <div className="admin-data-tabs" role="tablist" aria-label={tr("Administration data view")}>
               <button type="button" role="tab" aria-selected={dataView === 'invitations'} className={dataView === 'invitations' ? 'active' : ''} onClick={() => setDataView('invitations')}>{tr("Invitations")}{' '}<span>{invitations.length}</span></button>
