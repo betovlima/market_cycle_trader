@@ -122,7 +122,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
         apiFetch(`${API}/admin/model-tuning/catalog`),
         apiFetch(`${API}/admin/strategies/control`),
       ])
-      const strategyId = control?.candidate_strategy_id || control?.promoted_candidate_strategy_id || control?.research_strategy_id
+      const strategyId = control?.model_tuning_strategy_id || control?.candidate_strategy_id || control?.promoted_candidate_strategy_id || control?.research_strategy_id
       const detail = strategyId ? await apiFetch(`${API}/admin/strategies/${encodeURIComponent(strategyId)}`) : null
       const [baselinePayload] = await Promise.all([
         apiFetch(`${API}/admin/model-tuning/baselines?limit=20`),
@@ -133,7 +133,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
       const probability = nextCatalog?.probability || {}
       setCatalog(nextCatalog)
       setStrategy(detail)
-      setModelFamily(savedModel?.family || '')
+      setModelFamily(detail?.strategy_kind === 'temporal_intelligence' ? (nextCatalog?.model_family || 'temporal_policy') : (savedModel?.family || ''))
       setBaselines(items)
       setCandidateCount(nextCatalog.default_candidate_count || 20)
       setSeed(nextCatalog.default_seed ?? 42)
@@ -246,13 +246,14 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
   const probabilityMode = method === PROBABILITY_METHOD
   const adaptiveMode = probabilityMode
   const gateTuning = ['absolute_utility_cash_gate', 'joint_model_absolute_utility_cash_gate'].includes(String(run?.tuning_scope || catalog?.tuning_scope || ''))
+  const temporalTarget = strategy?.strategy_kind === 'temporal_intelligence' && String(catalog?.tuning_scope || '') === 'temporal_policy'
   const startActionLabel = probabilityMode ? tr('Start Unified CARO') : tr('Start Latin Hypercube')
   const protectedCandidate = Boolean(strategy?.locked && ['candidate', 'promoted_candidate'].includes(String(strategy?.status || '')))
   const canTune = Boolean(
     canStartTuning
     && strategy
     && (!strategy.locked || protectedCandidate)
-    && modelFamily === catalog?.model_family
+    && (temporalTarget || modelFamily === catalog?.model_family)
     && selectedBaseline
   )
 
@@ -279,9 +280,13 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
       }
       const created = await apiFetch(`${API}/admin/model-tuning`, { method: 'POST', body })
       setRun(created)
-      setNotice(probabilityMode
-        ? tr('Unified CARO started from the certified Candidate Backtest. Exploration and probabilistic refinement are selected automatically throughout the campaign.')
-        : tr('Latin Hypercube tuning started from the certified Candidate Backtest.'))
+      setNotice(temporalTarget
+        ? tr(probabilityMode
+          ? 'Unified CARO started from the materialized TEMPORAL Strategy using the frozen Temporal replay.'
+          : 'Latin Hypercube started from the materialized TEMPORAL Strategy using the frozen Temporal replay.')
+        : probabilityMode
+          ? tr('Unified CARO started from the certified Candidate Backtest. Exploration and probabilistic refinement are selected automatically throughout the campaign.')
+          : tr('Latin Hypercube tuning started from the certified Candidate Backtest.'))
     } catch (requestError) {
       handleError(requestError)
     } finally {
@@ -314,7 +319,9 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
         method: 'POST',
         body: {},
       })
-      setNotice(tr('A new Strategy was created from the frozen tuning result and selected as BACKTEST. After a successful Backtest it becomes the active CANDIDATE automatically.'))
+      setNotice(tr(response?.ready_for_model_tuning
+        ? 'A new TEMPORAL Strategy was created from the tuned policy and selected for Model Tuning.'
+        : 'A new Strategy was created from the frozen tuning result and selected as BACKTEST. After a successful Backtest it becomes the active CANDIDATE automatically.'))
       await onStrategyModelSaved?.(response.strategy)
       await loadWorkspace()
     } catch (requestError) {
@@ -411,16 +418,17 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
       {error ? <div className="global-inline-message error-inline">{error}</div> : null}
       {notice ? <div className="global-inline-message success-inline">{notice}</div> : null}
       {!strategy ? <div className="global-inline-message warning-inline">{tr('No Candidate or selected Strategy is available for model tuning.')}</div> : null}
-      {strategy?.locked && !protectedCandidate ? <div className="global-inline-message warning-inline">{tr('The protected Strategy is not an eligible Candidate tuning target.')}</div> : null}
-      {strategy && modelFamily !== catalog.model_family ? <div className="global-inline-message warning-inline">{tr('The current tuning target must use LightGBM.')}</div> : null}
-      {strategy && modelFamily === catalog.model_family && !baselines.length ? <div className="global-inline-message warning-inline">{tr("A completed certified Candidate Backtest is required before tuning. Adaptive CARO always uses the active Candidate's certified execution as its baseline.")}</div> : null}
+      {strategy?.locked && !protectedCandidate && !temporalTarget ? <div className="global-inline-message warning-inline">{tr('The protected Strategy is not an eligible Candidate tuning target.')}</div> : null}
+      {strategy && !temporalTarget && modelFamily !== catalog.model_family ? <div className="global-inline-message warning-inline">{tr('The current tuning target must use LightGBM.')}</div> : null}
+      {strategy && !temporalTarget && modelFamily === catalog.model_family && !baselines.length ? <div className="global-inline-message warning-inline">{tr("A completed certified Candidate Backtest is required before tuning. Adaptive CARO always uses the active Candidate's certified execution as its baseline.")}</div> : null}
+      {strategy && temporalTarget && !baselines.length ? <div className="global-inline-message warning-inline">{tr('The TEMPORAL Strategy source run is not available as a completed frozen replay.')}</div> : null}
 
       <div className="model-tuning-context-grid model-tuning-context-grid-wide">
         <div className="model-tuning-context-card model-tuning-target-card">
           <TuningContextLabel
             id="model-tuning-hint-target"
             label="Tuning target"
-            description="The active Candidate Strategy whose certified Backtest is used as the starting point for this research campaign."
+            description={temporalTarget ? tr('The selected TEMPORAL Strategy whose materialized policy and frozen replay are used as the research baseline.') : tr('The active Candidate Strategy whose certified Backtest is used as the starting point for this research campaign.')}
           />
           <strong title={strategy?.name || ''}>{strategy?.name || '—'}</strong>
           <small>{strategy ? `${tr(strategy.status)} · ${tr('Revision')} ${strategy.revision}` : '—'}</small>
@@ -438,19 +446,19 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
           <TuningContextLabel
             id="model-tuning-hint-saved-model"
             label="Saved model"
-            description="Model family currently saved with the Candidate Strategy. Joint CARO may tune the supported LightGBM hyperparameters, while fixed model settings remain unchanged."
+            description={temporalTarget ? tr('The underlying Winner model remains frozen. Model Tuning changes only the TEMPORAL timing policy thresholds.') : tr('Model family currently saved with the Candidate Strategy. Joint CARO may tune the supported LightGBM hyperparameters, while fixed model settings remain unchanged.')}
           />
-          <strong>{strategy?.research_model_configuration?.label || strategy?.research_model?.label || '—'}</strong>
-          <small>{modelFamily || '—'}</small>
+          <strong>{temporalTarget ? tr('Temporal Policy') : (strategy?.research_model_configuration?.label || strategy?.research_model?.label || '—')}</strong>
+          <small>{temporalTarget ? tr('Winner model frozen') : (modelFamily || '—')}</small>
         </div>
         <div className="model-tuning-context-card worker-online">
           <TuningContextLabel
             id="model-tuning-hint-execution"
             label="Execution"
-            description="Candidates run sequentially through the integrated API worker. Each LightGBM training still uses the CPU thread configuration saved in the model/runtime."
+            description={temporalTarget ? tr('Candidates replay the frozen Temporal observations and immutable Winner decisions. No LightGBM retraining, Alpaca request or new market-data load occurs.') : tr('Candidates run sequentially through the integrated API worker. Each LightGBM training still uses the CPU thread configuration saved in the model/runtime.')}
             align="right"
           />
-          <strong>{tr('Integrated API worker')}</strong>
+          <strong>{tr(temporalTarget ? 'Frozen Temporal replay' : 'Integrated API worker')}</strong>
           <small>{tr('One candidate at a time')}</small>
         </div>
       </div>
@@ -459,11 +467,11 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
         <div className="model-tuning-baseline-head">
           <div className="model-tuning-baseline-title">
             <span className="model-tuning-context-label">
-              <span>{tr('Certified Candidate baseline')}</span>
+              <span>{tr(temporalTarget ? 'Materialized TEMPORAL baseline' : 'Certified Candidate baseline')}</span>
               <ParameterHint
                 id="model-tuning-hint-baseline"
-                title={tr('Certified Candidate baseline')}
-                description={tr('The API uses the certified Candidate Backtest automatically. No clone, baseline selection or prior tuning campaign is required.')}
+                title={tr(temporalTarget ? 'Materialized TEMPORAL baseline' : 'Certified Candidate baseline')}
+                description={tr(temporalTarget ? 'The API reuses the completed Temporal Intelligence source run and frozen replay stored with this TEMPORAL Strategy.' : 'The API uses the certified Candidate Backtest automatically. No clone, baseline selection or prior tuning campaign is required.')}
               />
             </span>
             <strong title={selectedBaseline?.job_id || ''}>{selectedBaseline?.job_id || tr('No compatible completed baseline execution was found.')}</strong>
@@ -513,7 +521,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
         </label>
         <div className="model-tuning-control-note">
           <span>{tr('Validation')}</span>
-          <strong>{tr('Chronological walk-forward')}</strong>
+          <strong>{tr(temporalTarget ? 'Frozen Temporal replay' : 'Chronological walk-forward')}</strong>
         </div>
         {(canStartTuning || canStopTuning) ? <div className="model-tuning-actions">
           {canStartTuning ? <button type="button" className="primary-action" onClick={start} disabled={!canTune || active || busy}>{busy && !active ? tr('Starting…') : startActionLabel}</button> : null}

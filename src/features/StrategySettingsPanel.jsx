@@ -263,6 +263,34 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
     }
   }
 
+
+  async function useForModelTuning(strategy) {
+    if (strategy.id === selected?.id && hasUnsavedChanges) {
+      setError(tr('Save or discard the current strategy changes before selecting it for Model Tuning.'))
+      return
+    }
+    const note = window.prompt(tr('Reason for selecting this TEMPORAL Strategy for Model Tuning:'), `Tune ${strategy.name}`)?.trim()
+    if (!note) return
+    setBusy(`tune:${strategy.id}`)
+    setError('')
+    setNotice('')
+    try {
+      await apiFetch(`${API}/admin/strategies/${encodeURIComponent(strategy.id)}/select-for-model-tuning`, {
+        method: 'POST',
+        body: {
+          expected_control_revision: catalog.control.revision,
+          note,
+        },
+      })
+      setNotice(tr('Model Tuning will use this TEMPORAL Strategy and its frozen Temporal replay.'))
+      await loadCatalog(strategy.id)
+    } catch (requestError) {
+      handleError(requestError)
+    } finally {
+      setBusy('')
+    }
+  }
+
   async function markAsCandidate(strategy) {
     if (strategy.id === selected?.id && hasUnsavedChanges) {
       setError(tr('Save or discard the current strategy changes before marking it as a candidate.'))
@@ -420,6 +448,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
   const winnerId = catalog.control?.trader_winner_strategy_id
   const candidateId = catalog.control?.candidate_strategy_id
   const promotedCandidateId = catalog.control?.promoted_candidate_strategy_id
+  const modelTuningId = catalog.control?.model_tuning_strategy_id
   const hasActiveBacktest = Boolean(activeJob)
   const isTemporalStrategy = selected.strategy_kind === 'temporal_intelligence'
   const hasCompletedBacktestForSavedModel = selected.last_backtest_status === 'completed'
@@ -496,6 +525,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
             </div>
             <div className="strategy-editor-actions">
               {!isTemporalStrategy ? <button type="button" onClick={() => cloneStrategy(selected)} disabled={Boolean(busy)}>{tr("Clone for test")}</button> : null}
+              {isTemporalStrategy ? <button type="button" onClick={() => useForModelTuning(selected)} disabled={Boolean(busy) || selected.id === modelTuningId}>{tr(selected.id === modelTuningId ? 'Selected for Model Tuning' : 'Use in Model Tuning')}</button> : null}
               {selected.id !== researchId && !isTemporalStrategy ? <button type="button" onClick={() => useForBacktest(selected)} disabled={Boolean(busy) || hasActiveBacktest}>{tr("Use for backtest")}</button> : null}
               {!isTemporalStrategy && !selected.locked && selected.status === 'draft' ? <button type="button" className="candidate-action" title={tr(canMarkCandidate ? 'Make the latest completed run for the selected model the single active Candidate' : 'Save XGBoost or LightGBM on this Strategy and complete its backtest first')} onClick={() => markAsCandidate(selected)} disabled={Boolean(busy) || !canMarkCandidate}>{tr("Mark as candidate")}</button> : null}
               {!isTemporalStrategy && selected.id !== winnerId ? <button type="button" className="promote-action" title={tr(canPromote ? 'Promote metadata only, preserving the current position and next scheduled pipeline' : 'Mark a completed exact revision as candidate before promotion')} onClick={() => promoteToTrader(selected)} disabled={Boolean(busy) || !canPromote}>{tr("Promote to Trader winner")}</button> : null}
