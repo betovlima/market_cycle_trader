@@ -11,6 +11,7 @@ import {
 } from 'recharts'
 
 import { money, number, percent, shortDateTime } from '../../../shared/formatters'
+import { ParameterHint } from '../../../shared/components/ParameterHint'
 import { usePerformanceZoom } from '../hooks/usePerformanceZoom'
 import { useReorderableCards } from '../hooks/useReorderableCards'
 import { analyticsAxisLabel, analyticsTimestamp, monthParts, returnTone } from '../utils/performance'
@@ -222,6 +223,17 @@ export function BacktestPerformanceExplorer({ data, jobId }) {
       title={tr("Monthly return heatmap")}
       className="analytics-heatmap-feature-cell"
       action={<div className="analytics-card-heading-actions">
+        <ParameterHint
+          id="analytics-monthly-return-heatmap-hint"
+          title={tr('Monthly return heatmap')}
+          description={tr('Each month compares Simulation and Reference returns for the selected processing. Click any populated month to open its consistency analysis.')}
+          details={[
+            { label: tr('Simulation'), value: tr('Strategy monthly return') },
+            { label: tr('Reference'), value: tr('Benchmark monthly return') },
+            { label: 'S − R', value: tr('Monthly excess return') },
+            { label: tr('Monthly details'), value: tr('Rank, rolling 3-month return, YTD, streak, average, median and volatility') },
+          ]}
+        />
         <AnalyticsModeTabs
           value={monthlyMode}
           onChange={setMonthlyMode}

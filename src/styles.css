@@ -8080,3 +8080,212 @@ a { color: inherit; }
     --dashboard-analytics-cell-value-size: .66rem;
   }
 }
+
+/* v3.27.3 — Dashboard analytical title alignment and monthly consistency drill-down */
+.dashboard-analytics-hub .dashboard-analytics-history-head h2,
+.dashboard-analytics-hub .analytics-performance-explorer-section .analytics-section-heading h2 {
+  margin: 2px 0 0;
+  font-size: 1.5rem;
+  line-height: 1.12;
+  letter-spacing: -.025em;
+  color: var(--text);
+}
+.dashboard-analytics-hub .dashboard-analytics-history-head .panel-kicker,
+.dashboard-analytics-hub .analytics-performance-explorer-section .analytics-section-heading .panel-kicker {
+  margin-bottom: 4px;
+}
+.dashboard-analytics-hub .analytics-performance-explorer-section .analytics-section-title .parameter-hint-trigger,
+.dashboard-analytics-hub .dashboard-historical-performance-title .parameter-hint-trigger {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  font-size: .62rem;
+}
+
+.analytics-return-heatmap button.analytics-heatmap-cell {
+  appearance: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+.analytics-return-heatmap button.analytics-heatmap-cell:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  z-index: 2;
+}
+
+.monthly-return-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 92;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(1, 7, 15, .79);
+  backdrop-filter: blur(5px);
+}
+.monthly-return-dialog {
+  width: min(920px, 100%);
+  max-height: calc(100vh - 44px);
+  overflow: auto;
+  border: 1px solid rgba(77, 128, 182, .27);
+  border-radius: 14px;
+  background: #081729;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, .48);
+}
+.monthly-return-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(79, 111, 146, .18);
+}
+.monthly-return-dialog-header h3 {
+  margin: 3px 0 2px;
+  color: #edf6ff;
+  font-size: 1.2rem;
+  line-height: 1.15;
+}
+.monthly-return-dialog-header p {
+  margin: 0;
+  color: #7893ae;
+  font-size: .7rem;
+}
+.monthly-return-dialog-close {
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(83, 126, 172, .28);
+  border-radius: 9px;
+  color: #aac2dc;
+  background: rgba(10, 31, 52, .72);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+.monthly-return-dialog-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 14px 20px;
+}
+.monthly-return-dialog-metrics > div,
+.monthly-return-dialog-secondary article,
+.monthly-return-dialog-extremes > div {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(73, 111, 151, .16);
+  border-radius: 9px;
+  background: rgba(9, 28, 48, .58);
+}
+.monthly-return-dialog-metrics span,
+.monthly-return-dialog-secondary span,
+.monthly-return-dialog-extremes span,
+.monthly-return-dialog-insight-grid span {
+  display: block;
+  color: #7592af;
+  font-size: .61rem;
+  font-weight: 750;
+}
+.monthly-return-dialog-metrics strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1rem;
+}
+.monthly-return-dialog-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  padding: 0 20px 14px;
+}
+.monthly-return-dialog-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(73, 111, 151, .17);
+  border-radius: 10px;
+  background: rgba(5, 20, 36, .54);
+}
+.monthly-return-dialog-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.monthly-return-dialog-section-title span { color: #809cb8; font-size: .64rem; font-weight: 800; }
+.monthly-return-dialog-section-title strong { color: #dcecff; font-size: .72rem; }
+.monthly-return-dialog-bar-row {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) 72px;
+  align-items: center;
+  gap: 9px;
+  margin-top: 10px;
+  font-size: .64rem;
+}
+.monthly-return-dialog-bar-row > span { color: #87a2bd; }
+.monthly-return-dialog-bar-row > strong { text-align: right; }
+.monthly-return-dialog-bar-track {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(91, 121, 153, .17);
+}
+.monthly-return-dialog-bar-track i { display: block; height: 100%; border-radius: inherit; background: #8aa4c0; }
+.monthly-return-dialog-bar-track i.positive { background: var(--positive); }
+.monthly-return-dialog-bar-track i.negative { background: var(--negative); }
+.monthly-return-dialog-insight-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.monthly-return-dialog-insight-grid > div {
+  min-width: 0;
+  padding: 8px 9px;
+  border-radius: 8px;
+  background: rgba(11, 34, 57, .48);
+}
+.monthly-return-dialog-insight-grid strong {
+  display: block;
+  margin-top: 3px;
+  color: #dcecff;
+  font-size: .7rem;
+}
+.monthly-return-dialog-secondary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 20px 14px;
+}
+.monthly-return-dialog-secondary strong,
+.monthly-return-dialog-extremes strong {
+  display: block;
+  margin-top: 4px;
+  font-size: .76rem;
+}
+.monthly-return-dialog-extremes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 20px 20px;
+}
+.monthly-return-dialog strong.positive,
+.monthly-return-dialog .positive { color: var(--positive); }
+.monthly-return-dialog strong.negative,
+.monthly-return-dialog .negative { color: var(--negative); }
+.monthly-return-dialog .flat { color: #adc2d8; }
+
+@media (max-width: 760px) {
+  .dashboard-analytics-hub .dashboard-analytics-history-head h2,
+  .dashboard-analytics-hub .analytics-performance-explorer-section .analytics-section-heading h2 { font-size: 1.3rem; }
+  .monthly-return-dialog-backdrop { padding: 10px; }
+  .monthly-return-dialog { max-height: calc(100vh - 20px); }
+  .monthly-return-dialog-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-left: 12px; padding-right: 12px; }
+  .monthly-return-dialog-main { grid-template-columns: 1fr; padding-left: 12px; padding-right: 12px; }
+  .monthly-return-dialog-secondary,
+  .monthly-return-dialog-extremes { grid-template-columns: 1fr; padding-left: 12px; padding-right: 12px; }
+  .monthly-return-dialog-header { padding-left: 12px; padding-right: 12px; }
+}
+.analytics-return-heatmap button.analytics-heatmap-cell {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  line-height: normal;
+}
