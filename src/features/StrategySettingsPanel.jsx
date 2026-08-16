@@ -421,12 +421,14 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
   const candidateId = catalog.control?.candidate_strategy_id
   const promotedCandidateId = catalog.control?.promoted_candidate_strategy_id
   const hasActiveBacktest = Boolean(activeJob)
+  const isTemporalStrategy = selected.strategy_kind === 'temporal_intelligence'
   const hasCompletedBacktestForSavedModel = selected.last_backtest_status === 'completed'
     && Number(selected.last_backtest_revision) === Number(selected.revision)
     && Boolean(selected.last_backtest_id)
     && Boolean(selected.last_backtest_model?.settings_hash)
     && selected.last_backtest_model?.settings_hash === selected.research_model?.settings_hash
-  const canMarkCandidate = !selected.locked
+  const canMarkCandidate = !isTemporalStrategy
+    && !selected.locked
     && selected.status === 'draft'
     && Boolean(selected.research_model?.family)
     && selected.research_model?.family !== 'iqn'
@@ -493,14 +495,28 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
               <p>{tr("Revision")}{' '}{selected.revision} {tr("· Hash")}{' '}{selected.configuration_hash?.slice(0, 12) || '—'}{tr("… · Source")}{' '}{selected.origin?.winner_source_file || tr('catalog snapshot')}</p>
             </div>
             <div className="strategy-editor-actions">
-              <button type="button" onClick={() => cloneStrategy(selected)} disabled={Boolean(busy)}>{tr("Clone for test")}</button>
-              {selected.id !== researchId ? <button type="button" onClick={() => useForBacktest(selected)} disabled={Boolean(busy) || hasActiveBacktest}>{tr("Use for backtest")}</button> : null}
-              {!selected.locked && selected.status === 'draft' ? <button type="button" className="candidate-action" title={tr(canMarkCandidate ? 'Make the latest completed run for the selected model the single active Candidate' : 'Save XGBoost or LightGBM on this Strategy and complete its backtest first')} onClick={() => markAsCandidate(selected)} disabled={Boolean(busy) || !canMarkCandidate}>{tr("Mark as candidate")}</button> : null}
-              {selected.id !== winnerId ? <button type="button" className="promote-action" title={tr(canPromote ? 'Promote metadata only, preserving the current position and next scheduled pipeline' : 'Mark a completed exact revision as candidate before promotion')} onClick={() => promoteToTrader(selected)} disabled={Boolean(busy) || !canPromote}>{tr("Promote to Trader winner")}</button> : null}
+              {!isTemporalStrategy ? <button type="button" onClick={() => cloneStrategy(selected)} disabled={Boolean(busy)}>{tr("Clone for test")}</button> : null}
+              {selected.id !== researchId && !isTemporalStrategy ? <button type="button" onClick={() => useForBacktest(selected)} disabled={Boolean(busy) || hasActiveBacktest}>{tr("Use for backtest")}</button> : null}
+              {!isTemporalStrategy && !selected.locked && selected.status === 'draft' ? <button type="button" className="candidate-action" title={tr(canMarkCandidate ? 'Make the latest completed run for the selected model the single active Candidate' : 'Save XGBoost or LightGBM on this Strategy and complete its backtest first')} onClick={() => markAsCandidate(selected)} disabled={Boolean(busy) || !canMarkCandidate}>{tr("Mark as candidate")}</button> : null}
+              {!isTemporalStrategy && selected.id !== winnerId ? <button type="button" className="promote-action" title={tr(canPromote ? 'Promote metadata only, preserving the current position and next scheduled pipeline' : 'Mark a completed exact revision as candidate before promotion')} onClick={() => promoteToTrader(selected)} disabled={Boolean(busy) || !canPromote}>{tr("Promote to Trader winner")}</button> : null}
               {selected.id !== winnerId && selected.id !== candidateId ? <button type="button" className="danger" onClick={() => deleteStrategy(selected)} disabled={Boolean(busy)}>{tr("Delete strategy")}</button> : null}
             </div>
           </div>
 
+          {isTemporalStrategy ? (
+            <div className="strategy-temporal-policy-summary">
+              <span><small>{tr('Strategy type')}</small><strong>{tr('Temporal Intelligence')}</strong></span>
+              <span><small>{tr('Temporal experiment')}</small><strong>{selected.source_temporal_experiment || '—'}</strong></span>
+              <span><small>{tr('Source run')}</small><strong>{selected.source_temporal_run_id || '—'}</strong></span>
+              <span><small>{tr('Tuning target')}</small><strong>{tr('Temporal policy')}</strong></span>
+              <span><small>{tr('Base weak threshold')}</small><strong>{selected.temporal_policy?.parameters?.timing_base_weak_threshold ?? '—'}</strong></span>
+              <span><small>{tr('Challenger minimum')}</small><strong>{selected.temporal_policy?.parameters?.timing_challenger_minimum ?? '—'}</strong></span>
+              <span><small>{tr('Minimum advantage')}</small><strong>{selected.temporal_policy?.parameters?.timing_minimum_advantage ?? '—'}</strong></span>
+              <span><small>{tr('Validated capital')}</small><strong>{selected.temporal_policy?.validation?.ending_capital != null ? `$${Number(selected.temporal_policy.validation.ending_capital).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '—'}</strong></span>
+            </div>
+          ) : null}
+
+          {!isTemporalStrategy ? (<>
           <div className="strategy-parameter-tools strategy-parameter-tools-global">
             <label className="strategy-parameter-search">
               <StrategyFieldLabel id="hint-parameter-search" label={tr("Find a parameter")} hint={STRATEGY_FIELD_HINTS.search} />
@@ -517,8 +533,10 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
             </label>
             <small>{parameterSearch ? tr(globalVisibleParameterCount === 1 ? '{count} matching parameter' : '{count} matching parameters', { count: globalVisibleParameterCount }) : tr(globalVisibleParameterCount === 1 ? '{count} parameter available' : '{count} parameters available', { count: globalVisibleParameterCount })}</small>
           </div>
+          </>) : null}
 
-          <ModelResearchSettingsPanel
+
+          {!isTemporalStrategy ? <ModelResearchSettingsPanel
             onSessionExpired={onSessionExpired}
             embedded
             strategy={selected}
@@ -526,10 +544,11 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
             onDirtyChange={setModelHasUnsavedChanges}
             parameterSearch={parameterSearch}
             onSearchMatchCount={setModelParameterMatchCount}
-          />
+          /> : null}
 
           <StrategyLifecycleNotes selected={selected} />
 
+          {!isTemporalStrategy ? (
           <form className="strategy-parameter-form" onSubmit={saveStrategy}>
             <div className="strategy-metadata-grid">
               <label>
@@ -580,11 +599,12 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
               </div>
             ) : null}
           </form>
+          ) : null}
 
           <div className="strategy-last-test">
-            <span>{tr("Latest backtest")}</span>
-            <strong>{selected.last_backtest_status ? statusLabel(selected.last_backtest_status) : tr('Not run for this revision')}</strong>
-            <small>{selected.last_backtest_id || '—'} {tr("· Updated")}{' '}{dateTime(selected.updated_at)}</small>
+            <span>{tr(isTemporalStrategy ? 'Source validation' : 'Latest backtest')}</span>
+            <strong>{isTemporalStrategy ? tr('Temporal Intelligence completed') : selected.last_backtest_status ? statusLabel(selected.last_backtest_status) : tr('Not run for this revision')}</strong>
+            <small>{isTemporalStrategy ? selected.source_temporal_run_id || '—' : selected.last_backtest_id || '—'} {tr("· Updated")}{' '}{dateTime(selected.updated_at)}</small>
           </div>
         </div>
       </div>

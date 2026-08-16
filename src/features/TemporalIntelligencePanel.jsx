@@ -210,11 +210,14 @@ export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired 
   const canStart = hasCapability(capabilities, 'temporal_intelligence.start')
   const canStop = hasCapability(capabilities, 'temporal_intelligence.stop')
   const canExport = hasCapability(capabilities, 'temporal_intelligence.export')
+  const canMaterializeStrategy = hasCapability(capabilities, 'temporal_intelligence.materialize_strategy')
   const [run, setRun] = useState(null)
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [materializingStrategy, setMaterializingStrategy] = useState(false)
+  const [strategyNotice, setStrategyNotice] = useState('')
   const [error, setError] = useState('')
   const [selectedHorizon, setSelectedHorizon] = useState(null)
   const pollRef = useRef(null)
@@ -316,6 +319,25 @@ export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired 
     }
   }
 
+  async function materializeStrategy() {
+    if (!canMaterializeStrategy || materializingStrategy || !run?.id || !run?.result || run?.status !== 'completed') return
+    setMaterializingStrategy(true)
+    setError('')
+    setStrategyNotice('')
+    try {
+      const response = await apiFetch(`${API}/temporal-intelligence/${encodeURIComponent(run.id)}/strategy`, { method: 'POST' })
+      const strategy = response?.strategy || null
+      if (strategy) {
+        setRun((current) => current ? { ...current, materialized_strategy_id: strategy.id, materialized_strategy_name: strategy.name } : current)
+        setStrategyNotice(tr(response?.created ? 'Temporal Strategy created in Strategy catalog.' : 'Temporal Strategy already exists in Strategy catalog.'))
+      }
+    } catch (requestError) {
+      handleError(requestError)
+    } finally {
+      setMaterializingStrategy(false)
+    }
+  }
+
   async function exportResults() {
     if (!canExport || exporting || !run?.id || !run?.result) return
     setExporting(true)
@@ -342,6 +364,7 @@ export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired 
           {run?.analysis_end_date ? <><i>·</i><span>{tr('Data through')}</span><strong>{run.analysis_end_date}</strong></> : null}
         </div>
         <div className="temporal-actions">
+          {canMaterializeStrategy && run?.status === 'completed' && run?.result ? <button type="button" className="secondary-action compact" onClick={materializeStrategy} disabled={materializingStrategy || Boolean(run?.materialized_strategy_id)}>{tr(materializingStrategy ? 'Creating Strategy…' : run?.materialized_strategy_id ? 'Strategy created' : 'Create Strategy')}</button> : null}
           {canExport && run?.result ? <button type="button" className="secondary-action compact" onClick={exportResults} disabled={exporting}>{tr(exporting ? 'Exporting…' : 'Export Results')}</button> : null}
           {canStop && active ? <button type="button" className="secondary-action compact" onClick={stop} disabled={busy}>{tr(busy ? 'Stopping…' : 'Stop')}</button> : null}
           {canStart ? <button type="button" className="primary-action compact" onClick={start} disabled={busy || active}><PlayIcon />{tr(busy ? 'Starting…' : active ? 'Running' : 'Start Temporal Intelligence')}</button> : null}
@@ -349,6 +372,8 @@ export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired 
       </div>
 
       {error ? <div className="global-inline-message error-inline">{error}</div> : null}
+      {strategyNotice ? <div className="global-inline-message success-inline">{strategyNotice}</div> : null}
+      {run?.materialized_strategy_name ? <div className="temporal-strategy-materialized"><span>{tr('Catalog Strategy')}</span><strong>{run.materialized_strategy_name}</strong></div> : null}
       {run?.failure_message ? <div className="global-inline-message error-inline">{tr(run.failure_message)}</div> : null}
 
       {run ? <section className="temporal-status-panel"><div className="temporal-status-line"><strong>{statusLabel(run.status)}</strong><span>{run.stage || '—'}</span><span>{number(run.progress, 0)}%</span></div><div className="temporal-progress"><span style={{ width: `${Math.max(0, Math.min(100, Number(run.progress || 0)))}%` }} /></div><div className="temporal-status-meta"><span>{tr('Run')} {run.id}</span><span>{tr('Created')} {shortDateTime(run.created_at)}</span>{run.finished_at ? <span>{tr('Finished')} {shortDateTime(run.finished_at)}</span> : null}</div></section> : <div className="temporal-empty">{tr('No Temporal Intelligence execution yet.')}</div>}

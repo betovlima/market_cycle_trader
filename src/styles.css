@@ -1302,6 +1302,27 @@ a { color: inherit; }
   color: #efca62;
 }
 
+.strategy-list-markers span.temporal {
+  background: rgba(157, 103, 255, 0.16);
+  color: #c1a0ff;
+}
+
+.strategy-temporal-policy-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.strategy-temporal-policy-summary > span {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(157, 103, 255, .18);
+  border-radius: 8px;
+  background: rgba(23, 18, 43, .42);
+}
+.strategy-temporal-policy-summary small { display: block; color: var(--muted); font-size: .59rem; text-transform: uppercase; letter-spacing: .035em; }
+.strategy-temporal-policy-summary strong { display: block; margin-top: 4px; color: #ddd0ff; font-size: .69rem; overflow-wrap: anywhere; }
+
 .strategy-editor-panel {
   padding: 15px;
 }
@@ -7592,6 +7613,9 @@ a { color: inherit; }
 .temporal-run-meta strong { color: var(--text); min-width: 0; overflow-wrap: anywhere; }
 .temporal-run-meta i { color: rgba(156, 182, 212, .48); font-style: normal; }
 .temporal-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+.temporal-strategy-materialized { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 8px 10px; border: 1px solid rgba(157, 103, 255, .2); border-radius: 8px; background: rgba(23, 18, 43, .34); font-size: .68rem; }
+.temporal-strategy-materialized span { color: var(--muted); }
+.temporal-strategy-materialized strong { color: #ddd0ff; overflow-wrap: anywhere; }
 .temporal-status-panel { display: grid; gap: 8px; padding: 13px 14px; border: 1px solid var(--border); border-radius: 11px; background: rgba(7, 21, 38, .74); min-width: 0; }
 .temporal-status-line { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; font-size: .72rem; }
 .temporal-status-line strong { color: #dcecff; }
@@ -7849,3 +7873,6 @@ a { color: inherit; }
 .rotation-month-equity-chart .capital-movement-marker.market circle { fill: #25c992; }
 .rotation-month-equity-chart .capital-movement-marker.cash circle { fill: #a379e8; }
 .rotation-month-equity-chart .capital-movement-marker text { fill: #bcd3e9; font-size: 7px; font-weight: 850; text-anchor: middle; }
+
+@media (max-width: 900px) { .strategy-temporal-policy-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .strategy-temporal-policy-summary { grid-template-columns: 1fr; } }
