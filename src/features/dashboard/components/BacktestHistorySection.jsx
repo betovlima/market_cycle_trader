@@ -13,8 +13,6 @@ export function BacktestHistorySection({
   onStatusFilterChange,
   statusCounts,
   visibleRows,
-  storyJobId,
-  onStoryJobChange,
   sort,
   updateSort,
   safePage,
@@ -41,7 +39,7 @@ export function BacktestHistorySection({
                 <DashboardSortHeader label={tr("Rotations")} sortKey="rotations" sort={sort} onSort={updateSort} hint={DASHBOARD_HINTS.rotations} />
                 <DashboardSortHeader label={tr("Duration")} sortKey="duration" sort={sort} onSort={updateSort} hint={DASHBOARD_HINTS.duration} />
               </tr></thead>
-              <tbody>{visibleRows.length ? visibleRows.map((item) => <tr key={item.id} className={item.id === storyJobId ? 'selected-row' : ''} onDoubleClick={() => { if (String(item.status || '').toLowerCase() === 'completed') onStoryJobChange(item.id) }} title={String(item.status || '').toLowerCase() === 'completed' ? tr('Double-click to load this backtest in Trade Story') : ''}>
+              <tbody>{visibleRows.length ? visibleRows.map((item) => <tr key={item.id}>
                 <td>{shortDateTime(item.created_at)}</td><td><StatusBadge status={item.status} /></td><td className={item.metrics?.simulation_return == null ? '' : Number(item.metrics.simulation_return) >= 0 ? 'positive' : 'negative'}>{percent(item.metrics?.simulation_return)}</td><td>{item.metrics?.sharpe == null ? '—' : Number(item.metrics.sharpe).toFixed(3)}</td><td className={item.metrics?.maximum_drawdown == null ? '' : 'negative'}>{percent(item.metrics?.maximum_drawdown)}</td><td>{item.metrics?.position_changes == null ? '—' : Math.round(item.metrics.position_changes)}</td><td>{durationLabel(item.duration_seconds)}</td>
               </tr>) : <tr><td colSpan="7" className="empty-cell">{tr("No backtests match the current filters.")}</td></tr>}</tbody>
             </table>

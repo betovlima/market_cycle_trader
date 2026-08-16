@@ -1,7 +1,5 @@
-import { getIntlLocale, tr } from '../../../i18n/runtime'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-
+import { tr } from '../../../i18n/runtime'
+import { useEffect, useMemo, useState } from 'react'
 import { apiFetch, downloadFile } from '../../../api/http'
 import { hasCapability } from '../../../auth/capabilities'
 import { API } from '../../../config/env'
@@ -18,13 +16,12 @@ import {
 } from '../../../shared/components/Icons'
 import { ParameterHint } from '../../../shared/components/ParameterHint'
 import { durationLabel, money, percent, shortDateTime } from '../../../shared/formatters'
-import { clamp, minimumZoomSpan, nearestTimeSeriesIndex, timestampValue } from '../../../shared/charts/timeSeries'
 import { ExecutionStatus } from './ExecutionStatus'
 import { ModelTuningPanel } from '../../ModelTuningPanel'
 import { TemporalIntelligencePanel } from '../../TemporalIntelligencePanel'
-import { HISTORY_HINTS, HISTORY_PAGE_SIZE, METRIC_HINTS, ZOOM_STEP } from '../backtestConfig'
-import { backtestAxisLabel, sortRows, toggleSort } from '../backtestUtils'
-import { BacktestChartTooltip, BacktestTradeEventDot, FilterButton, ListToolbar, Metric, MetricLabel, Pagination, SortableHeader, StatusBadge } from './BacktestPrimitives'
+import { HISTORY_HINTS, HISTORY_PAGE_SIZE, METRIC_HINTS } from '../backtestConfig'
+import { sortRows, toggleSort } from '../backtestUtils'
+import { FilterButton, ListToolbar, Metric, MetricLabel, Pagination, SortableHeader, StatusBadge } from './BacktestPrimitives'
 import { RotationPanel } from './RotationPanel'
 
 export function BacktestPage({ workspace, capabilities = {}, onSessionExpired }) {
@@ -49,10 +46,6 @@ export function BacktestPage({ workspace, capabilities = {}, onSessionExpired })
   const [rotationPayload, setRotationPayload] = useState(null)
   const [rotationLoading, setRotationLoading] = useState(false)
   const [rotationError, setRotationError] = useState('')
-  const [zoomDomain, setZoomDomain] = useState(null)
-  const [isPanning, setIsPanning] = useState(false)
-  const chartInteractionRef = useRef(null)
-  const panStateRef = useRef(null)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState('')
   const [historyQuery, setHistoryQuery] = useState('')
@@ -141,202 +134,6 @@ export function BacktestPage({ workspace, capabilities = {}, onSessionExpired })
     return () => { active = false }
   }, [detail?.id])
 
-  const chartRows = useMemo(() => {
-    const points = (detail?.series || [])
-      .map((row) => ({ ...row, timestamp_value: timestampValue(row.timestamp), tradeEvents: [] }))
-      .filter((row) => row.timestamp_value !== null)
-      .sort((left, right) => left.timestamp_value - right.timestamp_value)
-
-    ;(rotationPayload?.rotations || []).forEach((rotation, index) => {
-      const nearestIndex = nearestTimeSeriesIndex(points, timestampValue(rotation.executed_at))
-      if (nearestIndex < 0) return
-      const common = {
-        executedAt: rotation.executed_at,
-        fromAsset: rotation.from_asset || 'CASH',
-        toAsset: rotation.to_asset || 'CASH',
-        holdingDays: rotation.holding_days,
-        positionReturn: rotation.position_return,
-        realizedPnl: rotation.realized_pnl,
-        transactionFees: rotation.transaction_fees,
-      }
-      if (rotation.from_asset && String(rotation.from_asset).toUpperCase() !== 'CASH') {
-        points[nearestIndex].tradeEvents.push({
-          ...common,
-          tradeSide: 'sell',
-          asset: rotation.from_asset,
-          markerKey: `${rotation.executed_at || 'rotation'}-sell-${rotation.from_asset}-${index}`,
-        })
-      }
-      if (rotation.to_asset && String(rotation.to_asset).toUpperCase() !== 'CASH') {
-        points[nearestIndex].tradeEvents.push({
-          ...common,
-          tradeSide: 'buy',
-          asset: rotation.to_asset,
-          markerKey: `${rotation.executed_at || 'rotation'}-buy-${rotation.to_asset}-${index}`,
-        })
-      }
-    })
-    return points
-  }, [detail?.series, rotationPayload])
-
-  const fullTimeDomain = useMemo(() => {
-    if (chartRows.length < 2) return null
-    const start = Number(chartRows[0]?.timestamp_value)
-    const end = Number(chartRows[chartRows.length - 1]?.timestamp_value)
-    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null
-    return { start, end }
-  }, [chartRows])
-
-  const minimumTimeSpan = useMemo(() => {
-    if (!fullTimeDomain) return 0
-    const calculated = minimumZoomSpan(chartRows)
-    const fullSpan = fullTimeDomain.end - fullTimeDomain.start
-    return Math.min(fullSpan, Math.max(calculated, fullSpan / 300))
-  }, [chartRows, fullTimeDomain])
-
-  const effectiveZoomDomain = useMemo(() => {
-    if (!fullTimeDomain) return null
-    if (!zoomDomain) return fullTimeDomain
-    const fullSpan = fullTimeDomain.end - fullTimeDomain.start
-    const requestedSpan = Math.max(minimumTimeSpan, zoomDomain.end - zoomDomain.start)
-    if (!Number.isFinite(requestedSpan) || requestedSpan >= fullSpan * 0.995) return fullTimeDomain
-
-    let start = clamp(zoomDomain.start, fullTimeDomain.start, fullTimeDomain.end - requestedSpan)
-    let end = start + requestedSpan
-    if (end > fullTimeDomain.end) {
-      end = fullTimeDomain.end
-      start = end - requestedSpan
-    }
-    return { start, end }
-  }, [fullTimeDomain, minimumTimeSpan, zoomDomain])
-
-  const zoomActive = Boolean(fullTimeDomain && effectiveZoomDomain
-    && (effectiveZoomDomain.end - effectiveZoomDomain.start) < (fullTimeDomain.end - fullTimeDomain.start) * 0.995)
-
-  const visibleChartRows = useMemo(() => {
-    if (!zoomActive || !effectiveZoomDomain) return chartRows
-    return chartRows.filter((point) => point.timestamp_value >= effectiveZoomDomain.start && point.timestamp_value <= effectiveZoomDomain.end)
-  }, [chartRows, effectiveZoomDomain, zoomActive])
-
-  const yDomain = useMemo(() => {
-    const values = visibleChartRows.flatMap((point) => [Number(point.simulation_equity), Number(point.reference_equity)])
-      .filter((value) => Number.isFinite(value))
-    if (!values.length) return ['auto', 'auto']
-    const minimum = Math.min(...values)
-    const maximum = Math.max(...values)
-    const spread = maximum - minimum
-    const magnitude = Math.max(Math.abs(minimum), Math.abs(maximum), 1)
-    const padding = spread > 0 ? Math.max(spread * 0.08, magnitude * 0.00005) : Math.max(magnitude * 0.0002, 1)
-    return [minimum - padding, maximum + padding]
-  }, [visibleChartRows])
-
-  const visibleTimeSpan = effectiveZoomDomain ? Math.max(0, effectiveZoomDomain.end - effectiveZoomDomain.start) : 0
-  const zoomLevel = useMemo(() => {
-    if (!zoomActive || !fullTimeDomain || !effectiveZoomDomain) return 1
-    const fullSpan = fullTimeDomain.end - fullTimeDomain.start
-    const visibleSpan = effectiveZoomDomain.end - effectiveZoomDomain.start
-    return visibleSpan > 0 ? fullSpan / visibleSpan : 1
-  }, [effectiveZoomDomain, fullTimeDomain, zoomActive])
-
-  useEffect(() => {
-    setZoomDomain(null)
-    panStateRef.current = null
-    setIsPanning(false)
-  }, [detail?.id])
-
-  useEffect(() => {
-    const chartNode = chartInteractionRef.current
-    if (!chartNode || !fullTimeDomain) return undefined
-
-    const handleWheel = (event) => {
-      if (event.deltaY === 0) return
-      event.preventDefault()
-      const fullSpan = fullTimeDomain.end - fullTimeDomain.start
-      if (fullSpan <= 0 || minimumTimeSpan >= fullSpan) return
-
-      const rect = chartNode.getBoundingClientRect()
-      const leftInset = Math.min(74, rect.width * 0.18)
-      const rightInset = Math.min(24, rect.width * 0.08)
-      const plotWidth = Math.max(1, rect.width - leftInset - rightInset)
-      const pointerRatio = clamp((event.clientX - rect.left - leftInset) / plotWidth, 0, 1)
-      const intensity = clamp(Math.abs(event.deltaY) / 120, 0.35, 1.6)
-      const factor = event.deltaY < 0 ? Math.pow(ZOOM_STEP, intensity) : Math.pow(1 / ZOOM_STEP, intensity)
-
-      setZoomDomain((current) => {
-        const requestedStart = current?.start ?? fullTimeDomain.start
-        const requestedEnd = current?.end ?? fullTimeDomain.end
-        const currentSpan = clamp(requestedEnd - requestedStart, minimumTimeSpan, fullSpan)
-        const currentStart = clamp(requestedStart, fullTimeDomain.start, fullTimeDomain.end - currentSpan)
-        const nextSpan = clamp(currentSpan * factor, minimumTimeSpan, fullSpan)
-        if (nextSpan >= fullSpan * 0.995) return null
-
-        const anchor = currentStart + currentSpan * pointerRatio
-        let start = anchor - nextSpan * pointerRatio
-        let end = start + nextSpan
-        if (start < fullTimeDomain.start) {
-          start = fullTimeDomain.start
-          end = start + nextSpan
-        }
-        if (end > fullTimeDomain.end) {
-          end = fullTimeDomain.end
-          start = end - nextSpan
-        }
-        return { start, end }
-      })
-    }
-
-    chartNode.addEventListener('wheel', handleWheel, { passive: false })
-    return () => chartNode.removeEventListener('wheel', handleWheel)
-  }, [fullTimeDomain, minimumTimeSpan])
-
-  function beginChartPan(event) {
-    if (event.button !== 0 || !zoomActive || !effectiveZoomDomain || !fullTimeDomain) return
-    if (event.target?.closest?.('.backtest-trade-marker-hit')) return
-    const chartNode = chartInteractionRef.current
-    if (!chartNode) return
-    const rect = chartNode.getBoundingClientRect()
-    const leftInset = Math.min(74, rect.width * 0.18)
-    const rightInset = Math.min(24, rect.width * 0.08)
-    const plotWidth = Math.max(1, rect.width - leftInset - rightInset)
-    panStateRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      domainStart: effectiveZoomDomain.start,
-      domainEnd: effectiveZoomDomain.end,
-      plotWidth,
-    }
-    setIsPanning(true)
-    event.currentTarget.setPointerCapture?.(event.pointerId)
-    event.preventDefault()
-  }
-
-  function moveChartPan(event) {
-    const pan = panStateRef.current
-    if (!pan || pan.pointerId !== event.pointerId || !fullTimeDomain) return
-    const span = pan.domainEnd - pan.domainStart
-    const shift = -((event.clientX - pan.startX) / pan.plotWidth) * span
-    let start = pan.domainStart + shift
-    let end = pan.domainEnd + shift
-    if (start < fullTimeDomain.start) {
-      start = fullTimeDomain.start
-      end = start + span
-    }
-    if (end > fullTimeDomain.end) {
-      end = fullTimeDomain.end
-      start = end - span
-    }
-    setZoomDomain({ start, end })
-    event.preventDefault()
-  }
-
-  function endChartPan(event) {
-    const pan = panStateRef.current
-    if (!pan || pan.pointerId !== event.pointerId) return
-    panStateRef.current = null
-    setIsPanning(false)
-    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
-  }
-
   const historyRows = useMemo(() => {
     const normalizedQuery = historyQuery.trim().toLowerCase()
     const rows = (dashboard?.recent_backtests || []).map((item) => ({
@@ -413,8 +210,7 @@ export function BacktestPage({ workspace, capabilities = {}, onSessionExpired })
             {(canViewResearchModels || canViewTuning || canViewTemporalIntelligence) ? (
               <div className="backtest-research-mode-switch" role="tablist" aria-label={tr('Research workspace')}>
                 <button type="button" role="tab" aria-selected={researchWorkspaceMode === 'simulation'} className={researchWorkspaceMode === 'simulation' ? 'active' : ''} onClick={() => setResearchWorkspaceMode('simulation')}>{tr('Simulation Backtest')}</button>
-                {canViewTuning ? <button type="button" role="tab" aria-selected={researchWorkspaceMode === 'tuning'} className={researchWorkspaceMode === 'tuning' ? 'active' : ''} onClick={() => setResearchWorkspaceMode('tuning')}>{tr('Model Tuning')}</button> : null}
-                {canViewTemporalIntelligence ? <button type="button" role="tab" aria-selected={researchWorkspaceMode === 'temporal'} className={researchWorkspaceMode === 'temporal' ? 'active' : ''} onClick={() => setResearchWorkspaceMode('temporal')}>{tr('Temporal Intelligence')}</button> : null}
+                {(canViewTuning || canViewTemporalIntelligence) ? <button type="button" role="tab" aria-selected={researchWorkspaceMode === 'research'} className={researchWorkspaceMode === 'research' ? 'active' : ''} onClick={() => setResearchWorkspaceMode('research')}>{tr('Research Lab')}</button> : null}
               </div>
             ) : null}
             {canViewResearchModels && researchWorkspaceMode === 'simulation' ? (
@@ -435,14 +231,17 @@ export function BacktestPage({ workspace, capabilities = {}, onSessionExpired })
           </div>
         </header>
 
-        {researchWorkspaceMode === 'tuning' && canViewTuning ? (
-          <ModelTuningPanel
-            capabilities={capabilities}
-            onSessionExpired={onSessionExpired}
-            onStrategyModelSaved={(updated) => setSelectedStrategyModel(updated?.research_model_configuration || updated?.research_model || null)}
-          />
-        ) : researchWorkspaceMode === 'temporal' && canViewTemporalIntelligence ? (
-          <TemporalIntelligencePanel capabilities={capabilities} onSessionExpired={onSessionExpired} />
+        {researchWorkspaceMode === 'research' ? (
+          <div className="backtest-research-lab-stack">
+            {canViewTemporalIntelligence ? <TemporalIntelligencePanel capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
+            {canViewTuning ? (
+              <ModelTuningPanel
+                capabilities={capabilities}
+                onSessionExpired={onSessionExpired}
+                onStrategyModelSaved={(updated) => setSelectedStrategyModel(updated?.research_model_configuration || updated?.research_model || null)}
+              />
+            ) : null}
+          </div>
         ) : <>
         <ExecutionStatus workspace={workspace} modelLabel={activeResearchModelLabel} />
         {strategyContextError ? <div className="global-inline-message error-inline backtest-workspace-message">{tr(strategyContextError)}</div> : null}
@@ -507,51 +306,6 @@ export function BacktestPage({ workspace, capabilities = {}, onSessionExpired })
             ) : null}
 
             <section className="backtest-workspace-main">
-              <article className="backtest-performance-section">
-                <div className="backtest-section-heading backtest-chart-heading">
-                  <div><span className="panel-kicker">{tr("Performance")}</span><h2>{tr("Simulation Comparison")}</h2></div>
-                  <div className="backtest-chart-heading-right">
-                    <div className="trade-event-legend" aria-label={tr("Backtest trade event legend")}>
-                      <span><i className="buy" />{tr("Buy")}</span>
-                      <span><i className="sell" />{tr("Sell")}</span>
-                    </div>
-                    <div className="backtest-chart-controls" aria-live="polite">
-                      <span>{zoomActive ? tr('Zoom {level}× · Drag to pan', { level: zoomLevel >= 10 ? zoomLevel.toFixed(0) : zoomLevel.toFixed(1) }) : tr('Wheel to zoom · Drag to pan')}</span>
-                      {zoomActive ? <button type="button" onClick={() => setZoomDomain(null)}>{tr("Reset zoom")}</button> : null}
-                    </div>
-                  </div>
-                </div>
-                <div
-                  ref={chartInteractionRef}
-                  className={`performance-chart backtest-performance-chart backtest-interactive-chart ${zoomActive ? 'is-zoomed' : ''} ${isPanning ? 'is-panning' : ''}`}
-                  aria-label={tr("Simulation comparison chart. Use the mouse wheel to zoom. When zoomed, hold the left mouse button and drag to pan through time. Buy and sell markers use a pointer cursor.")}
-                  onPointerDown={beginChartPan}
-                  onPointerMove={moveChartPan}
-                  onPointerUp={endChartPan}
-                  onPointerCancel={endChartPan}
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={visibleChartRows} margin={{ top: 18, right: 16, left: 8, bottom: 8 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis
-                        dataKey="timestamp_value"
-                        type="number"
-                        scale="time"
-                        domain={effectiveZoomDomain ? [effectiveZoomDomain.start, effectiveZoomDomain.end] : ['dataMin', 'dataMax']}
-                        allowDataOverflow
-                        minTickGap={38}
-                        tickFormatter={(value) => backtestAxisLabel(value, visibleTimeSpan)}
-                      />
-                      <YAxis domain={yDomain} tickFormatter={(value) => `$${Number(value).toLocaleString(getIntlLocale(), { maximumFractionDigits: 0 })}`} />
-                      <Tooltip content={<BacktestChartTooltip />} cursor={{ stroke: 'rgba(157, 175, 195, .42)', strokeWidth: 1 }} />
-                      <Legend />
-                      <Line type="monotone" dataKey="simulation_equity" name={tr("Simulation")} dot={<BacktestTradeEventDot />} activeDot={false} strokeWidth={2.4} stroke="var(--positive)" isAnimationActive={false} />
-                      <Line type="monotone" dataKey="reference_equity" name={tr("Reference")} dot={false} activeDot={false} strokeWidth={2.2} stroke="var(--accent)" isAnimationActive={false} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              </article>
-
               <article className="backtest-results-section">
                 <div className="backtest-section-heading compact">
                   <div><span className="panel-kicker">{tr("Summary")}</span><h2>{tr("Backtest Results")}</h2></div>

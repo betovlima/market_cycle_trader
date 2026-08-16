@@ -7876,3 +7876,207 @@ a { color: inherit; }
 
 @media (max-width: 900px) { .strategy-temporal-policy-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 520px) { .strategy-temporal-policy-summary { grid-template-columns: 1fr; } }
+
+/* v3.27.1 — Historical performance and Return and consistency information hints */
+.backtest-research-lab-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.model-tuning-temporal-mode {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 16px;
+}
+
+.model-tuning-temporal-mode-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.model-tuning-temporal-mode-head > div {
+  display: grid;
+  gap: 3px;
+}
+
+.model-tuning-temporal-mode-head small {
+  max-width: 620px;
+  text-align: right;
+}
+
+.model-tuning-temporal-mode .research-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.model-tuning-temporal-mode .research-mode-switch button {
+  display: grid;
+  gap: 4px;
+  min-height: 72px;
+  padding: 11px 13px;
+  text-align: left;
+}
+
+.model-tuning-temporal-mode .research-mode-switch button span {
+  font-size: 12px;
+  line-height: 1.35;
+  opacity: .78;
+}
+
+.model-tuning-current-candidate-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 7px;
+  font-size: 12px;
+}
+
+.dashboard-analytics-hub {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.dashboard-analytics-history-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.dashboard-analytics-history-head h2 {
+  margin: 2px 0 0;
+}
+
+.dashboard-analytics-run-select {
+  display: grid;
+  gap: 5px;
+  min-width: min(560px, 52vw);
+}
+
+.dashboard-analytics-run-select span,
+.dashboard-analytics-run-select small {
+  font-size: 12px;
+}
+
+.dashboard-analytics-run-select select {
+  width: 100%;
+}
+
+.dashboard-analytics-charts {
+  display: grid;
+  gap: 18px;
+}
+
+@media (max-width: 900px) {
+  .model-tuning-temporal-mode-head,
+  .dashboard-analytics-history-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .model-tuning-temporal-mode-head small {
+    text-align: left;
+  }
+
+  .model-tuning-temporal-mode .research-mode-switch {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-analytics-run-select {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+
+.dashboard-historical-performance-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dashboard-historical-performance-title h2 { margin: 0; }
+.dashboard-historical-performance-title .parameter-hint-trigger {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  font-size: .58rem;
+}
+
+.analytics-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.analytics-section-title h2 { margin: 0; }
+.analytics-section-title .parameter-hint-trigger {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  font-size: .58rem;
+}
+
+
+/* v3.27.2 — Dashboard analytics drill-down and typography alignment */
+.dashboard-analytics-hub {
+  --dashboard-analytics-kicker-size: .64rem;
+  --dashboard-analytics-title-size: .78rem;
+  --dashboard-analytics-control-size: .63rem;
+  --dashboard-analytics-cell-value-size: .68rem;
+}
+
+.dashboard-analytics-hub .panel-kicker,
+.dashboard-analytics-hub .rotation-monthly-heatmap-heading .backtest-field-label,
+.dashboard-analytics-hub .analytics-chart-cell-heading > div:first-child > span,
+.dashboard-analytics-hub .analytics-heatmap-head span,
+.dashboard-analytics-hub .rotation-monthly-heatmap-head span,
+.dashboard-analytics-hub .analytics-heatmap-row > strong,
+.dashboard-analytics-hub .rotation-monthly-heatmap-row > strong {
+  font-size: var(--dashboard-analytics-kicker-size) !important;
+}
+
+.dashboard-analytics-hub .rotation-monthly-heatmap-heading > div:first-child > strong,
+.dashboard-analytics-hub .analytics-chart-cell-heading > div:first-child > strong {
+  font-size: var(--dashboard-analytics-title-size);
+}
+
+.dashboard-analytics-hub .analytics-mode-tabs button,
+.dashboard-analytics-hub .rotation-monthly-heatmap-modes button,
+.dashboard-analytics-hub .analytics-zoom-status,
+.dashboard-analytics-hub .analytics-reset-zoom,
+.dashboard-analytics-hub .rotation-monthly-heatmap-footer,
+.dashboard-analytics-hub .dashboard-analytics-run-select span,
+.dashboard-analytics-hub .dashboard-analytics-run-select small {
+  font-size: var(--dashboard-analytics-control-size);
+}
+
+.dashboard-analytics-hub .rotation-monthly-heatmap-cell,
+.dashboard-analytics-hub .analytics-heatmap-feature-cell .analytics-heatmap-cell {
+  font-size: var(--dashboard-analytics-cell-value-size);
+  line-height: 1.15;
+}
+
+.dashboard-analytics-hub .rotation-monthly-heatmap-cell {
+  min-height: 36px;
+}
+
+.dashboard-analytics-hub .analytics-heatmap-feature-cell .analytics-heatmap-cell {
+  min-height: 41px;
+}
+
+.dashboard-analytics-hub .rotation-monthly-heatmap-cell[role="gridcell"] {
+  letter-spacing: .005em;
+}
+
+@media (max-width: 760px) {
+  .dashboard-analytics-hub {
+    --dashboard-analytics-kicker-size: .62rem;
+    --dashboard-analytics-title-size: .75rem;
+    --dashboard-analytics-control-size: .61rem;
+    --dashboard-analytics-cell-value-size: .66rem;
+  }
+}

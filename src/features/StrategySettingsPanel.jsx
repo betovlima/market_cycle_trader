@@ -282,7 +282,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
           note,
         },
       })
-      setNotice(tr('Model Tuning will use this TEMPORAL Strategy and its frozen Temporal replay.'))
+      setNotice(tr('Research Lab will use this TEMPORAL Strategy for LightGBM Model Tuning or frozen Policy Tuning.'))
       await loadCatalog(strategy.id)
     } catch (requestError) {
       handleError(requestError)

@@ -330,7 +330,7 @@ function MonthlyMovementDialog({ jobId, month, onClose }) {
   </div>
 }
 
-function MonthlyCapitalMovementHeatmap({ jobId, rotations, equity }) {
+export function MonthlyCapitalMovementHeatmap({ jobId, rotations, equity, allowDrilldown = true }) {
   const [mode, setMode] = useState('pnl')
   const [tooltip, setTooltip] = useState(null)
   const [selectedMonth, setSelectedMonth] = useState(null)
@@ -400,16 +400,16 @@ function MonthlyCapitalMovementHeatmap({ jobId, rotations, equity }) {
               onMouseEnter={(event) => showTooltip(event, month)}
               onFocus={(event) => showTooltip(event, month)}
               onBlur={hideTooltip}
-              onClick={() => { hideTooltip(); setSelectedMonth(month) }}
+              onClick={allowDrilldown ? () => { hideTooltip(); setSelectedMonth(month) } : undefined}
               aria-label={`${fullMonthName(year, index + 1)}. ${metric.label}`}
             >{metric.label}</button>
           })}
         </div>)}
       </div>
-      <div className="rotation-monthly-heatmap-footer"><span>{tr('Hover for summary')}</span><span>·</span><span>{tr('Click a month for detailed analysis')}</span></div>
+      <div className="rotation-monthly-heatmap-footer"><span>{tr('Hover for summary')}</span>{allowDrilldown ? <><span>·</span><span>{tr('Click a month for detailed analysis')}</span></> : null}</div>
     </article>
     <MonthlyMovementTooltip tooltip={tooltip} />
-    <MonthlyMovementDialog jobId={jobId} month={selectedMonth} onClose={() => setSelectedMonth(null)} />
+    {allowDrilldown ? <MonthlyMovementDialog jobId={jobId} month={selectedMonth} onClose={() => setSelectedMonth(null)} /> : null}
   </>
 }
 
@@ -560,7 +560,6 @@ export function RotationPanel({ jobId, payload, loading, error }) {
         />
       </div>
 
-      <MonthlyCapitalMovementHeatmap jobId={jobId} rotations={rotations} equity={payload?.equity || []} />
 
       <ListToolbar
         query={query}
