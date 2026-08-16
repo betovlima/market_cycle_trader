@@ -31,6 +31,7 @@ import { BacktestPerformanceExplorer } from './components/BacktestPerformanceExp
 import { RotationInspector } from './components/RotationInspector'
 import { returnTone } from './utils/performance'
 import { AnalyticsMetric, ChartCell, ChartEmpty, SectionHeading } from './components/AnalyticsPrimitives'
+import { AssetStrategyComparison } from './components/AssetStrategyComparison'
 
 const ASSET_PAGE_SIZE = 10
 const ROTATION_PAGE_SIZE = 10
@@ -267,6 +268,8 @@ function BacktestAnalytics({ dashboard }) {
       </section>
 
       <BacktestPerformanceExplorer data={data} jobId={jobId} />
+
+      <AssetStrategyComparison data={data} jobId={jobId} />
 
       <RotationInspector rotations={data.rotations || []} summary={rotation} />
 
