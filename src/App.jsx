@@ -10,7 +10,6 @@ import { BacktestPage } from './features/backtest/components/BacktestPage'
 import { useBacktestWorkspace } from './features/backtest/hooks/useBacktestWorkspace'
 import { AdministrationPage } from './features/AdministrationPage'
 import { SystemSettingsPage } from './features/SystemSettingsPage'
-import { AnalyticsPage } from './features/analytics/AnalyticsPage'
 import { AssetDiscoveryPage } from './features/assetDiscovery/AssetDiscoveryPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { LoginPage } from './features/LoginPage'
@@ -19,7 +18,6 @@ import { PaperPortfolioDashboard } from './features/paperPortfolio/PaperPortfoli
 const TAB_CAPABILITIES = {
   dashboard: 'dashboard.view',
   backtest: 'backtest.view',
-  analytics: 'analytics.view',
   'asset-discovery': 'asset_discovery.view',
   portfolio: 'portfolio.view',
   administration: 'administration.view',
@@ -79,7 +77,6 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
     <main className="workspace-main">
       {activeTab === 'dashboard' && hasCapability(capabilities, 'dashboard.view') ? <DashboardPage workspace={workspace} capabilities={capabilities} onOpenBacktest={() => setActiveTab('backtest')} /> : null}
       {activeTab === 'backtest' && hasCapability(capabilities, 'backtest.view') ? <BacktestPage workspace={workspace} capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
-      {activeTab === 'analytics' && hasCapability(capabilities, 'analytics.view') ? <AnalyticsPage capabilities={capabilities} dashboard={workspace.dashboard} /> : null}
       {activeTab === 'asset-discovery' && hasCapability(capabilities, 'asset_discovery.view') ? <AssetDiscoveryPage onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'portfolio' && hasCapability(capabilities, 'portfolio.view') ? <PaperPortfolioDashboard /> : null}
       {activeTab === 'administration' && hasCapability(capabilities, 'administration.view') ? <AdministrationPage onSessionExpired={onSessionExpired} /> : null}

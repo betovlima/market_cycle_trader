@@ -244,7 +244,18 @@ export function BacktestPerformanceExplorer({ data, jobId }) {
     <SectionHeading
       kicker={tr("PERFORMANCE")}
       title={tr("Return and consistency")}
-      description={tr("Interactive performance explorer. Zoom or pan the capital curve and the monthly return heatmap follows the same time window.")}
+      hintId="analytics-return-consistency-hint"
+      hint={{
+        description: tr("Combines capital growth and monthly consistency so the selected processing can be evaluated by both total performance and how that performance was built through time."),
+        details: [
+          { label: tr("Value"), value: tr("Capital in USD"), description: tr("Shows the historical Simulation and Reference equity values in the selected processing.") },
+          { label: tr("Indexed 100"), value: tr("Relative growth"), description: tr("Normalizes both series to 100 at the beginning of the visible window so their relative growth can be compared directly.") },
+          { label: tr("S − R"), value: tr("Excess return"), description: tr("Shows the cumulative performance difference between Simulation and Reference. Values above zero indicate relative outperformance.") },
+          { label: tr("Monthly heatmap"), value: tr("Consistency"), description: tr("Shows monthly Simulation, Reference or S − R returns to reveal persistent gains, weak periods and concentration of performance.") },
+          { label: tr("Zoom / pan"), value: tr("Synchronized window"), description: tr("Changing the visible period in the capital chart applies the same time window to the monthly return heatmap.") },
+        ],
+        relationship: tr("A stronger historical profile combines high cumulative return with repeatable monthly performance. A large final return concentrated in only a few periods should be interpreted as less consistent than a similar return distributed across many months."),
+      }}
       action={<div className="analytics-layout-toolbar">
         <span><b aria-hidden="true">⋮⋮</b> {tr("Drag chart headers to reorder")}</span>
         {reorderable.customized ? <button type="button" onClick={reorderable.reset}>{tr("Reset layout")}</button> : null}

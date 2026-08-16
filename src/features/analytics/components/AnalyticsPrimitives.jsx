@@ -45,11 +45,14 @@ export function AnalyticsResponsiveContainer({ children, fallbackHeight = 260 })
   </div>
 }
 
-export function SectionHeading({ kicker, title, description = '', action = null }) {
+export function SectionHeading({ kicker, title, description = '', action = null, hint = null, hintId = '' }) {
   return <div className="analytics-section-heading">
     <div>
       <span className="panel-kicker">{tr(kicker)}</span>
-      <h2>{tr(title)}</h2>
+      <div className="analytics-section-title">
+        <h2>{tr(title)}</h2>
+        {hint ? <ParameterHint id={hintId || `analytics-section-${String(title).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} title={tr(title)} {...hint} /> : null}
+      </div>
       {description ? <p>{tr(description)}</p> : null}
     </div>
     {action}

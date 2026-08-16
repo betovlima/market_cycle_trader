@@ -81,6 +81,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
   const [baselines, setBaselines] = useState([])
   const [run, setRun] = useState(null)
   const [method, setMethod] = useState(PROBABILITY_METHOD)
+  const [temporalTuningTarget, setTemporalTuningTarget] = useState('temporal_model')
   const [candidateCount, setCandidateCount] = useState(20)
   const [seed, setSeed] = useState(42)
   const [minimumCapitalImprovementPct, setMinimumCapitalImprovementPct] = useState('')
@@ -133,9 +134,19 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
       const probability = nextCatalog?.probability || {}
       setCatalog(nextCatalog)
       setStrategy(detail)
-      setModelFamily(detail?.strategy_kind === 'temporal_intelligence' ? (nextCatalog?.model_family || 'temporal_policy') : (savedModel?.family || ''))
+      const temporalModes = Array.isArray(nextCatalog?.temporal_tuning_modes) ? nextCatalog.temporal_tuning_modes : []
+      const temporalDefault = nextCatalog?.default_temporal_tuning_target || temporalModes[0]?.id || 'temporal_model'
+      if (detail?.strategy_kind === 'temporal_intelligence') {
+        setTemporalTuningTarget((current) => {
+          const target = temporalModes.some((item) => item.id === current) ? current : temporalDefault
+          setCandidateCount(target === 'temporal_model' ? Math.min(8, nextCatalog.default_candidate_count || 20) : (nextCatalog.default_candidate_count || 20))
+          return target
+        })
+      } else {
+        setCandidateCount(nextCatalog.default_candidate_count || 20)
+      }
+      setModelFamily(detail?.strategy_kind === 'temporal_intelligence' ? 'lightgbm_utility' : (savedModel?.family || ''))
       setBaselines(items)
-      setCandidateCount(nextCatalog.default_candidate_count || 20)
       setSeed(nextCatalog.default_seed ?? 42)
       setMinimumCapitalImprovementPct(String(numberOr(probability.default_min_capital_improvement) * 100))
       setSharpeTolerance(String(probability.default_sharpe_tolerance ?? ''))
@@ -245,15 +256,27 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
   const candidateCardMethod = run?.id && runMatchesCurrentBaseline ? run.method : method
   const probabilityMode = method === PROBABILITY_METHOD
   const adaptiveMode = probabilityMode
-  const gateTuning = ['absolute_utility_cash_gate', 'joint_model_absolute_utility_cash_gate'].includes(String(run?.tuning_scope || catalog?.tuning_scope || ''))
-  const temporalTarget = strategy?.strategy_kind === 'temporal_intelligence' && String(catalog?.tuning_scope || '') === 'temporal_policy'
-  const startActionLabel = probabilityMode ? tr('Start Unified CARO') : tr('Start Latin Hypercube')
+  const temporalStrategy = strategy?.strategy_kind === 'temporal_intelligence'
+  const temporalModes = Array.isArray(catalog?.temporal_tuning_modes) ? catalog.temporal_tuning_modes : []
+  const selectedTemporalMode = temporalStrategy
+    ? (temporalModes.find((item) => item.id === temporalTuningTarget) || temporalModes[0] || null)
+    : null
+  const effectivePlan = selectedTemporalMode || catalog
+  const temporalModelMode = temporalStrategy && temporalTuningTarget === 'temporal_model'
+  const temporalPolicyMode = temporalStrategy && temporalTuningTarget === 'temporal_policy'
+  const temporalTarget = temporalStrategy
+  const gateTuning = ['absolute_utility_cash_gate', 'joint_model_absolute_utility_cash_gate'].includes(String(run?.tuning_scope || effectivePlan?.tuning_scope || catalog?.tuning_scope || ''))
+  const startActionLabel = temporalModelMode
+    ? tr(probabilityMode ? 'Start Temporal Model CARO' : 'Start Temporal Model LHS')
+    : temporalPolicyMode
+      ? tr(probabilityMode ? 'Start Temporal Policy CARO' : 'Start Temporal Policy LHS')
+      : probabilityMode ? tr('Start Unified CARO') : tr('Start Latin Hypercube')
   const protectedCandidate = Boolean(strategy?.locked && ['candidate', 'promoted_candidate'].includes(String(strategy?.status || '')))
   const canTune = Boolean(
     canStartTuning
     && strategy
-    && (!strategy.locked || protectedCandidate)
-    && (temporalTarget || modelFamily === catalog?.model_family)
+    && (temporalStrategy || !strategy.locked || protectedCandidate)
+    && (temporalStrategy || modelFamily === catalog?.model_family)
     && selectedBaseline
   )
 
@@ -270,6 +293,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
         candidate_count: Number(candidateCount),
         seed: Number(seed),
       }
+      if (temporalStrategy) body.tuning_target = temporalTuningTarget
       if (adaptiveMode) {
         body.probability = {
           min_capital_improvement: numberOr(minimumCapitalImprovementPct) / 100,
@@ -280,13 +304,13 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
       }
       const created = await apiFetch(`${API}/admin/model-tuning`, { method: 'POST', body })
       setRun(created)
-      setNotice(temporalTarget
-        ? tr(probabilityMode
-          ? 'Unified CARO started from the materialized TEMPORAL Strategy using the frozen Temporal replay.'
-          : 'Latin Hypercube started from the materialized TEMPORAL Strategy using the frozen Temporal replay.')
-        : probabilityMode
-          ? tr('Unified CARO started from the certified Candidate Backtest. Exploration and probabilistic refinement are selected automatically throughout the campaign.')
-          : tr('Latin Hypercube tuning started from the certified Candidate Backtest.'))
+      setNotice(temporalModelMode
+        ? tr('Temporal Model Tuning started. Every challenger retrains the Temporal LightGBM models on the same frozen market snapshot and walk-forward protocol.')
+        : temporalPolicyMode
+          ? tr('Temporal Policy Tuning started. Candidates reuse the frozen Temporal predictions and replay only the Winner-Anchored timing policy.')
+          : probabilityMode
+            ? tr('Unified CARO started from the certified Candidate Backtest. Exploration and probabilistic refinement are selected automatically throughout the campaign.')
+            : tr('Latin Hypercube tuning started from the certified Candidate Backtest.'))
     } catch (requestError) {
       handleError(requestError)
     } finally {
@@ -319,8 +343,11 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
         method: 'POST',
         body: {},
       })
+      if (response?.recommended_tuning_target) setTemporalTuningTarget(response.recommended_tuning_target)
       setNotice(tr(response?.ready_for_model_tuning
-        ? 'A new TEMPORAL Strategy was created from the tuned policy and selected for Model Tuning.'
+        ? (run?.tuning_scope === 'temporal_model'
+          ? 'A new TEMPORAL Strategy was created with the tuned LightGBM model and selected for the next Policy Tuning stage.'
+          : 'A new TEMPORAL Strategy was created from the tuned policy and selected for Model Tuning.')
         : 'A new Strategy was created from the frozen tuning result and selected as BACKTEST. After a successful Backtest it becomes the active CANDIDATE automatically.'))
       await onStrategyModelSaved?.(response.strategy)
       await loadWorkspace()
@@ -423,12 +450,39 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
       {strategy && !temporalTarget && modelFamily === catalog.model_family && !baselines.length ? <div className="global-inline-message warning-inline">{tr("A completed certified Candidate Backtest is required before tuning. Adaptive CARO always uses the active Candidate's certified execution as its baseline.")}</div> : null}
       {strategy && temporalTarget && !baselines.length ? <div className="global-inline-message warning-inline">{tr('The TEMPORAL Strategy source run is not available as a completed frozen replay.')}</div> : null}
 
+      {temporalStrategy && temporalModes.length ? (
+        <div className="model-tuning-temporal-mode">
+          <div className="model-tuning-temporal-mode-head">
+            <div><span className="panel-kicker">{tr('TEMPORAL TUNING')}</span><strong>{tr('Choose what to optimize')}</strong></div>
+            <small>{tr('Model first, then policy. Both use the same materialized TEMPORAL Strategy workflow.')}</small>
+          </div>
+          <div className="research-mode-switch">
+            {temporalModes.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={temporalTuningTarget === item.id ? 'active' : ''}
+                disabled={active || busy}
+                onClick={() => {
+                  setTemporalTuningTarget(item.id)
+                  setCandidateCount(item.id === 'temporal_model' ? Math.min(8, catalog.default_candidate_count || 20) : (catalog.default_candidate_count || 20))
+                }}
+              >
+                <strong>{tr(item.id === 'temporal_model' ? 'Model Tuning · LightGBM' : 'Policy Tuning · Replay')}</strong>
+                <span>{tr(item.description || '')}</span>
+              </button>
+            ))}
+          </div>
+          {temporalModelMode ? <div className="global-inline-message warning-inline">{tr('Full Temporal Model Tuning retrains LightGBM for every candidate and is intentionally much slower than Policy Tuning.')}</div> : null}
+        </div>
+      ) : null}
+
       <div className="model-tuning-context-grid model-tuning-context-grid-wide">
         <div className="model-tuning-context-card model-tuning-target-card">
           <TuningContextLabel
             id="model-tuning-hint-target"
             label="Tuning target"
-            description={temporalTarget ? tr('The selected TEMPORAL Strategy whose materialized policy and frozen replay are used as the research baseline.') : tr('The active Candidate Strategy whose certified Backtest is used as the starting point for this research campaign.')}
+            description={temporalTarget ? tr('The selected materialized TEMPORAL Strategy is the immutable baseline for both LightGBM Model Tuning and fast Policy Tuning.') : tr('The active Candidate Strategy whose certified Backtest is used as the starting point for this research campaign.')}
           />
           <strong title={strategy?.name || ''}>{strategy?.name || '—'}</strong>
           <small>{strategy ? `${tr(strategy.status)} · ${tr('Revision')} ${strategy.revision}` : '—'}</small>
@@ -437,28 +491,28 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
           <TuningContextLabel
             id="model-tuning-hint-scope"
             label="Tuning scope"
-            description={catalog?.tuning_scope_description || 'Defines exactly which parameters Adaptive CARO may change while the remaining experiment stays frozen.'}
+            description={effectivePlan?.description || catalog?.tuning_scope_description || 'Defines exactly which parameters Adaptive CARO may change while the remaining experiment stays frozen.'}
           />
-          <strong title={tr(catalog?.tuning_scope_label || 'LightGBM model parameters')}>{tr(catalog?.tuning_scope_label || 'LightGBM model parameters')}</strong>
-          <small>{catalog?.joint_optimization ? `${(catalog.tuned_parameters || []).length} ${tr('parameters')} · ${(catalog.tuned_model_parameters || []).length} LightGBM · ${(catalog.tuned_strategy_parameters || []).length} MARKET/CASH` : `${(catalog?.tuned_parameters || []).length || catalog?.search_space?.length || 0} ${tr('parameters')}`}</small>
+          <strong title={tr(effectivePlan?.label || effectivePlan?.tuning_scope_label || 'LightGBM model parameters')}>{tr(effectivePlan?.label || effectivePlan?.tuning_scope_label || 'LightGBM model parameters')}</strong>
+          <small>{catalog?.joint_optimization ? `${(effectivePlan?.tuned_parameters || catalog.tuned_parameters || []).length} ${tr('parameters')} · ${(catalog.tuned_model_parameters || []).length} LightGBM · ${(catalog.tuned_strategy_parameters || []).length} MARKET/CASH` : `${(effectivePlan?.tuned_parameters || effectivePlan?.search_space || catalog?.tuned_parameters || catalog?.search_space || []).length} ${tr('parameters')}`}</small>
         </div>
         <div className="model-tuning-context-card">
           <TuningContextLabel
             id="model-tuning-hint-saved-model"
             label="Saved model"
-            description={temporalTarget ? tr('The underlying Winner model remains frozen. Model Tuning changes only the TEMPORAL timing policy thresholds.') : tr('Model family currently saved with the Candidate Strategy. Joint CARO may tune the supported LightGBM hyperparameters, while fixed model settings remain unchanged.')}
+            description={temporalModelMode ? tr('The Temporal LightGBM classifiers and regressors are retrained for every challenger. Winner allocation and Temporal policy thresholds remain frozen.') : temporalPolicyMode ? tr('The Temporal LightGBM predictions and underlying Winner remain frozen. Only the Winner-Anchored timing thresholds are replayed.') : tr('Model family currently saved with the Candidate Strategy. Joint CARO may tune the supported LightGBM hyperparameters, while fixed model settings remain unchanged.')}
           />
-          <strong>{temporalTarget ? tr('Temporal Policy') : (strategy?.research_model_configuration?.label || strategy?.research_model?.label || '—')}</strong>
-          <small>{temporalTarget ? tr('Winner model frozen') : (modelFamily || '—')}</small>
+          <strong>{temporalModelMode ? tr('LightGBM Temporal Intelligence') : temporalPolicyMode ? tr('Temporal Policy') : (strategy?.research_model_configuration?.label || strategy?.research_model?.label || '—')}</strong>
+          <small>{temporalModelMode ? tr('Retrained per candidate') : temporalPolicyMode ? tr('LightGBM + Winner frozen') : (modelFamily || '—')}</small>
         </div>
         <div className="model-tuning-context-card worker-online">
           <TuningContextLabel
             id="model-tuning-hint-execution"
             label="Execution"
-            description={temporalTarget ? tr('Candidates replay the frozen Temporal observations and immutable Winner decisions. No LightGBM retraining, Alpaca request or new market-data load occurs.') : tr('Candidates run sequentially through the integrated API worker. Each LightGBM training still uses the CPU thread configuration saved in the model/runtime.')}
+            description={temporalModelMode ? tr('Candidates retrain Temporal LightGBM sequentially using only the frozen MongoDB market snapshot. No Alpaca request occurs.') : temporalPolicyMode ? tr('Candidates replay the frozen Temporal observations and immutable Winner decisions. No LightGBM retraining, Alpaca request or new market-data load occurs.') : tr('Candidates run sequentially through the integrated API worker. Each LightGBM training still uses the CPU thread configuration saved in the model/runtime.')}
             align="right"
           />
-          <strong>{tr(temporalTarget ? 'Frozen Temporal replay' : 'Integrated API worker')}</strong>
+          <strong>{tr(temporalModelMode ? 'Full Temporal LightGBM retrain' : temporalPolicyMode ? 'Frozen Temporal replay' : 'Integrated API worker')}</strong>
           <small>{tr('One candidate at a time')}</small>
         </div>
       </div>
@@ -471,7 +525,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
               <ParameterHint
                 id="model-tuning-hint-baseline"
                 title={tr(temporalTarget ? 'Materialized TEMPORAL baseline' : 'Certified Candidate baseline')}
-                description={tr(temporalTarget ? 'The API reuses the completed Temporal Intelligence source run and frozen replay stored with this TEMPORAL Strategy.' : 'The API uses the certified Candidate Backtest automatically. No clone, baseline selection or prior tuning campaign is required.')}
+                description={tr(temporalModelMode ? 'The API reuses the completed Temporal run as Control, retrains challenger LightGBM models against the same frozen market snapshot, and never downloads new market data.' : temporalPolicyMode ? 'The API reuses the completed Temporal Intelligence source run and frozen replay stored with this TEMPORAL Strategy.' : 'The API uses the certified Candidate Backtest automatically. No clone, baseline selection or prior tuning campaign is required.')}
               />
             </span>
             <strong title={selectedBaseline?.job_id || ''}>{selectedBaseline?.job_id || tr('No compatible completed baseline execution was found.')}</strong>
@@ -521,7 +575,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
         </label>
         <div className="model-tuning-control-note">
           <span>{tr('Validation')}</span>
-          <strong>{tr(temporalTarget ? 'Frozen Temporal replay' : 'Chronological walk-forward')}</strong>
+          <strong>{tr(temporalModelMode ? 'Walk-forward · frozen market snapshot' : temporalPolicyMode ? 'Frozen Temporal replay' : 'Chronological walk-forward')}</strong>
         </div>
         {(canStartTuning || canStopTuning) ? <div className="model-tuning-actions">
           {canStartTuning ? <button type="button" className="primary-action" onClick={start} disabled={!canTune || active || busy}>{busy && !active ? tr('Starting…') : startActionLabel}</button> : null}
@@ -544,9 +598,9 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
       ) : null}
 
       <details className="model-tuning-space">
-        <summary>{tr('Search space')}<span>{catalog.search_space.length} {tr('parameters')}</span></summary>
+        <summary>{tr('Search space')}<span>{(effectivePlan?.search_space || catalog.search_space || []).length} {tr('parameters')}</span></summary>
         <div className="model-tuning-space-grid">
-          {catalog.search_space.map((field) => (
+          {(effectivePlan?.search_space || catalog.search_space || []).map((field) => (
             <div key={field.name}>
               <strong>{field.name}</strong>
               <span>{field.min} → {field.max}</span>
@@ -569,6 +623,12 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
             </div>
           </div>
           <div className="model-tuning-progress-track"><i style={{ width: `${Math.max(0, Math.min(100, Number(run.progress || 0)))}%` }} /></div>
+          {run.tuning_scope === 'temporal_model' && run.current_candidate_id != null ? (
+            <div className="model-tuning-current-candidate-progress">
+              <span>{tr('Candidate')} #{run.current_candidate_id} · {tr(run.current_candidate_stage || 'Training Temporal LightGBM')}</span>
+              <strong>{Number(run.current_candidate_progress || 0).toFixed(1)}%</strong>
+            </div>
+          ) : null}
           {run.baseline_execution ? <small>{tr('Baseline')} · {run.baseline_execution.job_id} · {money(run.baseline_execution.metrics?.ending_capital)}</small> : null}
           {run.probability_anchor ? <small>{tr('Champion anchor')} · {run.probability_anchor.candidate_id !== undefined ? `#${run.probability_anchor.candidate_id} · ` : ''}{money(run.probability_anchor.metrics?.ending_capital)} · {run.imported_observation_count || 0} {tr('imported observations')}</small> : null}
           {run.method === PROBABILITY_METHOD && run.probability_state ? <small>{tr('Unified state')} · {tr('Champion')} #{run.probability_state.last_champion_candidate_id ?? run.probability_anchor?.candidate_id ?? 0} · {tr('Exploration trials')} {run.probability_state.exploration_trials_completed || 0} · {tr('Adaptive trials')} {run.probability_state.adaptive_trials_completed || 0} · {tr('Trust region')} {(Number(run.probability_state.trust_region_radius || 0) * 100).toFixed(1)}% · {tr('No-improvement streak')} {run.probability_state.no_improvement_streak || 0}</small> : null}
