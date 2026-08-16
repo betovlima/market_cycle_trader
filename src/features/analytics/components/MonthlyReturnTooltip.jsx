@@ -36,7 +36,7 @@ export function MonthlyReturnTooltip({ tooltip }) {
 
       <div className="analytics-heatmap-tooltip-result">
         <span className={`analytics-heatmap-tooltip-dot ${returnTone(tooltip.excess)}`} />
-        <span>{tr(tooltip.relativeResult)}</span>
+        <span>{tr(tooltip.relativeResult)} · {tr('Click for monthly consistency details')}</span>
       </div>
     </div>,
     document.body,
