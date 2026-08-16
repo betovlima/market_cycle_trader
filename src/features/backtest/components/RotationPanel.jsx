@@ -6,6 +6,7 @@ import { compactDate, money, percent, shortDate, shortDateTime } from '../../../
 import { METRIC_HINTS, ROTATION_HINTS, ROTATION_PAGE_SIZE } from '../backtestConfig'
 import { sortRows, toggleSort } from '../backtestUtils'
 import { FilterButton, ListToolbar, Metric, MetricLabel, Pagination, SortableHeader } from './BacktestPrimitives'
+import { MonthlyAssetAnalysis } from './MonthlyAssetAnalysis'
 
 
 const MONTH_TOOLTIP_WIDTH = 318
@@ -200,12 +201,14 @@ function monthEquityPath(points) {
   const lastTs = points[points.length - 1].timestamp
   const span = lastTs - firstTs || 1
   const coordinates = points.map((point) => ({
+    timestamp: point.timestamp,
+    value: point.value,
     x: paddingX + ((point.timestamp - firstTs) / span) * (width - paddingX * 2),
     y: paddingY + (1 - (point.value - min) / range) * (height - paddingY * 2),
   }))
   const path = coordinates.map((point, index) => `${index ? 'L' : 'M'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' ')
   const area = `${path} L ${coordinates[coordinates.length - 1].x.toFixed(2)} ${(height - paddingY).toFixed(2)} L ${coordinates[0].x.toFixed(2)} ${(height - paddingY).toFixed(2)} Z`
-  return { width, height, min, max, path, area }
+  return { width, height, min, max, path, area, coordinates }
 }
 
 function MonthlyMovementTooltip({ tooltip }) {
@@ -229,8 +232,25 @@ function MonthlyMovementTooltip({ tooltip }) {
   </div>
 }
 
-function MonthlyMovementDialog({ month, onClose }) {
+function MonthlyMovementDialog({ jobId, month, onClose }) {
   const chart = useMemo(() => monthEquityPath(month?.equityPoints || []), [month])
+  const capitalMarkers = useMemo(() => {
+    if (!chart?.coordinates?.length || !month?.movements?.length) return []
+    return month.movements.flatMap((movement, index) => {
+      const timestamp = movementTimestamp(movement.executed_at)
+      if (timestamp === null) return []
+      let nearest = null
+      let nearestDistance = Number.POSITIVE_INFINITY
+      for (const point of chart.coordinates) {
+        const distance = Math.abs(point.timestamp - timestamp)
+        if (distance < nearestDistance) { nearest = point; nearestDistance = distance }
+      }
+      if (!nearest) return []
+      const fromAsset = normalizedMovementAsset(movement.from_asset)
+      const toAsset = normalizedMovementAsset(movement.to_asset)
+      return [{ ...nearest, index, timestamp: movement.executed_at, fromAsset, toAsset, label: toAsset === 'CASH' ? 'CASH' : toAsset }]
+    })
+  }, [chart, month])
   if (!month) return null
   const exits = month.profitableExits + month.losingExits + month.flatExits
   const profitableRate = exits ? month.profitableExits / exits : null
@@ -266,6 +286,11 @@ function MonthlyMovementDialog({ month, onClose }) {
             <line x1="12" x2="748" y1="132" y2="132" />
             <path className="area" d={chart.area} />
             <path className="line" d={chart.path} />
+            {capitalMarkers.map((marker) => <g key={`${marker.timestamp}-${marker.index}`} className={`capital-movement-marker ${marker.toAsset === 'CASH' ? 'cash' : 'market'}`}>
+              <circle cx={marker.x} cy={marker.y} r="5.5" />
+              <text x={marker.x} y={marker.y - 9}>{marker.label}</text>
+              <title>{`${shortDateTime(marker.timestamp)} · ${marker.fromAsset} → ${marker.toAsset}`}</title>
+            </g>)}
           </svg> : <div className="rotation-month-chart-empty">{tr('No equity observations for this month.')}</div>}
           <div className="rotation-month-equity-range"><span>{compactMoney(chart?.min)}</span><span>{compactMoney(chart?.max)}</span></div>
         </article>
@@ -281,6 +306,8 @@ function MonthlyMovementDialog({ month, onClose }) {
           <div><span>{tr('Worst exit')}</span><strong className="negative">{month.worstExit ? `${normalizedMovementAsset(month.worstExit.from_asset)} · ${money(month.worstExit.realized_pnl)}` : '—'}</strong></div>
         </aside>
       </div>
+
+      <MonthlyAssetAnalysis jobId={jobId} month={month} />
 
       <div className="rotation-month-dialog-table-wrap">
         <div className="rotation-month-dialog-section-title"><div><span>{tr('Capital movements')}</span><strong>{tr('{count} movements', { count: month.movementCount })}</strong></div></div>
@@ -303,7 +330,7 @@ function MonthlyMovementDialog({ month, onClose }) {
   </div>
 }
 
-function MonthlyCapitalMovementHeatmap({ rotations, equity }) {
+function MonthlyCapitalMovementHeatmap({ jobId, rotations, equity }) {
   const [mode, setMode] = useState('pnl')
   const [tooltip, setTooltip] = useState(null)
   const [selectedMonth, setSelectedMonth] = useState(null)
@@ -382,7 +409,7 @@ function MonthlyCapitalMovementHeatmap({ rotations, equity }) {
       <div className="rotation-monthly-heatmap-footer"><span>{tr('Hover for summary')}</span><span>·</span><span>{tr('Click a month for detailed analysis')}</span></div>
     </article>
     <MonthlyMovementTooltip tooltip={tooltip} />
-    <MonthlyMovementDialog month={selectedMonth} onClose={() => setSelectedMonth(null)} />
+    <MonthlyMovementDialog jobId={jobId} month={selectedMonth} onClose={() => setSelectedMonth(null)} />
   </>
 }
 
@@ -533,7 +560,7 @@ export function RotationPanel({ jobId, payload, loading, error }) {
         />
       </div>
 
-      <MonthlyCapitalMovementHeatmap rotations={rotations} equity={payload?.equity || []} />
+      <MonthlyCapitalMovementHeatmap jobId={jobId} rotations={rotations} equity={payload?.equity || []} />
 
       <ListToolbar
         query={query}

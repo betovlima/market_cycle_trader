@@ -7,7 +7,6 @@ import {
   Line,
   LineChart,
   ReferenceLine,
-  ResponsiveContainer,
   Scatter,
   ScatterChart,
   Tooltip,
@@ -17,7 +16,7 @@ import {
 
 import { tr } from '../../../i18n/runtime'
 import { number, percent, shortDate, shortDateTime } from '../../../shared/formatters'
-import { ChartCell, ChartEmpty, SectionHeading } from './AnalyticsPrimitives'
+import { AnalyticsResponsiveContainer, ChartCell, ChartEmpty, SectionHeading } from './AnalyticsPrimitives'
 import { returnTone } from '../utils/performance'
 
 const PAGE_SIZE = 12
@@ -118,47 +117,47 @@ export function RotationInspector({ rotations = [], summary = {} }) {
       <div className="rotation-inspector-chart-grid">
         <ChartCell kicker={tr('ROTATION VALUE')} title={tr('Value added by each rotation')} className="rotation-inspector-chart-cell">
           <div className="analytics-chart rotation-inspector-chart">
-            <ResponsiveContainer width="100%" height="100%">
+            <AnalyticsResponsiveContainer fallbackHeight={250}>
               <LineChart data={diagnosed} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="sequence" tickFormatter={(value) => `#${value}`} minTickGap={26} />
                 <YAxis tickFormatter={(value) => `${Math.round(value * 100)}%`} />
                 <ReferenceLine y={0} stroke="var(--muted)" strokeDasharray="4 4" />
                 <Tooltip content={<RotationTooltip />} />
-                <Line type="monotone" dataKey="rotation_value_added" name={tr('Rotation value added')} dot={false} strokeWidth={2} stroke="var(--accent)" />
+                <Line type="monotone" dataKey="rotation_value_added" name={tr('Rotation value added')} dot={false} strokeWidth={2} stroke="var(--accent)" isAnimationActive={false} />
               </LineChart>
-            </ResponsiveContainer>
+            </AnalyticsResponsiveContainer>
           </div>
         </ChartCell>
 
         <ChartCell kicker={tr('POSITION PATH')} title={tr('MFE versus realized next return')} className="rotation-inspector-chart-cell">
           <div className="analytics-chart rotation-inspector-chart">
-            <ResponsiveContainer width="100%" height="100%">
+            <AnalyticsResponsiveContainer fallbackHeight={250}>
               <ScatterChart margin={{ top: 8, right: 12, bottom: 8, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" dataKey="maximum_favorable_excursion" name="MFE" tickFormatter={(value) => `${Math.round(value * 100)}%`} />
                 <YAxis type="number" dataKey="subsequent_position_return" name={tr('Realized next return')} tickFormatter={(value) => `${Math.round(value * 100)}%`} />
                 <ReferenceLine y={0} stroke="var(--muted)" strokeDasharray="4 4" />
                 <Tooltip content={<ExcursionTooltip />} />
-                <Scatter data={diagnosed} fill="var(--accent)" />
+                <Scatter data={diagnosed} fill="var(--accent)" isAnimationActive={false} />
               </ScatterChart>
-            </ResponsiveContainer>
+            </AnalyticsResponsiveContainer>
           </div>
         </ChartCell>
 
         <ChartCell kicker={tr('OPPORTUNITY COST')} title={tr('Largest missed alternatives')} className="rotation-inspector-chart-cell rotation-inspector-cost-chart-cell">
           {costly.length ? <div className="analytics-chart rotation-inspector-chart">
-            <ResponsiveContainer width="100%" height="100%">
+            <AnalyticsResponsiveContainer fallbackHeight={290}>
               <BarChart data={costly} layout="vertical" margin={{ top: 4, right: 12, bottom: 4, left: 12 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" tickFormatter={(value) => `${Math.round(value * 100)}%`} />
                 <YAxis type="category" dataKey="transition" width={92} tick={{ fontSize: 10 }} />
                 <Tooltip formatter={(value) => percent(value)} labelFormatter={(label) => label} />
-                <Bar dataKey="opportunity_cost" name={tr('Opportunity cost')} fill="var(--warning, #d6a74d)" radius={[0, 4, 4, 0]}>
+                <Bar dataKey="opportunity_cost" name={tr('Opportunity cost')} fill="var(--warning, #d6a74d)" radius={[0, 4, 4, 0]} isAnimationActive={false}>
                   {costly.map((row) => <Cell key={`${row.sequence}-${row.transition}`} />)}
                 </Bar>
               </BarChart>
-            </ResponsiveContainer>
+            </AnalyticsResponsiveContainer>
           </div> : <ChartEmpty>{tr('No positive opportunity cost was measured.')}</ChartEmpty>}
         </ChartCell>
       </div>

@@ -7670,3 +7670,182 @@ a { color: inherit; }
     align-items: flex-start;
   }
 }
+
+/* Monthly capital-rotation drill-down: per-asset price and trade behavior. */
+.rotation-month-dialog { width: min(1360px, calc(100vw - 44px)); }
+.rotation-month-asset-analysis {
+  margin: 0 14px 10px;
+  padding: 11px;
+  border: 1px solid rgba(76, 113, 153, .17);
+  border-radius: 9px;
+  background: rgba(4, 18, 34, .48);
+}
+.rotation-month-asset-analysis-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 9px;
+}
+.rotation-month-asset-analysis-heading > div:first-child { min-width: 0; }
+.rotation-month-asset-analysis-heading span {
+  display: block;
+  color: #7894af;
+  font-size: .54rem;
+  font-weight: 750;
+}
+.rotation-month-asset-analysis-heading strong {
+  display: block;
+  margin-top: 2px;
+  color: #dfeefd;
+  font-size: .68rem;
+  line-height: 1.4;
+}
+.rotation-asset-tabs,
+.rotation-asset-analysis-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.rotation-asset-tabs button,
+.rotation-asset-analysis-toolbar button {
+  border: 1px solid rgba(80, 126, 175, .24);
+  border-radius: 7px;
+  padding: 5px 9px;
+  color: #8eabc8;
+  background: rgba(11, 35, 60, .68);
+  font-size: .56rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+.rotation-asset-tabs button:hover,
+.rotation-asset-analysis-toolbar button:hover { color: #d9edff; border-color: rgba(76, 157, 240, .42); }
+.rotation-asset-tabs button.active,
+.rotation-asset-analysis-toolbar button.active {
+  color: #eef8ff;
+  border-color: rgba(70, 157, 246, .62);
+  background: rgba(31, 103, 178, .34);
+}
+.rotation-asset-analysis-metrics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.rotation-asset-analysis-metrics > div {
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid rgba(75, 110, 150, .15);
+  border-radius: 7px;
+  background: rgba(7, 24, 43, .54);
+}
+.rotation-asset-analysis-metrics span { display: block; color: #748ea8; font-size: .51rem; font-weight: 750; }
+.rotation-asset-analysis-metrics strong { display: block; margin-top: 3px; color: #e1effd; font-size: .65rem; }
+.rotation-asset-analysis-metrics strong.positive { color: var(--positive); }
+.rotation-asset-analysis-metrics strong.negative { color: var(--negative); }
+.rotation-asset-analysis-toolbar { margin: 0 0 7px; }
+.rotation-asset-price-chart-wrap {
+  border: 1px solid rgba(72, 111, 151, .14);
+  border-radius: 8px;
+  padding: 5px 8px 6px;
+  background: rgba(3, 15, 29, .58);
+}
+.rotation-asset-price-chart { display: block; width: 100%; height: 250px; overflow: visible; }
+.rotation-asset-price-chart .grid { stroke: rgba(99, 135, 173, .12); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.rotation-asset-price-chart .held-period { fill: rgba(44, 196, 139, .075); }
+.rotation-asset-price-chart .price-line { fill: none; stroke: #4da3ff; stroke-width: 2.1; vector-effect: non-scaling-stroke; }
+.rotation-asset-price-chart .strategy-line { fill: none; stroke: #56a8ff; stroke-width: 2.1; vector-effect: non-scaling-stroke; }
+.rotation-asset-price-chart .asset-line { fill: none; stroke: #37d5a1; stroke-width: 2.1; vector-effect: non-scaling-stroke; }
+.rotation-asset-price-chart .trade-marker { cursor: help; }
+.rotation-asset-price-chart .trade-marker circle { stroke: rgba(238, 248, 255, .92); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.rotation-asset-price-chart .trade-marker.entry circle { fill: #1fcf8b; }
+.rotation-asset-price-chart .trade-marker.exit circle { fill: #f05d72; }
+.rotation-asset-price-chart .trade-marker text {
+  fill: #041525;
+  font-size: 8px;
+  font-weight: 1000;
+  text-anchor: middle;
+  pointer-events: none;
+}
+.rotation-asset-price-chart .axis-label { fill: #6f89a3; font-size: 9px; font-weight: 650; }
+.rotation-asset-price-chart .axis-label.x.end { text-anchor: end; }
+.rotation-asset-chart-legend {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 3px 3px 0;
+  color: #829cb6;
+  font-size: .52rem;
+  font-weight: 750;
+}
+.rotation-asset-chart-legend span::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 5px;
+  border-radius: 50%;
+  vertical-align: -1px;
+}
+.rotation-asset-chart-legend .held::before { border-radius: 2px; background: rgba(44, 196, 139, .24); }
+.rotation-asset-chart-legend .entry::before { background: #1fcf8b; }
+.rotation-asset-chart-legend .exit::before { background: #f05d72; }
+.rotation-asset-chart-legend .strategy::before { background: #56a8ff; }
+.rotation-asset-chart-legend .asset::before { background: #37d5a1; }
+.rotation-asset-analysis-empty {
+  min-height: 118px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  color: #708aa4;
+  font-size: .6rem;
+  text-align: center;
+}
+.rotation-asset-analysis-empty.error { color: #f47b89; }
+.rotation-allocation-timeline { margin-top: 10px; }
+.rotation-allocation-track {
+  position: relative;
+  height: 32px;
+  overflow: hidden;
+  border: 1px solid rgba(79, 117, 158, .18);
+  border-radius: 7px;
+  background: rgba(7, 25, 44, .72);
+}
+.rotation-allocation-segment {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-right: 1px solid rgba(2, 14, 26, .62);
+  color: #e9f6ff;
+  font-size: .52rem;
+  font-weight: 950;
+  white-space: nowrap;
+}
+.rotation-allocation-segment.cash { color: #eadfff; background: rgba(132, 92, 216, .5); }
+.rotation-allocation-segment.market.tone-0 { background: rgba(26, 134, 216, .58); }
+.rotation-allocation-segment.market.tone-1 { background: rgba(33, 178, 132, .56); }
+.rotation-allocation-segment.market.tone-2 { background: rgba(191, 139, 45, .56); }
+.rotation-allocation-segment.market.tone-3 { background: rgba(117, 91, 210, .56); }
+.rotation-allocation-segment.market.tone-4 { background: rgba(38, 156, 173, .56); }
+.rotation-allocation-range { display: flex; justify-content: space-between; margin-top: 3px; color: #637d97; font-size: .49rem; }
+
+@media (max-width: 980px) {
+  .rotation-month-asset-analysis-heading { align-items: stretch; flex-direction: column; }
+  .rotation-asset-analysis-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 680px) {
+  .rotation-month-asset-analysis { margin-left: 10px; margin-right: 10px; }
+  .rotation-asset-analysis-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rotation-asset-price-chart { height: 210px; }
+}
+.rotation-month-equity-chart .capital-movement-marker circle { stroke: #dceeff; stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+.rotation-month-equity-chart .capital-movement-marker.market circle { fill: #25c992; }
+.rotation-month-equity-chart .capital-movement-marker.cash circle { fill: #a379e8; }
+.rotation-month-equity-chart .capital-movement-marker text { fill: #bcd3e9; font-size: 7px; font-weight: 850; text-anchor: middle; }

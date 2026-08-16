@@ -1,7 +1,8 @@
 import { getIntlLocale, tr } from '../../../i18n/runtime'
-import { CartesianGrid, ComposedChart, Legend, Line, LineChart, ReferenceArea, ReferenceDot, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { CartesianGrid, ComposedChart, Legend, Line, LineChart, ReferenceArea, ReferenceDot, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { ChevronLeftIcon, ChevronRightIcon } from '../../../shared/components/Icons'
+import { MeasuredChartContainer } from '../../../shared/components/MeasuredChartContainer'
 import { ParameterHint } from '../../../shared/components/ParameterHint'
 import { money, percent, shortDateTime } from '../../../shared/formatters'
 import { nearestTimeSeriesIndex } from '../../../shared/charts/timeSeries'
@@ -71,7 +72,7 @@ export function TradeStorySection({
             </div>
 
             <div ref={chartInteractionRef} className={`dashboard-growth-chart dashboard-story-interactive ${zoomActive ? 'is-zoomed' : ''} ${isPanning ? 'is-panning' : ''}`} onPointerDown={beginChartPan} onPointerMove={moveChartPan} onPointerUp={endChartPan} onPointerCancel={endChartPan}>
-              {chartRows.length ? <ResponsiveContainer width="100%" height="100%"><ComposedChart data={visibleChartRows} margin={{ top: 16, right: 16, left: 8, bottom: 6 }}>
+              {chartRows.length ? <MeasuredChartContainer fallbackHeight={360}><ComposedChart data={visibleChartRows} margin={{ top: 16, right: 16, left: 8, bottom: 6 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="timestamp_value" type="number" scale="time" domain={effectiveZoomDomain ? [effectiveZoomDomain.start, effectiveZoomDomain.end] : ['dataMin', 'dataMax']} allowDataOverflow minTickGap={38} tickFormatter={(value) => dashboardAxisLabel(value, visibleTimeSpan)} />
                 <YAxis domain={yDomain} tickFormatter={(value) => `$${Number(value).toLocaleString(getIntlLocale(), { maximumFractionDigits: 0 })}`} />
@@ -80,7 +81,7 @@ export function TradeStorySection({
                 {selectedTradeStart !== null && selectedTradeEnd !== null ? <ReferenceArea x1={selectedTradeStart} x2={selectedTradeEnd} className="dashboard-selected-trade-area" ifOverflow="extendDomain" /> : null}
                 <Line type="monotone" dataKey="simulation_equity" name="Simulation" dot={markerMode === 'off' ? false : <StoryTradeDot />} activeDot={false} strokeWidth={2.5} stroke="var(--positive)" isAnimationActive={false} />
                 <Line type="monotone" dataKey="reference_equity" name="Reference" dot={false} activeDot={false} strokeWidth={2.1} stroke="var(--accent)" isAnimationActive={false} />
-              </ComposedChart></ResponsiveContainer> : <div className="dashboard-story-empty">{tr("No equity history is available for this completed backtest.")}</div>}
+              </ComposedChart></MeasuredChartContainer> : <div className="dashboard-story-empty">{tr("No equity history is available for this completed backtest.")}</div>}
             </div>
 
             <div className="dashboard-navigator-header">
@@ -124,7 +125,7 @@ export function TradeStorySection({
                   <div><span>{tr("Holding")}</span><strong>{selectedTrade.holding_days == null ? '—' : tr('{count} days', { count: Number(selectedTrade.holding_days).toFixed(1) })}</strong></div>
                 </div>
                 <div className="dashboard-selected-trade-chart">
-                  {selectedTradeChartRows.length ? <ResponsiveContainer width="100%" height="100%"><LineChart data={selectedTradeChartRows} margin={{ top: 14, right: 18, left: 8, bottom: 6 }}>
+                  {selectedTradeChartRows.length ? <MeasuredChartContainer fallbackHeight={320}><LineChart data={selectedTradeChartRows} margin={{ top: 14, right: 18, left: 8, bottom: 6 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="timestamp_value" type="number" scale="time" domain={['dataMin', 'dataMax']} minTickGap={34} tickFormatter={(value) => dashboardAxisLabel(value, Math.max(0, (selectedTradeEnd || 0) - (selectedTradeStart || 0)))} />
                     <YAxis domain={selectedTradeYDomain} tickFormatter={(value) => selectedTradeView === 'indexed' ? Number(value).toFixed(1) : `$${Number(value).toLocaleString(getIntlLocale(), { maximumFractionDigits: 0 })}`} />
@@ -135,7 +136,7 @@ export function TradeStorySection({
                     <Line type="monotone" dataKey={selectedTradeView === 'indexed' ? 'reference_index' : 'reference_equity'} name={tr("Buy & Hold")} dot={false} activeDot={{ r: 4 }} strokeWidth={2.2} stroke="var(--accent)" isAnimationActive={false} />
                     {selectedTradeStart !== null ? <ReferenceDot x={selectedTradeStart} y={selectedTradeChartRows[nearestTimeSeriesIndex(selectedTradeChartRows, selectedTradeStart)]?.[selectedTradeView === 'indexed' ? 'strategy_index' : 'simulation_equity']} r={5} className="dashboard-entry-dot" ifOverflow="visible" /> : null}
                     {selectedTradeEnd !== null ? <ReferenceDot x={selectedTradeEnd} y={selectedTradeChartRows[nearestTimeSeriesIndex(selectedTradeChartRows, selectedTradeEnd)]?.[selectedTradeView === 'indexed' ? 'strategy_index' : 'simulation_equity']} r={5} className="dashboard-exit-dot" ifOverflow="visible" /> : null}
-                  </LineChart></ResponsiveContainer> : <div className="dashboard-story-empty">{tr("No portfolio or reference points were stored inside this holding interval.")}</div>}
+                  </LineChart></MeasuredChartContainer> : <div className="dashboard-story-empty">{tr("No portfolio or reference points were stored inside this holding interval.")}</div>}
                 </div>
               </article>
 

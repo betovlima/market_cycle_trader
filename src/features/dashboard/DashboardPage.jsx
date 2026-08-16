@@ -452,13 +452,23 @@ export function DashboardPage({ workspace, capabilities = {}, onOpenBacktest }) 
   const forecastHasOpportunity = Number.isFinite(Number(forecastOpportunitySignal))
 
   const decisionRows = useMemo(() => (intelligence?.decision_history?.rows || [])
-    .map((row) => ({
-      ...row,
-      timestamp_value: timestampValue(row.decision_date || row.timestamp),
-      opportunity_signal: Number.isFinite(Number(row.opportunity_confidence))
-        ? Number(row.opportunity_confidence)
-        : (Number.isFinite(Number(row.opportunity_probability)) ? Number(row.opportunity_probability) : null),
-    }))
+    .map((row) => {
+      const numeric = (value) => Number.isFinite(Number(value)) ? Number(value) : null
+      return {
+        ...row,
+        timestamp_value: timestampValue(row.decision_date || row.timestamp),
+        best_utility: numeric(row.absolute_utility_best_score ?? row.best_score ?? row.raw_best_score ?? row.top_1_score),
+        current_utility: numeric(row.current_score),
+        best_cash_edge: numeric(row.best_cash_edge),
+        current_cash_edge: numeric(row.current_cash_edge),
+        cash_exit_threshold: numeric(row.cash_exit_threshold),
+        cash_entry_threshold: numeric(row.cash_entry_threshold),
+        absolute_utility_exit_threshold: numeric(row.absolute_utility_exit_threshold),
+        absolute_utility_entry_threshold: numeric(row.absolute_utility_entry_threshold),
+        opportunity_threshold: numeric(row.opportunity_threshold),
+        opportunity_signal: numeric(row.opportunity_confidence ?? row.opportunity_probability),
+      }
+    })
     .filter((row) => row.timestamp_value !== null), [intelligence?.decision_history?.rows])
   const cashIntervals = useMemo(() => buildCashIntervals(decisionRows), [decisionRows])
   const decisionSpan = decisionRows.length > 1 ? decisionRows[decisionRows.length - 1].timestamp_value - decisionRows[0].timestamp_value : 0
@@ -466,6 +476,11 @@ export function DashboardPage({ workspace, capabilities = {}, onOpenBacktest }) 
   const cashEntryThreshold = decisionRows.find((row) => Number.isFinite(Number(row.cash_entry_threshold)))?.cash_entry_threshold ?? forecast?.cash_entry_threshold
   const decisionHasOpportunity = decisionRows.some((row) => Number.isFinite(Number(row.opportunity_signal)))
   const decisionUsesOpportunityConfidence = decisionRows.some((row) => Number.isFinite(Number(row.opportunity_confidence)))
+  const decisionHasCashEdge = decisionRows.some((row) => Number.isFinite(Number(row.best_cash_edge)) || Number.isFinite(Number(row.current_cash_edge)))
+  const decisionUsesAbsoluteUtility = decisionRows.some((row) => Boolean(row.strategy_absolute_utility_cash_gate_enabled) || Number.isFinite(Number(row.absolute_utility_best_score)))
+  const decisionHasCurrentUtility = decisionRows.some((row) => Number.isFinite(Number(row.current_utility)))
+  const absoluteUtilityExitThreshold = decisionRows.find((row) => Number.isFinite(Number(row.absolute_utility_exit_threshold)))?.absolute_utility_exit_threshold ?? researchStrategy?.configuration?.opportunity_utility_exit_threshold
+  const absoluteUtilityEntryThreshold = decisionRows.find((row) => Number.isFinite(Number(row.absolute_utility_entry_threshold)))?.absolute_utility_entry_threshold ?? researchStrategy?.configuration?.opportunity_utility_entry_threshold
   const opportunityThreshold = decisionRows.find((row) => Number.isFinite(Number(row.opportunity_threshold)))?.opportunity_threshold ?? forecast?.opportunity_threshold
 
   const tuning = intelligence?.tuning || null
@@ -532,11 +547,16 @@ export function DashboardPage({ workspace, capabilities = {}, onOpenBacktest }) 
           forecastUsesOpportunityConfidence={forecastUsesOpportunityConfidence}
           decisionRows={decisionRows}
           decisionHasOpportunity={decisionHasOpportunity}
+          decisionHasCashEdge={decisionHasCashEdge}
+          decisionUsesAbsoluteUtility={decisionUsesAbsoluteUtility}
+          decisionHasCurrentUtility={decisionHasCurrentUtility}
           decisionUsesOpportunityConfidence={decisionUsesOpportunityConfidence}
           cashIntervals={cashIntervals}
           decisionSpan={decisionSpan}
           cashExitThreshold={cashExitThreshold}
           cashEntryThreshold={cashEntryThreshold}
+          absoluteUtilityExitThreshold={absoluteUtilityExitThreshold}
+          absoluteUtilityEntryThreshold={absoluteUtilityEntryThreshold}
           opportunityThreshold={opportunityThreshold}
           tuning={tuning}
           tuningRows={tuningRows}

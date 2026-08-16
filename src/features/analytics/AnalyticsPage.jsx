@@ -5,7 +5,6 @@ import {
   CartesianGrid,
   Line,
   LineChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -30,7 +29,7 @@ import { money, number, percent, shortDate, shortDateTime } from '../../shared/f
 import { BacktestPerformanceExplorer } from './components/BacktestPerformanceExplorer'
 import { RotationInspector } from './components/RotationInspector'
 import { returnTone } from './utils/performance'
-import { AnalyticsMetric, ChartCell, ChartEmpty, SectionHeading } from './components/AnalyticsPrimitives'
+import { AnalyticsMetric, AnalyticsResponsiveContainer, ChartCell, ChartEmpty, SectionHeading } from './components/AnalyticsPrimitives'
 
 const ASSET_PAGE_SIZE = 10
 const ROTATION_PAGE_SIZE = 10
@@ -396,11 +395,11 @@ function PortfolioAnalytics() {
         <SectionHeading kicker={tr("PAPER PERFORMANCE")} title={tr("Portfolio evolution and current risk")} />
         <div className="analytics-portfolio-grid">
           <ChartCell kicker={tr("PAPER EQUITY")} title={tr("Portfolio value history")} className="analytics-chart-primary">
-            {data.history?.length ? <div className="analytics-chart analytics-chart-large"><ResponsiveContainer width="100%" height="100%"><LineChart data={data.history}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="recorded_at" tickFormatter={shortDate} minTickGap={38} /><YAxis tickFormatter={(value) => `$${Math.round(value / 1000)}k`} /><Tooltip labelFormatter={shortDateTime} formatter={(value) => money(value)} /><Line type="monotone" dataKey="portfolio_value" name={tr("Portfolio value")} dot={false} strokeWidth={2} stroke="var(--accent)" /></LineChart></ResponsiveContainer></div> : <ChartEmpty>{tr("No portfolio snapshots stored yet.")}</ChartEmpty>}
+            {data.history?.length ? <div className="analytics-chart analytics-chart-large"><AnalyticsResponsiveContainer fallbackHeight={344}><LineChart data={data.history}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="recorded_at" tickFormatter={shortDate} minTickGap={38} /><YAxis tickFormatter={(value) => `$${Math.round(value / 1000)}k`} /><Tooltip labelFormatter={shortDateTime} formatter={(value) => money(value)} /><Line type="monotone" dataKey="portfolio_value" name={tr("Portfolio value")} dot={false} strokeWidth={2} stroke="var(--accent)" isAnimationActive={false} /></LineChart></AnalyticsResponsiveContainer></div> : <ChartEmpty>{tr("No portfolio snapshots stored yet.")}</ChartEmpty>}
           </ChartCell>
           <div className="analytics-portfolio-side">
             <ChartCell kicker={tr("PAPER RISK")} title={tr("Portfolio drawdown")}>
-              {data.history?.length ? <div className="analytics-chart analytics-chart-mini"><ResponsiveContainer width="100%" height="100%"><LineChart data={data.history}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="recorded_at" tickFormatter={shortDate} minTickGap={38} /><YAxis tickFormatter={(value) => `${Math.round(value * 100)}%`} /><Tooltip labelFormatter={shortDateTime} formatter={(value) => percent(value)} /><Line type="monotone" dataKey="drawdown" name={tr("Drawdown")} dot={false} strokeWidth={2} stroke="var(--negative)" /></LineChart></ResponsiveContainer></div> : <ChartEmpty />}
+              {data.history?.length ? <div className="analytics-chart analytics-chart-mini"><AnalyticsResponsiveContainer fallbackHeight={166}><LineChart data={data.history}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="recorded_at" tickFormatter={shortDate} minTickGap={38} /><YAxis tickFormatter={(value) => `${Math.round(value * 100)}%`} /><Tooltip labelFormatter={shortDateTime} formatter={(value) => percent(value)} /><Line type="monotone" dataKey="drawdown" name={tr("Drawdown")} dot={false} strokeWidth={2} stroke="var(--negative)" isAnimationActive={false} /></LineChart></AnalyticsResponsiveContainer></div> : <ChartEmpty />}
             </ChartCell>
             <div className="analytics-account-grid">
               <div className="analytics-subsection compact-panel"><div className="analytics-subsection-heading"><span>{tr("CURRENT POSITION")}</span><strong>{tr("Paper account state")}</strong></div><dl className="analytics-definition-list compact"><div><dt>{tr("Symbol")}</dt><dd>{data.current?.position?.symbol || tr('Cash')}</dd></div><div><dt>{tr("Quantity")}</dt><dd>{number(data.current?.position?.quantity, 4)}</dd></div><div><dt>{tr("Average entry")}</dt><dd>{money(data.current?.position?.average_entry_price)}</dd></div><div><dt>{tr("Current price")}</dt><dd>{money(data.current?.position?.current_price)}</dd></div><div><dt>{tr("Unrealized P/L")}</dt><dd className={tone(summary.unrealized_pnl)}>{money(summary.unrealized_pnl)}</dd></div></dl></div>

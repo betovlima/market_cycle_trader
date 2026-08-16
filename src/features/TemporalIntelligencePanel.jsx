@@ -263,11 +263,12 @@ export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired 
 
   const result = run?.result || null
   const horizonMetrics = result?.horizon_metrics || []
-  const trendCapturePolicy = result?.experiment === 'temporal_decision_intelligence_v5_trend_capture_hysteresis'
-  const multiHorizonPolicy = ['temporal_decision_intelligence_v4_multi_horizon', 'temporal_decision_intelligence_v5_trend_capture_hysteresis'].includes(result?.experiment)
-  const decisionExperiment = ['temporal_decision_intelligence_v1', 'temporal_decision_intelligence_v2', 'temporal_decision_intelligence_v3', 'temporal_decision_intelligence_v4_multi_horizon', 'temporal_decision_intelligence_v5_trend_capture_hysteresis'].includes(result?.experiment)
-  const capitalPolicyV2 = ['temporal_decision_intelligence_v2', 'temporal_decision_intelligence_v3', 'temporal_decision_intelligence_v4_multi_horizon', 'temporal_decision_intelligence_v5_trend_capture_hysteresis'].includes(result?.experiment)
-  const capitalPolicyV3 = ['temporal_decision_intelligence_v3', 'temporal_decision_intelligence_v4_multi_horizon', 'temporal_decision_intelligence_v5_trend_capture_hysteresis'].includes(result?.experiment)
+  const trendCapturePolicy = ['temporal_decision_intelligence_v5_trend_capture_hysteresis', 'temporal_decision_intelligence_v6_adaptive_trend_capture', 'temporal_decision_intelligence_v7_rotation_before_cash'].includes(result?.experiment)
+  const winnerAnchoredPolicy = result?.experiment === 'temporal_decision_intelligence_v8_winner_anchored_timing'
+  const multiHorizonPolicy = ['temporal_decision_intelligence_v4_multi_horizon', 'temporal_decision_intelligence_v5_trend_capture_hysteresis', 'temporal_decision_intelligence_v6_adaptive_trend_capture', 'temporal_decision_intelligence_v7_rotation_before_cash', 'temporal_decision_intelligence_v8_winner_anchored_timing'].includes(result?.experiment)
+  const decisionExperiment = ['temporal_decision_intelligence_v1', 'temporal_decision_intelligence_v2', 'temporal_decision_intelligence_v3', 'temporal_decision_intelligence_v4_multi_horizon', 'temporal_decision_intelligence_v5_trend_capture_hysteresis', 'temporal_decision_intelligence_v6_adaptive_trend_capture', 'temporal_decision_intelligence_v7_rotation_before_cash', 'temporal_decision_intelligence_v8_winner_anchored_timing'].includes(result?.experiment)
+  const capitalPolicyV2 = ['temporal_decision_intelligence_v2', 'temporal_decision_intelligence_v3', 'temporal_decision_intelligence_v4_multi_horizon', 'temporal_decision_intelligence_v5_trend_capture_hysteresis', 'temporal_decision_intelligence_v6_adaptive_trend_capture', 'temporal_decision_intelligence_v7_rotation_before_cash', 'temporal_decision_intelligence_v8_winner_anchored_timing'].includes(result?.experiment)
+  const capitalPolicyV3 = ['temporal_decision_intelligence_v3', 'temporal_decision_intelligence_v4_multi_horizon', 'temporal_decision_intelligence_v5_trend_capture_hysteresis', 'temporal_decision_intelligence_v6_adaptive_trend_capture', 'temporal_decision_intelligence_v7_rotation_before_cash', 'temporal_decision_intelligence_v8_winner_anchored_timing'].includes(result?.experiment)
   useEffect(() => {
     if (!horizonMetrics.length) {
       setSelectedHorizon(null)
@@ -358,16 +359,20 @@ export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired 
 
         {multiHorizonPolicy && multiHorizonMetrics ? <>
           <section className="temporal-section">
-            <div className="temporal-section-heading"><h3>{tr('Multi-Horizon Decision Engine')}</h3><span>{tr(trendCapturePolicy ? 'Trend Capture + Decision Hysteresis' : 'Single BUY / HOLD / SELL / CASH policy')}</span></div>
+            <div className="temporal-section-heading"><h3>{tr('Multi-Horizon Decision Engine')}</h3><span>{tr(winnerAnchoredPolicy ? 'Winner-Anchored Temporal Timing' : result?.experiment === 'temporal_decision_intelligence_v7_rotation_before_cash' ? 'Adaptive Trend Capture + Rotation Before CASH' : result?.experiment === 'temporal_decision_intelligence_v6_adaptive_trend_capture' ? 'Adaptive Trend Capture + Risk-Conditioned Hysteresis' : trendCapturePolicy ? 'Trend Capture + Decision Hysteresis' : 'Single BUY / HOLD / SELL / CASH policy')}</span></div>
             <div className="temporal-summary-grid selected-horizon">
               <Metric label={tr('Multi-Horizon Capital')} value={money(multiHorizonCapital.ending_capital)} tone={Number(multiHorizonCapital.total_return || 0) >= 0 ? 'positive' : 'negative'} />
               <Metric label={tr('CAGR')} value={percent(multiHorizonCapital.cagr, 2)} tone={Number(multiHorizonCapital.cagr || 0) >= 0 ? 'positive' : 'negative'} />
               <Metric label={tr('Sharpe')} value={number(multiHorizonCapital.sharpe, 3)} />
               <Metric label={tr('Max Drawdown')} value={percent(multiHorizonCapital.max_drawdown, 2)} tone={Number(multiHorizonCapital.max_drawdown || 0) < 0 ? 'negative' : ''} />
               <Metric label={tr('Exposure')} value={percent(multiHorizonCapital.exposure, 2)} />
-              {trendCapturePolicy ? <Metric label={tr('Switches')} value={number(multiHorizonCapital.switch_count, 0)} note={`${tr('Median hold')} ${number(multiHorizonCapital.median_holding_days, 1)}d`} /> : null}
-              {trendCapturePolicy ? <Metric label={tr('Short Holds ≤ 2d')} value={percent(multiHorizonCapital.short_holding_ratio_2d, 1)} note={`${tr('Median CASH')} ${number(multiHorizonCapital.median_cash_days, 1)}d`} /> : null}
+              {(trendCapturePolicy || winnerAnchoredPolicy) ? <Metric label={tr('Switches')} value={number(multiHorizonCapital.switch_count, 0)} note={`${tr('Median hold')} ${number(multiHorizonCapital.median_holding_days, 1)}d`} /> : null}
+              {(trendCapturePolicy || winnerAnchoredPolicy) ? <Metric label={tr('Short Holds ≤ 2d')} value={percent(multiHorizonCapital.short_holding_ratio_2d, 1)} note={`${tr('Median CASH')} ${number(multiHorizonCapital.median_cash_days, 1)}d`} /> : null}
               {trendCapturePolicy ? <Metric label={tr('Re-entries')} value={number(multiHorizonCapital.reentry_count, 0)} note={`${number(multiHorizonCapital.next_day_reentry_count, 0)} ${tr('next-day')}`} /> : null}
+              {result?.experiment === 'temporal_decision_intelligence_v7_rotation_before_cash' ? <Metric label={tr('Rotation Before CASH')} value={number(multiHorizonCapital.rotation_before_cash_count, 0)} note={`${tr('Incumbent recovery')} ${number(multiHorizonCapital.incumbent_entry_recovery_hold_count, 0)}`} /> : null}
+              {result?.experiment === 'temporal_decision_intelligence_v7_rotation_before_cash' ? <Metric label={tr('Defensive CASH')} value={number(multiHorizonCapital.defensive_exit_cash_count, 0)} note={`${tr('Opportunity CASH')} ${number(multiHorizonCapital.opportunity_exit_cash_count, 0)}`} /> : null}
+              {winnerAnchoredPolicy ? <Metric label={tr('Temporal Timing Overrides')} value={number(multiHorizonCapital.timing_override_count, 0)} note={`${tr('Top-2 challenger')} · ${percent(multiHorizonMetrics.capital_lift_vs_winner_anchor_replay, 2)}`} /> : null}
+              {winnerAnchoredPolicy ? <Metric label={tr('Winner Anchor Replay')} value={money(multiHorizonMetrics.winner_anchor_replay?.ending_capital)} note={tr('Same open-to-open evaluation basis')} /> : null}
               <Metric label={tr('Vs Winner')} value={percent(multiHorizonMetrics.capital_vs_winner, 2)} tone={Number(multiHorizonMetrics.capital_vs_winner || 0) >= 0 ? 'positive' : 'negative'} />
               <Metric label={tr('Vs Benchmark')} value={percent(multiHorizonMetrics.capital_vs_benchmark, 2)} tone={Number(multiHorizonMetrics.capital_vs_benchmark || 0) >= 0 ? 'positive' : 'negative'} />
               <Metric label={tr('Latest Shadow Target')} value={multiHorizonBestForecast?.symbol || tr('CASH')} note={multiHorizonBestForecast ? `${tr('Opportunity Gate')} ${number(multiHorizonBestForecast.opportunity_gate_score, 4)}` : ''} />

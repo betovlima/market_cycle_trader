@@ -189,9 +189,10 @@ export function DecisionTimelineTooltip({ active, payload }) {
     <div><span>{tr('Decision')}</span><b>{row.final_action_asset || row.selected_asset || 'CASH'}</b></div>
     <div><span>{tr('Reason')}</span><b>{row.decision_reason || '—'}</b></div>
     <div><span>{tr('Best asset')}</span><b>{row.best_asset || row.raw_best_asset || '—'}</b></div>
-    <div><span>{tr('Best utility')}</span><b>{decimal(row.best_score)}</b></div>
-    <div><span>{tr('Best cash edge')}</span><b>{decimal(row.best_cash_edge)}</b></div>
-    <div><span>{tr('Current cash edge')}</span><b>{decimal(row.current_cash_edge)}</b></div>
+    <div><span>{tr('Best Utility')}</span><b>{decimal(row.best_utility ?? row.absolute_utility_best_score ?? row.best_score)}</b></div>
+    {Number.isFinite(Number(row.current_utility ?? row.current_score)) ? <div><span>{tr('Current Utility')}</span><b>{decimal(row.current_utility ?? row.current_score)}</b></div> : null}
+    {Number.isFinite(Number(row.best_cash_edge)) ? <div><span>{tr('Best Cash Edge')}</span><b>{decimal(row.best_cash_edge)}</b></div> : null}
+    {Number.isFinite(Number(row.current_cash_edge)) ? <div><span>{tr('Current Cash Edge')}</span><b>{decimal(row.current_cash_edge)}</b></div> : null}
     {Number.isFinite(Number(row.opportunity_probability)) ? <div><span>{tr('Opportunity Probability')}</span><b>{percent(row.opportunity_probability)}</b></div> : null}
     {Number.isFinite(Number(row.opportunity_confidence)) ? <div><span>{tr('Opportunity Confidence')}</span><b>{percent(row.opportunity_confidence)}</b></div> : null}
     {Number.isFinite(Number(row.opportunity_threshold)) ? <div><span>{tr(Number.isFinite(Number(row.opportunity_confidence)) ? 'Opportunity confidence threshold' : 'Opportunity threshold')}</span><b>{percent(row.opportunity_threshold)}</b></div> : null}

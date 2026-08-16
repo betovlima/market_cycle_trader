@@ -5,7 +5,6 @@ import {
   Line,
   LineChart,
   ReferenceLine,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -17,6 +16,7 @@ import { useReorderableCards } from '../hooks/useReorderableCards'
 import { analyticsAxisLabel, analyticsTimestamp, monthParts, returnTone } from '../utils/performance'
 import {
   AnalyticsDragHandle,
+  AnalyticsResponsiveContainer,
   AnalyticsModeTabs,
   ChartCell,
   ChartEmpty,
@@ -179,7 +179,7 @@ export function BacktestPerformanceExplorer({ data, jobId }) {
         onPointerUp={endPan}
         onPointerCancel={endPan}
       >
-        <ResponsiveContainer width="100%" height="100%">
+        <AnalyticsResponsiveContainer fallbackHeight={350}>
           <LineChart data={performanceRows}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
@@ -202,18 +202,18 @@ export function BacktestPerformanceExplorer({ data, jobId }) {
               cursor={{ stroke: 'rgba(147, 177, 210, .45)', strokeDasharray: '4 4' }}
             />
             {performanceMode === 'value' ? <>
-              <Line type="monotone" dataKey="simulation_equity" name={tr("Simulation")} dot={false} strokeWidth={2.3} stroke="var(--positive)" />
-              <Line type="monotone" dataKey="reference_equity" name={tr("Reference")} dot={false} strokeWidth={2} stroke="var(--accent)" />
+              <Line type="monotone" dataKey="simulation_equity" name={tr("Simulation")} dot={false} strokeWidth={2.3} stroke="var(--positive)" isAnimationActive={false} />
+              <Line type="monotone" dataKey="reference_equity" name={tr("Reference")} dot={false} strokeWidth={2} stroke="var(--accent)" isAnimationActive={false} />
             </> : performanceMode === 'indexed' ? <>
               <ReferenceLine y={100} stroke="rgba(145, 169, 198, .35)" strokeDasharray="3 4" />
-              <Line type="monotone" dataKey="simulation_index" name={tr("Simulation")} dot={false} strokeWidth={2.3} stroke="var(--positive)" />
-              <Line type="monotone" dataKey="reference_index" name={tr("Reference")} dot={false} strokeWidth={2} stroke="var(--accent)" />
+              <Line type="monotone" dataKey="simulation_index" name={tr("Simulation")} dot={false} strokeWidth={2.3} stroke="var(--positive)" isAnimationActive={false} />
+              <Line type="monotone" dataKey="reference_index" name={tr("Reference")} dot={false} strokeWidth={2} stroke="var(--accent)" isAnimationActive={false} />
             </> : <>
               <ReferenceLine y={0} stroke="rgba(145, 169, 198, .45)" strokeDasharray="3 4" />
-              <Line type="monotone" dataKey="excess_change" name="S − R" dot={false} strokeWidth={2.3} stroke="var(--positive)" />
+              <Line type="monotone" dataKey="excess_change" name="S − R" dot={false} strokeWidth={2.3} stroke="var(--positive)" isAnimationActive={false} />
             </>}
           </LineChart>
-        </ResponsiveContainer>
+        </AnalyticsResponsiveContainer>
       </div> : <ChartEmpty />}
     </ChartCell>,
 
