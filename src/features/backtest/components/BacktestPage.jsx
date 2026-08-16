@@ -21,6 +21,7 @@ import { durationLabel, money, percent, shortDateTime } from '../../../shared/fo
 import { clamp, minimumZoomSpan, nearestTimeSeriesIndex, timestampValue } from '../../../shared/charts/timeSeries'
 import { ExecutionStatus } from './ExecutionStatus'
 import { ModelTuningPanel } from '../../ModelTuningPanel'
+import { TemporalIntelligencePanel } from '../../TemporalIntelligencePanel'
 import { HISTORY_HINTS, HISTORY_PAGE_SIZE, METRIC_HINTS, ZOOM_STEP } from '../backtestConfig'
 import { backtestAxisLabel, sortRows, toggleSort } from '../backtestUtils'
 import { BacktestChartTooltip, BacktestTradeEventDot, FilterButton, ListToolbar, Metric, MetricLabel, Pagination, SortableHeader, StatusBadge } from './BacktestPrimitives'
@@ -31,6 +32,7 @@ export function BacktestPage({ workspace, capabilities = {}, onSessionExpired })
   const canViewResearchModels = hasCapability(capabilities, 'research_models.view')
   const canStartBacktest = hasCapability(capabilities, 'backtest.start')
   const canViewTuning = hasCapability(capabilities, 'tuning.view')
+  const canViewTemporalIntelligence = hasCapability(capabilities, 'temporal_intelligence.view')
   const {
     job,
     dashboard,
@@ -408,10 +410,11 @@ export function BacktestPage({ workspace, capabilities = {}, onSessionExpired })
             </div>
           </div>
           <div className="backtest-workspace-actions">
-            {(canViewResearchModels || canViewTuning) ? (
+            {(canViewResearchModels || canViewTuning || canViewTemporalIntelligence) ? (
               <div className="backtest-research-mode-switch" role="tablist" aria-label={tr('Research workspace')}>
                 <button type="button" role="tab" aria-selected={researchWorkspaceMode === 'simulation'} className={researchWorkspaceMode === 'simulation' ? 'active' : ''} onClick={() => setResearchWorkspaceMode('simulation')}>{tr('Simulation Backtest')}</button>
                 {canViewTuning ? <button type="button" role="tab" aria-selected={researchWorkspaceMode === 'tuning'} className={researchWorkspaceMode === 'tuning' ? 'active' : ''} onClick={() => setResearchWorkspaceMode('tuning')}>{tr('Model Tuning')}</button> : null}
+                {canViewTemporalIntelligence ? <button type="button" role="tab" aria-selected={researchWorkspaceMode === 'temporal'} className={researchWorkspaceMode === 'temporal' ? 'active' : ''} onClick={() => setResearchWorkspaceMode('temporal')}>{tr('Temporal Intelligence')}</button> : null}
               </div>
             ) : null}
             {canViewResearchModels && researchWorkspaceMode === 'simulation' ? (
@@ -438,6 +441,8 @@ export function BacktestPage({ workspace, capabilities = {}, onSessionExpired })
             onSessionExpired={onSessionExpired}
             onStrategyModelSaved={(updated) => setSelectedStrategyModel(updated?.research_model_configuration || updated?.research_model || null)}
           />
+        ) : researchWorkspaceMode === 'temporal' && canViewTemporalIntelligence ? (
+          <TemporalIntelligencePanel capabilities={capabilities} onSessionExpired={onSessionExpired} />
         ) : <>
         <ExecutionStatus workspace={workspace} modelLabel={activeResearchModelLabel} />
         {strategyContextError ? <div className="global-inline-message error-inline backtest-workspace-message">{tr(strategyContextError)}</div> : null}
