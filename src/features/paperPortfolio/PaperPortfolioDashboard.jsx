@@ -1,4 +1,4 @@
-import { tr } from '../../i18n/runtime'
+import { getIntlLocale, tr } from '../../i18n/runtime'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiFetch } from '../../api/http'
 import { API } from '../../config/env'

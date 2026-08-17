@@ -83,6 +83,9 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
   const [method, setMethod] = useState(PROBABILITY_METHOD)
   const [temporalTuningTarget, setTemporalTuningTarget] = useState('temporal_model')
   const [candidateCount, setCandidateCount] = useState(20)
+  const [researchFolds, setResearchFolds] = useState(3)
+  const [validationFolds, setValidationFolds] = useState(5)
+  const [certificationFolds, setCertificationFolds] = useState(7)
   const [seed, setSeed] = useState(42)
   const [minimumCapitalImprovementPct, setMinimumCapitalImprovementPct] = useState('')
   const [sharpeTolerance, setSharpeTolerance] = useState('')
@@ -150,6 +153,10 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
       }
       setModelFamily(detail?.strategy_kind === 'temporal_intelligence' ? 'lightgbm_utility' : (savedModel?.family || ''))
       setBaselines(items)
+      const foldProtocol = nextCatalog?.fold_protocol || {}
+      setResearchFolds(Number(foldProtocol.research_default || 3))
+      setValidationFolds(Number(foldProtocol.validation_default || 5))
+      setCertificationFolds(Number(foldProtocol.certification_default || 7))
       setSeed(nextCatalog.default_seed ?? 42)
       setMinimumCapitalImprovementPct(String(numberOr(probability.default_min_capital_improvement) * 100))
       setSharpeTolerance(String(probability.default_sharpe_tolerance ?? ''))
@@ -167,6 +174,13 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
   useEffect(() => {
     loadWorkspace()
   }, [loadWorkspace])
+
+  useEffect(() => {
+    if (!run?.id || !run?.fold_protocol) return
+    setResearchFolds(Number(run.fold_protocol.research_folds || 3))
+    setValidationFolds(Number(run.fold_protocol.validation_folds || 5))
+    setCertificationFolds(Number(run.fold_protocol.certification_folds || 7))
+  }, [run?.id])
 
   useEffect(() => {
     if (timerRef.current) window.clearInterval(timerRef.current)
@@ -285,11 +299,18 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
     && (temporalStrategy || modelFamily === catalog?.model_family)
     && selectedBaseline
   )
+  const foldMinimum = Number(catalog?.fold_protocol?.minimum || 2)
+  const foldProtocolValid = Number(researchFolds) >= foldMinimum
+    && Number(validationFolds) >= Number(researchFolds)
+    && Number(certificationFolds) >= Number(validationFolds)
+  const continuationResearchFoldsCompatible = !run?.fold_protocol
+    || Number(researchFolds) === Number(run.fold_protocol.research_folds || 3)
+  const foldInputDisabled = !canStartTuning || !canTune || active || busy
 
 
 
   async function start() {
-    if (!canTune || busy) return
+    if (!canTune || busy || (temporalStrategy && !foldProtocolValid)) return
     setBusy(true)
     setError('')
     setNotice('')
@@ -299,7 +320,14 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
         candidate_count: Number(candidateCount),
         seed: Number(seed),
       }
-      if (temporalStrategy) body.tuning_target = temporalTuningTarget
+      if (temporalStrategy) {
+        body.tuning_target = temporalTuningTarget
+        body.fold_protocol = {
+          research_folds: Number(researchFolds),
+          validation_folds: Number(validationFolds),
+          certification_folds: Number(certificationFolds),
+        }
+      }
       if (adaptiveMode) {
         body.probability = {
           min_capital_improvement: numberOr(minimumCapitalImprovementPct) / 100,
@@ -329,7 +357,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
 
 
   async function continueResearch() {
-    if (!run?.id || run.status !== 'completed' || run.method !== PROBABILITY_METHOD || busy) return
+    if (!run?.id || run.status !== 'completed' || run.method !== PROBABILITY_METHOD || busy || !foldProtocolValid || !continuationResearchFoldsCompatible) return
     setBusy(true)
     setError('')
     setNotice('')
@@ -340,6 +368,11 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
         seed: Number(seed),
         source_tuning_run_id: run.id,
         tuning_target: run.tuning_scope,
+        fold_protocol: {
+          research_folds: Number(researchFolds),
+          validation_folds: Number(validationFolds),
+          certification_folds: Number(certificationFolds),
+        },
         probability: {
           min_capital_improvement: numberOr(minimumCapitalImprovementPct) / 100,
           sharpe_tolerance: numberOr(sharpeTolerance),
@@ -360,7 +393,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
     }
   }
 
-  async function validateChampion(candidate) {
+  async function validateFinalist(candidate) {
     if (!run?.id || !candidate || busy) return
     setBusy(true)
     setError('')
@@ -371,10 +404,8 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
       })
       const updated = await apiFetch(`${API}/admin/model-tuning/${encodeURIComponent(run.id)}`)
       setRun(updated)
-      setNotice(tr('CARO Champion validated. Its immutable TEMPORAL snapshot and Dashboard analytics are now available. Trader Winner promotion remains protected until the Temporal live execution engine is installed.'))
-      if (validation?.id) {
-        window.dispatchEvent(new CustomEvent('mct:open-dashboard-processing', { detail: { processingId: validation.id } }))
-      }
+      setNotice(tr('CARO finalist validation completed with a full Temporal LightGBM walk-forward rerun. Open Dashboard Analytics to inspect the validation processing before certification.'))
+      if (validation?.id) viewProcessing(validation.id)
     } catch (requestError) {
       handleError(requestError)
     } finally {
@@ -382,11 +413,35 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
     }
   }
 
-  function viewChampionAnalytics() {
-    if (!run?.validation_processing_id) return
+  async function certifyCandidate(candidate) {
+    if (!run?.id || !candidate || busy) return
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const certification = await apiFetch(`${API}/admin/model-tuning/${encodeURIComponent(run.id)}/candidates/${candidate.candidate_id}/certify`, {
+        method: 'POST',
+      })
+      const updated = await apiFetch(`${API}/admin/model-tuning/${encodeURIComponent(run.id)}`)
+      setRun(updated)
+      setNotice(tr('CARO candidate certification completed with the configured certification folds. Trader Winner promotion remains protected until the Temporal live execution engine is installed.'))
+      if (certification?.certification_processing_id) viewProcessing(certification.certification_processing_id)
+    } catch (requestError) {
+      handleError(requestError)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function viewProcessing(processingId) {
+    if (!processingId) return
     window.dispatchEvent(new CustomEvent('mct:open-dashboard-processing', {
-      detail: { processingId: run.validation_processing_id },
+      detail: { processingId },
     }))
+  }
+
+  function viewChampionAnalytics() {
+    viewProcessing(run?.certification_processing_id || run?.validation_processing_id)
   }
 
   async function stop() {
@@ -650,10 +705,41 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
           <strong>{tr(temporalModelMode ? 'Walk-forward · frozen market snapshot' : temporalPolicyMode ? 'Frozen Temporal replay' : 'Chronological walk-forward')}</strong>
         </div>
         {(canStartTuning || canStopTuning) ? <div className="model-tuning-actions">
-          {canStartTuning ? <button type="button" className="primary-action" onClick={start} disabled={!canTune || active || busy}>{busy && !active ? tr('Starting…') : startActionLabel}</button> : null}
+          {canStartTuning ? <button type="button" className="primary-action" onClick={start} disabled={!canTune || active || busy || (temporalStrategy && !foldProtocolValid)}>{busy && !active ? tr('Starting…') : startActionLabel}</button> : null}
           {canStopTuning ? <button type="button" className="secondary-action" onClick={stop} disabled={!active || busy || run?.status === 'stop_requested'}>{run?.status === 'stop_requested' ? tr('Stopping…') : tr('Stop')}</button> : null}
         </div> : null}
       </div>
+
+      {temporalStrategy && catalog?.fold_protocol?.supported ? (
+        <section className="model-tuning-fold-protocol">
+          <div className="model-tuning-fold-protocol-heading">
+            <div>
+              <span className="panel-kicker">{tr('WALK-FORWARD PROTOCOL')}</span>
+              <strong>{tr('Research → Validation → Certification')}</strong>
+            </div>
+            <small>{tr('Folds are part of the experimental protocol and are never optimized by CARO.')}</small>
+          </div>
+          <div className="model-tuning-fold-protocol-grid">
+            <label>
+              <span>{tr('Research folds')}</span>
+              <input type="number" min={foldMinimum} step="1" value={researchFolds} disabled={foldInputDisabled} onChange={(event) => setResearchFolds(event.target.value)} />
+              <small>{tr('Used by CARO candidate search. For Policy Tuning, changing this value builds one new frozen Temporal LightGBM prediction cache before the fast policy replays begin.')}</small>
+            </label>
+            <label>
+              <span>{tr('Validation folds')}</span>
+              <input type="number" min={Math.max(foldMinimum, Number(researchFolds) || foldMinimum)} step="1" value={validationFolds} disabled={foldInputDisabled} onChange={(event) => setValidationFolds(event.target.value)} />
+              <small>{tr('Used only when you validate a selected CARO finalist. The Temporal LightGBM models are fully retrained under the new walk-forward split.')}</small>
+            </label>
+            <label>
+              <span>{tr('Certification folds')}</span>
+              <input type="number" min={Math.max(foldMinimum, Number(validationFolds) || foldMinimum)} step="1" value={certificationFolds} disabled={foldInputDisabled} onChange={(event) => setCertificationFolds(event.target.value)} />
+              <small>{tr('Used after a finalist passes validation. Certification performs another full Temporal LightGBM walk-forward rerun before Winner eligibility can be considered.')}</small>
+            </label>
+          </div>
+          {!foldProtocolValid ? <small className="model-tuning-fold-protocol-error">{tr('Fold protocol must satisfy Research ≤ Validation ≤ Certification, with at least 2 folds at every stage.')}</small> : null}
+          {run?.id && run?.status === 'completed' && run?.method === PROBABILITY_METHOD ? <small>{tr('Continue Research must keep the same Research fold count because the imported CARO observations belong to that protocol. Start a new campaign to change Research folds.')}</small> : null}
+        </section>
+      ) : null}
 
       {adaptiveMode ? (
         <details className="model-tuning-space model-tuning-advanced">
@@ -694,7 +780,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
             <div className="model-tuning-run-actions">
               {canViewTuningLogs ? <button type="button" className="secondary-action compact" onClick={openCampaignLog} disabled={logLoading}>{tr('Campaign log')}</button> : null}
               {canExportTuning && !active ? <button type="button" className="secondary-action compact" onClick={exportCampaign} disabled={exporting}>{tr(exporting ? 'Exporting…' : 'Export Campaign')}</button> : null}
-              {canStartTuning && temporalStrategy && run.status === 'completed' && run.method === PROBABILITY_METHOD ? <button type="button" className="secondary-action compact" onClick={continueResearch} disabled={busy}>{tr('Continue Research')}</button> : null}
+              {canStartTuning && temporalStrategy && run.status === 'completed' && run.method === PROBABILITY_METHOD ? <button type="button" className="secondary-action compact" onClick={continueResearch} disabled={busy || !foldProtocolValid || !continuationResearchFoldsCompatible}>{tr('Continue Research')}</button> : null}
               {run.validation_processing_id ? <button type="button" className="secondary-action compact" onClick={viewChampionAnalytics}>{tr('View Analytics')}</button> : null}
               <strong>{Number(run.progress || 0).toFixed(1)}%</strong>
             </div>
@@ -729,7 +815,10 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
               const adoptable = !active && candidate.status === 'completed' && !candidate.is_control
               const previouslyPromoted = (run?.adoption_history || []).some((item) => Number(item.candidate_id) === Number(candidate.candidate_id))
               const isFinalChampion = !active && candidate.status === 'completed' && !candidate.is_control && Number(run?.best_candidate_id) === Number(candidate.candidate_id)
-              const isValidatedChampion = Number(run?.validated_candidate_id) === Number(candidate.candidate_id) && Boolean(run?.validation_processing_id)
+              const candidateValidation = candidate.validation || null
+              const candidateCertification = candidate.certification || null
+              const canValidateFinalist = temporalPolicyMode && canPromoteTuning && !active && candidate.status === 'completed' && !candidate.is_control && !candidateValidation
+              const canCertifyCandidate = temporalPolicyMode && canPromoteTuning && !active && Boolean(candidateValidation?.passed) && !candidateCertification
               const typeLabel = candidate.is_control
                 ? tr('Control')
                 : candidate.kind === 'champion_probability'
@@ -821,9 +910,12 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
                     {canViewTuningLogs && !candidate.baseline_preview ? <button type="button" onClick={() => openCandidateLog(candidate)} disabled={logLoading}>{tr('Log')}</button> : null}
                     {previouslyPromoted && !temporalTarget ? <span className="model-tuning-adopted">{tr('Promoted')}</span> : null}
                     {temporalModelMode && canPromoteTuning && isFinalChampion ? <button type="button" onClick={() => adopt(candidate)} disabled={busy}>{tr('Continue to Policy Tuning')}</button> : null}
-                    {temporalPolicyMode && canPromoteTuning && isFinalChampion && !isValidatedChampion ? <button type="button" onClick={() => validateChampion(candidate)} disabled={busy}>{tr('Validate Champion')}</button> : null}
-                    {temporalPolicyMode && isValidatedChampion ? <span className="model-tuning-adopted">{tr('Validated')}</span> : null}
-                    {temporalPolicyMode && isValidatedChampion ? <button type="button" onClick={viewChampionAnalytics}>{tr('View Analytics')}</button> : null}
+                    {canValidateFinalist ? <button type="button" onClick={() => validateFinalist(candidate)} disabled={busy}>{tr('Validate')} · {run?.fold_protocol?.validation_folds || validationFolds} {tr('folds')}</button> : null}
+                    {candidateValidation ? <span className={`model-tuning-adopted ${candidateValidation.passed ? '' : 'failed'}`}>{tr(candidateValidation.passed ? 'Validation passed' : 'Validation failed')} · {candidateValidation.fold_count || run?.fold_protocol?.validation_folds || validationFolds}</span> : null}
+                    {candidateValidation?.processing_id ? <button type="button" onClick={() => viewProcessing(candidateValidation.processing_id)}>{tr('Validation Analytics')}</button> : null}
+                    {canCertifyCandidate ? <button type="button" onClick={() => certifyCandidate(candidate)} disabled={busy}>{tr('Certify')} · {run?.fold_protocol?.certification_folds || certificationFolds} {tr('folds')}</button> : null}
+                    {candidateCertification ? <span className={`model-tuning-adopted ${candidateCertification.passed ? '' : 'failed'}`}>{tr(candidateCertification.passed ? 'Certification passed' : 'Certification failed')} · {candidateCertification.fold_count || run?.fold_protocol?.certification_folds || certificationFolds}</span> : null}
+                    {candidateCertification?.processing_id ? <button type="button" onClick={() => viewProcessing(candidateCertification.processing_id)}>{tr('Certification Analytics')}</button> : null}
                     {!temporalTarget && canPromoteTuning && adoptable ? <button type="button" onClick={() => adopt(candidate)} disabled={busy}>{tr(previouslyPromoted ? 'Promote again' : 'Promote to Backtest')}</button> : null}
                   </footer>
                 </article>
