@@ -15,13 +15,13 @@ function completedRows(rows) {
 }
 
 function optionLabel(item) {
-  const name = item?.strategy_profile_name || item?.strategy_name || item?.id || tr('Backtest')
-  const model = item?.research_model_label || item?.model_label || ''
+  const name = item?.processing_label || item?.strategy_profile_name || item?.strategy_name || item?.id || tr('Backtest')
+  const model = item?.processing_kind === 'caro_champion' ? '' : (item?.research_model_label || item?.model_label || '')
   const at = item?.created_at || item?.finished_at
   return [at ? shortDateTime(at) : null, name, model].filter(Boolean).join(' · ')
 }
 
-export function DashboardBacktestAnalyticsSection({ fallbackJobs = [] }) {
+export function DashboardBacktestAnalyticsSection({ fallbackJobs = [], initialProcessingId = "" }) {
   const [jobs, setJobs] = useState([])
   const [jobId, setJobId] = useState('')
   const [data, setData] = useState(null)
@@ -30,7 +30,7 @@ export function DashboardBacktestAnalyticsSection({ fallbackJobs = [] }) {
 
   useEffect(() => {
     let active = true
-    apiFetch(`${API}/analytics/backtests?limit=200`)
+    apiFetch(`${API}/analytics/processings?limit=200`)
       .then((payload) => {
         if (!active) return
         setJobs(completedRows(payload?.items || []))
@@ -43,7 +43,7 @@ export function DashboardBacktestAnalyticsSection({ fallbackJobs = [] }) {
 
   const history = useMemo(() => {
     const primary = completedRows(jobs)
-    return primary.length ? primary : completedRows(fallbackJobs)
+    return primary.length ? primary : completedRows(fallbackJobs).map((item) => ({ ...item, processing_kind: 'backtest', processing_label: tr('Backtest') }))
   }, [fallbackJobs, jobs])
 
   useEffect(() => {
@@ -51,10 +51,15 @@ export function DashboardBacktestAnalyticsSection({ fallbackJobs = [] }) {
       setJobId('')
       return
     }
+    const requested = String(initialProcessingId || '')
+    if (requested && history.some((item) => String(item.id) === requested) && String(jobId) !== requested) {
+      setJobId(requested)
+      return
+    }
     if (!jobId || !history.some((item) => String(item.id) === String(jobId))) {
       setJobId(String(history[0].id))
     }
-  }, [history, jobId])
+  }, [history, initialProcessingId, jobId])
 
   useEffect(() => {
     if (!jobId) {
@@ -64,7 +69,7 @@ export function DashboardBacktestAnalyticsSection({ fallbackJobs = [] }) {
     let active = true
     setLoading(true)
     setError('')
-    apiFetch(`${API}/analytics/backtests/${encodeURIComponent(jobId)}`)
+    apiFetch(`${API}/analytics/processings/${encodeURIComponent(jobId)}`)
       .then((payload) => { if (active) setData(payload) })
       .catch((requestError) => {
         if (!active) return
@@ -85,7 +90,7 @@ export function DashboardBacktestAnalyticsSection({ fallbackJobs = [] }) {
             <ParameterHint
               id="dashboard-historical-performance-hint"
               title={tr('Historical performance')}
-              description={tr('Choose a completed Backtest processing to inspect its consolidated historical performance. Changing the selection updates both charts below without running a new backtest or modifying the Strategy.')}
+              description={tr('Choose a completed Backtest or validated CARO Champion to inspect its consolidated historical performance. Changing the selection updates both charts without running new research or modifying the Strategy.')}
               details={[
                 { label: tr('Default'), value: tr('Latest completed processing') },
                 { label: tr('Backtest Analytics'), value: tr('Monthly capital movement') },
@@ -110,7 +115,7 @@ export function DashboardBacktestAnalyticsSection({ fallbackJobs = [] }) {
 
       {data ? (
         <div className="dashboard-analytics-charts">
-          <MonthlyCapitalMovementHeatmap jobId={jobId} rotations={data.rotations || []} equity={data.equity || []} allowDrilldown />
+          <MonthlyCapitalMovementHeatmap jobId={jobId} processingId={jobId} rotations={data.rotations || []} equity={data.equity || []} allowDrilldown />
           <BacktestPerformanceExplorer data={data} jobId={jobId} />
         </div>
       ) : null}

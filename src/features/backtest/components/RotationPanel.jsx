@@ -232,7 +232,7 @@ function MonthlyMovementTooltip({ tooltip }) {
   </div>
 }
 
-function MonthlyMovementDialog({ jobId, month, onClose }) {
+function MonthlyMovementDialog({ jobId, processingId = null, month, onClose }) {
   const chart = useMemo(() => monthEquityPath(month?.equityPoints || []), [month])
   const capitalMarkers = useMemo(() => {
     if (!chart?.coordinates?.length || !month?.movements?.length) return []
@@ -307,7 +307,7 @@ function MonthlyMovementDialog({ jobId, month, onClose }) {
         </aside>
       </div>
 
-      <MonthlyAssetAnalysis jobId={jobId} month={month} />
+      <MonthlyAssetAnalysis jobId={jobId} processingId={processingId} month={month} />
 
       <div className="rotation-month-dialog-table-wrap">
         <div className="rotation-month-dialog-section-title"><div><span>{tr('Capital movements')}</span><strong>{tr('{count} movements', { count: month.movementCount })}</strong></div></div>
@@ -330,7 +330,7 @@ function MonthlyMovementDialog({ jobId, month, onClose }) {
   </div>
 }
 
-export function MonthlyCapitalMovementHeatmap({ jobId, rotations, equity, allowDrilldown = true }) {
+export function MonthlyCapitalMovementHeatmap({ jobId, processingId = null, rotations, equity, allowDrilldown = true }) {
   const [mode, setMode] = useState('pnl')
   const [tooltip, setTooltip] = useState(null)
   const [selectedMonth, setSelectedMonth] = useState(null)
@@ -409,7 +409,7 @@ export function MonthlyCapitalMovementHeatmap({ jobId, rotations, equity, allowD
       <div className="rotation-monthly-heatmap-footer"><span>{tr('Hover for summary')}</span>{allowDrilldown ? <><span>·</span><span>{tr('Click a month for detailed analysis')}</span></> : null}</div>
     </article>
     <MonthlyMovementTooltip tooltip={tooltip} />
-    {allowDrilldown ? <MonthlyMovementDialog jobId={jobId} month={selectedMonth} onClose={() => setSelectedMonth(null)} /> : null}
+    {allowDrilldown ? <MonthlyMovementDialog jobId={jobId} processingId={processingId} month={selectedMonth} onClose={() => setSelectedMonth(null)} /> : null}
   </>
 }
 

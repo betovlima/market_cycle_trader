@@ -30,7 +30,7 @@ const PERFORMANCE_LAYOUT_STORAGE_KEY = 'market-cycle-trader.analytics.performanc
 const DEFAULT_PERFORMANCE_LAYOUT = ['performance', 'heatmap']
 
 
-function PerformanceTooltip({ active, payload }) {
+function PerformanceTooltip({ active, payload, referenceLabel = null }) {
   if (!active || !payload?.length) return null
   const point = payload.find((item) => item?.payload?.timestamp)?.payload
   if (!point) return null
@@ -38,7 +38,7 @@ function PerformanceTooltip({ active, payload }) {
   return <div className="analytics-performance-tooltip">
     <strong>{shortDateTime(point.timestamp)}</strong>
     <div><span>{tr("Simulation")}</span><b>{money(point.simulation_equity)}</b></div>
-    <div><span>{tr("Reference")}</span><b>{money(point.reference_equity)}</b></div>
+    <div><span>{referenceLabel || tr("Reference")}</span><b>{money(point.reference_equity)}</b></div>
     <div><span>{tr("Simulation change")}</span><b className={returnTone(point.simulation_change)}>{percent(point.simulation_change)}</b></div>
     <div><span>{tr("Reference change")}</span><b className={returnTone(point.reference_change)}>{percent(point.reference_change)}</b></div>
     <div><span>S − R</span><b className={returnTone(point.excess_change)}>{percent(point.excess_change)}</b></div>
@@ -46,6 +46,7 @@ function PerformanceTooltip({ active, payload }) {
 }
 
 export function BacktestPerformanceExplorer({ data, jobId }) {
+  const referenceLabel = data?.reference_label ? tr(data.reference_label) : tr('Reference')
   const [performanceMode, setPerformanceMode] = useState('value')
   const [monthlyMode, setMonthlyMode] = useState('simulation')
   const reorderable = useReorderableCards({
@@ -199,16 +200,16 @@ export function BacktestPerformanceExplorer({ data, jobId }) {
                   : `${(value * 100).toFixed(0)}%`}
             />
             <Tooltip
-              content={<PerformanceTooltip />}
+              content={<PerformanceTooltip referenceLabel={referenceLabel} />}
               cursor={{ stroke: 'rgba(147, 177, 210, .45)', strokeDasharray: '4 4' }}
             />
             {performanceMode === 'value' ? <>
               <Line type="monotone" dataKey="simulation_equity" name={tr("Simulation")} dot={false} strokeWidth={2.3} stroke="var(--positive)" isAnimationActive={false} />
-              <Line type="monotone" dataKey="reference_equity" name={tr("Reference")} dot={false} strokeWidth={2} stroke="var(--accent)" isAnimationActive={false} />
+              <Line type="monotone" dataKey="reference_equity" name={referenceLabel} dot={false} strokeWidth={2} stroke="var(--accent)" isAnimationActive={false} />
             </> : performanceMode === 'indexed' ? <>
               <ReferenceLine y={100} stroke="rgba(145, 169, 198, .35)" strokeDasharray="3 4" />
               <Line type="monotone" dataKey="simulation_index" name={tr("Simulation")} dot={false} strokeWidth={2.3} stroke="var(--positive)" isAnimationActive={false} />
-              <Line type="monotone" dataKey="reference_index" name={tr("Reference")} dot={false} strokeWidth={2} stroke="var(--accent)" isAnimationActive={false} />
+              <Line type="monotone" dataKey="reference_index" name={referenceLabel} dot={false} strokeWidth={2} stroke="var(--accent)" isAnimationActive={false} />
             </> : <>
               <ReferenceLine y={0} stroke="rgba(145, 169, 198, .45)" strokeDasharray="3 4" />
               <Line type="monotone" dataKey="excess_change" name="S − R" dot={false} strokeWidth={2.3} stroke="var(--positive)" isAnimationActive={false} />
@@ -240,7 +241,7 @@ export function BacktestPerformanceExplorer({ data, jobId }) {
           label={tr("Monthly heatmap view")}
           items={[
             { value: 'simulation', label: 'Simulation' },
-            { value: 'reference', label: 'Reference' },
+            { value: 'reference', label: referenceLabel },
             { value: 'excess', label: 'S − R' },
           ]}
         />
@@ -248,7 +249,7 @@ export function BacktestPerformanceExplorer({ data, jobId }) {
         {cardDragHandle('heatmap', 'Monthly return heatmap')}
       </div>}
     >
-      <MonthlyReturnHeatmap rows={visibleMonthlyRows} mode={monthlyMode} />
+      <MonthlyReturnHeatmap rows={visibleMonthlyRows} mode={monthlyMode} referenceLabel={referenceLabel} />
     </ChartCell>,
   }
 
