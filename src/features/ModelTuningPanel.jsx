@@ -88,6 +88,9 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
   const [sharpeTolerance, setSharpeTolerance] = useState('')
   const [drawdownTolerancePct, setDrawdownTolerancePct] = useState('')
   const [minimumWorstFoldPct, setMinimumWorstFoldPct] = useState('')
+  const [adaptiveStoppingEnabled, setAdaptiveStoppingEnabled] = useState(true)
+  const [noImprovementTrialLimit, setNoImprovementTrialLimit] = useState(100)
+  const [minimumMeaningfulImprovementPct, setMinimumMeaningfulImprovementPct] = useState('0.25')
   const [busy, setBusy] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [error, setError] = useState('')
@@ -152,6 +155,9 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
       setSharpeTolerance(String(probability.default_sharpe_tolerance ?? ''))
       setDrawdownTolerancePct(String(numberOr(probability.default_drawdown_tolerance) * 100))
       setMinimumWorstFoldPct(String(numberOr(probability.default_min_worst_fold_return) * 100))
+      setAdaptiveStoppingEnabled(probability.default_adaptive_stopping_enabled !== false)
+      setNoImprovementTrialLimit(Number(probability.default_no_improvement_trial_limit || 100))
+      setMinimumMeaningfulImprovementPct(String(numberOr(probability.default_minimum_meaningful_improvement ?? 0.0025) * 100))
       setError('')
     } catch (requestError) {
       handleError(requestError)
@@ -300,6 +306,9 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
           sharpe_tolerance: numberOr(sharpeTolerance),
           drawdown_tolerance: numberOr(drawdownTolerancePct) / 100,
           min_worst_fold_return: numberOr(minimumWorstFoldPct) / 100,
+          adaptive_stopping_enabled: adaptiveStoppingEnabled,
+          no_improvement_trial_limit: Number(noImprovementTrialLimit),
+          minimum_meaningful_improvement: numberOr(minimumMeaningfulImprovementPct) / 100,
         }
       }
       const created = await apiFetch(`${API}/admin/model-tuning`, { method: 'POST', body })
@@ -316,6 +325,68 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
     } finally {
       setBusy(false)
     }
+  }
+
+
+  async function continueResearch() {
+    if (!run?.id || run.status !== 'completed' || run.method !== PROBABILITY_METHOD || busy) return
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const body = {
+        method: PROBABILITY_METHOD,
+        candidate_count: Number(candidateCount),
+        seed: Number(seed),
+        source_tuning_run_id: run.id,
+        tuning_target: run.tuning_scope,
+        probability: {
+          min_capital_improvement: numberOr(minimumCapitalImprovementPct) / 100,
+          sharpe_tolerance: numberOr(sharpeTolerance),
+          drawdown_tolerance: numberOr(drawdownTolerancePct) / 100,
+          min_worst_fold_return: numberOr(minimumWorstFoldPct) / 100,
+          adaptive_stopping_enabled: adaptiveStoppingEnabled,
+          no_improvement_trial_limit: Number(noImprovementTrialLimit),
+          minimum_meaningful_improvement: numberOr(minimumMeaningfulImprovementPct) / 100,
+        },
+      }
+      const created = await apiFetch(`${API}/admin/model-tuning`, { method: 'POST', body })
+      setRun(created)
+      setNotice(tr('Research continued from the completed CARO campaign. Prior observations were imported and the new budget adds only new trials.'))
+    } catch (requestError) {
+      handleError(requestError)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function validateChampion(candidate) {
+    if (!run?.id || !candidate || busy) return
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const validation = await apiFetch(`${API}/admin/model-tuning/${encodeURIComponent(run.id)}/candidates/${candidate.candidate_id}/validate-champion`, {
+        method: 'POST',
+      })
+      const updated = await apiFetch(`${API}/admin/model-tuning/${encodeURIComponent(run.id)}`)
+      setRun(updated)
+      setNotice(tr('CARO Champion validated. Its immutable TEMPORAL snapshot and Dashboard analytics are now available. Trader Winner promotion remains protected until the Temporal live execution engine is installed.'))
+      if (validation?.id) {
+        window.dispatchEvent(new CustomEvent('mct:open-dashboard-processing', { detail: { processingId: validation.id } }))
+      }
+    } catch (requestError) {
+      handleError(requestError)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function viewChampionAnalytics() {
+    if (!run?.validation_processing_id) return
+    window.dispatchEvent(new CustomEvent('mct:open-dashboard-processing', {
+      detail: { processingId: run.validation_processing_id },
+    }))
   }
 
   async function stop() {
@@ -567,7 +638,8 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
       <div className="model-tuning-controls">
         <label>
           <span>{tr(probabilityMode ? 'Research budget (trials)' : 'Exploration candidates')}</span>
-          <input type="number" min={catalog.candidate_count_min} max={catalog.candidate_count_max} step="1" value={candidateCount} disabled={!canStartTuning || !canTune || active || busy} onChange={(event) => setCandidateCount(event.target.value)} />
+          <input type="number" min={catalog.candidate_count_min} max={catalog.research_budget_technical_segment_max || catalog.candidate_count_max} step="1" value={candidateCount} disabled={!canStartTuning || !canTune || active || busy} onChange={(event) => setCandidateCount(event.target.value)} />
+          {probabilityMode ? <small>{tr('No fixed research ceiling. Continue Research adds another compatible budget segment without discarding prior observations.')}</small> : null}
         </label>
         <label>
           <span>{tr('Sampling seed')}</span>
@@ -592,6 +664,9 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
               <label><span>{tr('Sharpe tolerance')}</span><input type="number" min="0" step="0.01" value={sharpeTolerance} disabled={!canStartTuning || active || busy} onChange={(event) => setSharpeTolerance(event.target.value)} /></label>
               <label><span>{tr('Drawdown tolerance (pp)')}</span><input type="number" min="0" step="0.1" value={drawdownTolerancePct} disabled={!canStartTuning || active || busy} onChange={(event) => setDrawdownTolerancePct(event.target.value)} /></label>
               <label><span>{tr('Minimum worst fold (%)')}</span><input type="number" step="0.1" value={minimumWorstFoldPct} disabled={!canStartTuning || active || busy} onChange={(event) => setMinimumWorstFoldPct(event.target.value)} /></label>
+              <label className="model-tuning-checkbox-control"><span>{tr('Adaptive early stopping')}</span><input type="checkbox" checked={adaptiveStoppingEnabled} disabled={!canStartTuning || active || busy} onChange={(event) => setAdaptiveStoppingEnabled(event.target.checked)} /></label>
+              <label><span>{tr('No-improvement trials')}</span><input type="number" min="10" step="10" value={noImprovementTrialLimit} disabled={!canStartTuning || active || busy || !adaptiveStoppingEnabled} onChange={(event) => setNoImprovementTrialLimit(event.target.value)} /></label>
+              <label><span>{tr('Meaningful improvement (%)')}</span><input type="number" min="0" step="0.05" value={minimumMeaningfulImprovementPct} disabled={!canStartTuning || active || busy || !adaptiveStoppingEnabled} onChange={(event) => setMinimumMeaningfulImprovementPct(event.target.value)} /></label>
             </div>
           </div>
         </details>
@@ -619,6 +694,8 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
             <div className="model-tuning-run-actions">
               {canViewTuningLogs ? <button type="button" className="secondary-action compact" onClick={openCampaignLog} disabled={logLoading}>{tr('Campaign log')}</button> : null}
               {canExportTuning && !active ? <button type="button" className="secondary-action compact" onClick={exportCampaign} disabled={exporting}>{tr(exporting ? 'Exporting…' : 'Export Campaign')}</button> : null}
+              {canStartTuning && temporalStrategy && run.status === 'completed' && run.method === PROBABILITY_METHOD ? <button type="button" className="secondary-action compact" onClick={continueResearch} disabled={busy}>{tr('Continue Research')}</button> : null}
+              {run.validation_processing_id ? <button type="button" className="secondary-action compact" onClick={viewChampionAnalytics}>{tr('View Analytics')}</button> : null}
               <strong>{Number(run.progress || 0).toFixed(1)}%</strong>
             </div>
           </div>
@@ -633,6 +710,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
           {run.probability_anchor ? <small>{tr('Champion anchor')} · {run.probability_anchor.candidate_id !== undefined ? `#${run.probability_anchor.candidate_id} · ` : ''}{money(run.probability_anchor.metrics?.ending_capital)} · {run.imported_observation_count || 0} {tr('imported observations')}</small> : null}
           {run.method === PROBABILITY_METHOD && run.probability_state ? <small>{tr('Unified state')} · {tr('Champion')} #{run.probability_state.last_champion_candidate_id ?? run.probability_anchor?.candidate_id ?? 0} · {tr('Exploration trials')} {run.probability_state.exploration_trials_completed || 0} · {tr('Adaptive trials')} {run.probability_state.adaptive_trials_completed || 0} · {tr('Trust region')} {(Number(run.probability_state.trust_region_radius || 0) * 100).toFixed(1)}% · {tr('No-improvement streak')} {run.probability_state.no_improvement_streak || 0}</small> : null}
           {run.market_data_cutoff_date ? <small>{tr('Frozen market-data cutoff')} · {run.market_data_cutoff_date}</small> : null}
+          {run.adaptive_early_stopped ? <small>{tr(run.adaptive_early_stop_reason || 'Adaptive early stopping completed the campaign after convergence.')}</small> : null}
           {run.status === 'stop_requested' ? <small>{tr('Cancelling the active tuning candidate now. Partial research artifacts will be discarded.')}</small> : null}
           {run.active_candidate_ids?.length ? <small>{tr(run.status === 'stop_requested' ? 'Cancelling candidate' : 'Active candidates')} · {run.active_candidate_ids.map((id) => `#${id}`).join(', ')}</small> : null}
         </div>
@@ -650,6 +728,8 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
               const proposal = candidate.proposal || {}
               const adoptable = !active && candidate.status === 'completed' && !candidate.is_control
               const previouslyPromoted = (run?.adoption_history || []).some((item) => Number(item.candidate_id) === Number(candidate.candidate_id))
+              const isFinalChampion = !active && candidate.status === 'completed' && !candidate.is_control && Number(run?.best_candidate_id) === Number(candidate.candidate_id)
+              const isValidatedChampion = Number(run?.validated_candidate_id) === Number(candidate.candidate_id) && Boolean(run?.validation_processing_id)
               const typeLabel = candidate.is_control
                 ? tr('Control')
                 : candidate.kind === 'champion_probability'
@@ -739,8 +819,12 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
                     {hasParameters ? <button type="button" onClick={() => setParameterCandidateId(candidate.candidate_id)}>{tr('Parameters')}</button> : null}
                     <button type="button" onClick={() => setSelectedCandidateId(candidate.candidate_id)}>{tr('View')}</button>
                     {canViewTuningLogs && !candidate.baseline_preview ? <button type="button" onClick={() => openCandidateLog(candidate)} disabled={logLoading}>{tr('Log')}</button> : null}
-                    {previouslyPromoted ? <span className="model-tuning-adopted">{tr('Promoted')}</span> : null}
-                    {canPromoteTuning && adoptable ? <button type="button" onClick={() => adopt(candidate)} disabled={busy}>{tr(previouslyPromoted ? 'Promote again' : 'Promote to Backtest')}</button> : null}
+                    {previouslyPromoted && !temporalTarget ? <span className="model-tuning-adopted">{tr('Promoted')}</span> : null}
+                    {temporalModelMode && canPromoteTuning && isFinalChampion ? <button type="button" onClick={() => adopt(candidate)} disabled={busy}>{tr('Continue to Policy Tuning')}</button> : null}
+                    {temporalPolicyMode && canPromoteTuning && isFinalChampion && !isValidatedChampion ? <button type="button" onClick={() => validateChampion(candidate)} disabled={busy}>{tr('Validate Champion')}</button> : null}
+                    {temporalPolicyMode && isValidatedChampion ? <span className="model-tuning-adopted">{tr('Validated')}</span> : null}
+                    {temporalPolicyMode && isValidatedChampion ? <button type="button" onClick={viewChampionAnalytics}>{tr('View Analytics')}</button> : null}
+                    {!temporalTarget && canPromoteTuning && adoptable ? <button type="button" onClick={() => adopt(candidate)} disabled={busy}>{tr(previouslyPromoted ? 'Promote again' : 'Promote to Backtest')}</button> : null}
                   </footer>
                 </article>
               )

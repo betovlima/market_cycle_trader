@@ -10,7 +10,7 @@ import { DashboardMetric, MarketUpdateMetric } from './components/DashboardPrimi
 import { BacktestHistorySection } from './components/BacktestHistorySection'
 import { DashboardBacktestAnalyticsSection } from './components/DashboardBacktestAnalyticsSection'
 
-export function DashboardPage({ workspace, capabilities = {}, onOpenBacktest }) {
+export function DashboardPage({ workspace, capabilities = {}, onOpenBacktest, initialProcessingId = "" }) {
   const { dashboard, loadingDashboard, running, restoringExecution, startingBacktest, startDisabled, runBacktest } = workspace
   const best = dashboard?.best_performance
   const last = dashboard?.last_backtest
@@ -102,7 +102,7 @@ export function DashboardPage({ workspace, capabilities = {}, onOpenBacktest }) 
           <MarketUpdateMetric />
         </div>
 
-        <DashboardBacktestAnalyticsSection fallbackJobs={recentBacktests} />
+        <DashboardBacktestAnalyticsSection fallbackJobs={recentBacktests} initialProcessingId={initialProcessingId} />
 
         <BacktestHistorySection
           filteredRows={filteredRows}

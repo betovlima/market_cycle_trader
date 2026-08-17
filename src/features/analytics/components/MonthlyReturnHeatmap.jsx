@@ -15,8 +15,8 @@ function monthNames() {
 const TOOLTIP_WIDTH = 248
 const TOOLTIP_PADDING = 12
 
-function selectedModeLabel(mode) {
-  if (mode === 'reference') return tr('Reference')
+function selectedModeLabel(mode, referenceLabel = null) {
+  if (mode === 'reference') return referenceLabel || tr('Reference')
   if (mode === 'excess') return 'S − R'
   return tr('Simulation')
 }
@@ -143,7 +143,7 @@ function ReturnComparisonBar({ label, value, maxAbs, tone }) {
   </div>
 }
 
-function MonthlyReturnDialog({ detail, rows, mode, onClose }) {
+function MonthlyReturnDialog({ detail, rows, mode, referenceLabel = null, onClose }) {
   if (!detail) return null
   const context = monthlyContext(rows, detail, mode)
   const maxAbs = Math.max(Math.abs(detail.simulation), Math.abs(detail.reference), Math.abs(detail.excess), .000001)
@@ -168,7 +168,7 @@ function MonthlyReturnDialog({ detail, rows, mode, onClose }) {
 
       <div className="monthly-return-dialog-metrics">
         <div><span>{tr('Simulation')}</span><strong className={returnTone(detail.simulation)}>{percent(detail.simulation)}</strong></div>
-        <div><span>{tr('Reference')}</span><strong className={returnTone(detail.reference)}>{percent(detail.reference)}</strong></div>
+        <div><span>{referenceLabel || tr('Reference')}</span><strong className={returnTone(detail.reference)}>{percent(detail.reference)}</strong></div>
         <div><span>S − R</span><strong className={relativeTone}>{percent(detail.excess)}</strong></div>
         <div><span>{detail.selectedModeLabel}</span><strong className={selectedTone}>{percent(detail.selectedValue)}</strong></div>
       </div>
@@ -177,7 +177,7 @@ function MonthlyReturnDialog({ detail, rows, mode, onClose }) {
         <article className="monthly-return-dialog-card">
           <div className="monthly-return-dialog-section-title"><span>{tr('Simulation versus reference')}</span><strong className={relativeTone}>{tr(detail.relativeResult)}</strong></div>
           <ReturnComparisonBar label={tr('Simulation')} value={detail.simulation} maxAbs={maxAbs} tone={returnTone(detail.simulation)} />
-          <ReturnComparisonBar label={tr('Reference')} value={detail.reference} maxAbs={maxAbs} tone={returnTone(detail.reference)} />
+          <ReturnComparisonBar label={referenceLabel || tr('Reference')} value={detail.reference} maxAbs={maxAbs} tone={returnTone(detail.reference)} />
           <ReturnComparisonBar label="S − R" value={detail.excess} maxAbs={maxAbs} tone={relativeTone} />
         </article>
 
@@ -200,7 +200,7 @@ function MonthlyReturnDialog({ detail, rows, mode, onClose }) {
           <strong className={returnTone(context.ytdSimulation)}>{context.ytdSimulation == null ? '—' : percent(context.ytdSimulation)}</strong>
         </article>
         <article>
-          <span>{tr('Year-to-date Reference')}</span>
+          <span>{tr('Year-to-date {reference}', { reference: referenceLabel || tr('Reference') })}</span>
           <strong className={returnTone(context.ytdReference)}>{context.ytdReference == null ? '—' : percent(context.ytdReference)}</strong>
         </article>
         <article>
@@ -217,7 +217,7 @@ function MonthlyReturnDialog({ detail, rows, mode, onClose }) {
   </div>, document.body)
 }
 
-export function MonthlyReturnHeatmap({ rows, mode }) {
+export function MonthlyReturnHeatmap({ rows, mode, referenceLabel = null }) {
   const [tooltip, setTooltip] = useState(null)
   const [selectedMonth, setSelectedMonth] = useState(null)
   const mapped = useMemo(() => mapMonthlyReturns(rows, mode), [mode, rows])
@@ -246,7 +246,7 @@ export function MonthlyReturnHeatmap({ rows, mode }) {
 
   if (!years.length) return <ChartEmpty>{tr("No monthly return observations in the selected range.")}</ChartEmpty>
 
-  const modeLabel = selectedModeLabel(mode)
+  const modeLabel = selectedModeLabel(mode, referenceLabel)
   const months = monthNames()
 
   return <>
@@ -292,6 +292,6 @@ export function MonthlyReturnHeatmap({ rows, mode }) {
     </div>
 
     <MonthlyReturnTooltip tooltip={tooltip} />
-    <MonthlyReturnDialog detail={selectedMonth} rows={rows} mode={mode} onClose={() => setSelectedMonth(null)} />
+    <MonthlyReturnDialog detail={selectedMonth} rows={rows} mode={mode} referenceLabel={referenceLabel} onClose={() => setSelectedMonth(null)} />
   </>
 }

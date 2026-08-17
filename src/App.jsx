@@ -35,6 +35,7 @@ function isPermissionDeniedMessage(message) {
 function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefresh }) {
   const workspace = useBacktestWorkspace()
   const [activeTab, setActiveTab] = useState('dashboard')
+  const [dashboardProcessingId, setDashboardProcessingId] = useState('')
   const capabilities = session?.capabilities || {}
   const allowedTabs = useMemo(
     () => Object.entries(TAB_CAPABILITIES).filter(([, capability]) => hasCapability(capabilities, capability)).map(([tab]) => tab),
@@ -44,6 +45,16 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
   useEffect(() => {
     if (workspace.running && hasCapability(capabilities, 'backtest.view')) setActiveTab('backtest')
   }, [capabilities, workspace.running])
+
+  useEffect(() => {
+    const openDashboardProcessing = (event) => {
+      const processingId = String(event?.detail?.processingId || '')
+      if (processingId) setDashboardProcessingId(processingId)
+      if (hasCapability(capabilities, 'dashboard.view')) setActiveTab('dashboard')
+    }
+    window.addEventListener('mct:open-dashboard-processing', openDashboardProcessing)
+    return () => window.removeEventListener('mct:open-dashboard-processing', openDashboardProcessing)
+  }, [capabilities])
 
   useEffect(() => {
     let active = true
@@ -75,7 +86,7 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
     {idleRemaining !== null && idleRemaining <= 300 ? <div className="session-expiration-warning">{tr("Your session will expire soon.")}</div> : null}
     {workspace.error && !isPermissionDeniedMessage(workspace.error) ? <div className="global-error"><strong>{tr("Unable to load data")}</strong><span>{tr(workspace.error)}</span><button type="button" onClick={() => workspace.setError('')}>×</button></div> : null}
     <main className="workspace-main">
-      {activeTab === 'dashboard' && hasCapability(capabilities, 'dashboard.view') ? <DashboardPage workspace={workspace} capabilities={capabilities} onOpenBacktest={() => setActiveTab('backtest')} /> : null}
+      {activeTab === 'dashboard' && hasCapability(capabilities, 'dashboard.view') ? <DashboardPage workspace={workspace} capabilities={capabilities} onOpenBacktest={() => setActiveTab('backtest')} initialProcessingId={dashboardProcessingId} /> : null}
       {activeTab === 'backtest' && hasCapability(capabilities, 'backtest.view') ? <BacktestPage workspace={workspace} capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'asset-discovery' && hasCapability(capabilities, 'asset_discovery.view') ? <AssetDiscoveryPage onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'portfolio' && hasCapability(capabilities, 'portfolio.view') ? <PaperPortfolioDashboard /> : null}
