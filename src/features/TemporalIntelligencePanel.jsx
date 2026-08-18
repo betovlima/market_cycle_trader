@@ -5,6 +5,7 @@ import { hasCapability } from '../auth/capabilities'
 import { API } from '../config/env'
 import { tr } from '../i18n/runtime'
 import { PlayIcon } from '../shared/components/Icons'
+import { TemporalRotationQualityPanel } from './TemporalRotationQualityPanel'
 import { money, number, percent, shortDateTime } from '../shared/formatters'
 
 function statusLabel(value) {
@@ -57,37 +58,6 @@ function LegacyHorizonTable({ items = [], selectedHorizon, onSelect }) {
   )
 }
 
-function DecisionHorizonTable({ items = [], selectedHorizon, onSelect, showWinnerComparison = false }) {
-  return (
-    <div className="temporal-table-shell">
-      <table className="temporal-table temporal-decision-horizon-table">
-        <thead>
-          <tr>
-            <th>{tr('Horizon')}</th><th>{tr('OOS Samples')}</th><th>{tr('Profit Barrier')}</th><th>{tr('Loss Barrier')}</th>
-            <th>{tr('Profit-first AUC')}</th><th>{tr('Profit-first Brier Skill')}</th><th>{tr('Bottom AUC')}</th><th>{tr('Top AUC')}</th>
-            <th>{tr('Trend Persistence AUC')}</th><th>{tr('Drawdown MAE Skill')}</th><th>{tr('Shadow Capital')}</th><th>{tr('CAGR')}</th>
-            <th>{tr('Sharpe')}</th><th>{tr('Max Drawdown')}</th><th>{tr('Exposure')}</th><th>{tr('Switches')}</th>{showWinnerComparison ? <th>{tr('Vs Winner')}</th> : null}
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => {
-            const capital = item.shadow_capital || {}
-            return (
-              <tr key={item.horizon} className={Number(selectedHorizon) === Number(item.horizon) ? 'selected' : ''} onClick={() => onSelect(Number(item.horizon))}>
-                <td><strong>{item.horizon}d</strong></td><td>{number(item.samples, 0)}</td><td>{percent(item.profit_barrier, 2)}</td><td>{percent(item.loss_barrier, 2)}</td>
-                <td>{number(item.profit_before_loss_auc, 3)}</td><td>{percent(item.profit_before_loss_brier_skill, 2)}</td><td>{number(item.bottom_auc, 3)}</td>
-                <td>{number(item.top_auc, 3)}</td><td>{number(item.trend_persistence_auc, 3)}</td><td>{percent(item.drawdown_mae_skill, 2)}</td>
-                <td>{money(capital.ending_capital)}</td><td>{percent(capital.cagr, 2)}</td><td>{number(capital.sharpe, 3)}</td>
-                <td>{percent(capital.max_drawdown, 2)}</td><td>{percent(capital.exposure, 2)}</td><td>{number(capital.switch_count, 0)}</td>{showWinnerComparison ? <td className={Number(item.capital_vs_winner || 0) >= 0 ? 'positive' : 'negative'}>{percent(item.capital_vs_winner, 2)}</td> : null}
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
 function ConfidenceTable({ items = [] }) {
   if (!items.length) return null
   return (
@@ -95,30 +65,6 @@ function ConfidenceTable({ items = [] }) {
       <table className="temporal-table">
         <thead><tr><th>{tr('Probability Band')}</th><th>{tr('Samples')}</th><th>{tr('Mean Probability')}</th><th>{tr('Realized Hit Rate')}</th><th>{tr('Realized Alpha')}</th><th>{tr('Predicted Alpha')}</th><th>{tr('Realized Drawdown')}</th></tr></thead>
         <tbody>{items.map((item) => <tr key={`${item.from_probability}-${item.to_probability}`}><td>{percent(item.from_probability, 0)}–{percent(item.to_probability, 0)}</td><td>{number(item.samples, 0)}</td><td>{percent(item.mean_probability, 2)}</td><td>{percent(item.realized_positive_rate, 2)}</td><td>{percent(item.mean_realized_alpha, 2)}</td><td>{percent(item.mean_predicted_alpha, 2)}</td><td>{percent(item.mean_realized_drawdown, 2)}</td></tr>)}</tbody>
-      </table>
-    </div>
-  )
-}
-
-function RiskTable({ items = [] }) {
-  if (!items.length) return null
-  return (
-    <div className="temporal-table-shell compact">
-      <table className="temporal-table">
-        <thead><tr><th>{tr('Risk Bucket')}</th><th>{tr('Samples')}</th><th>{tr('Predicted Drawdown')}</th><th>{tr('Realized Drawdown')}</th><th>{tr('P90 Realized Drawdown')}</th></tr></thead>
-        <tbody>{items.map((item) => <tr key={item.bucket}><td><strong>{tr(item.bucket)}</strong></td><td>{number(item.samples, 0)}</td><td>{percent(item.mean_predicted_drawdown, 2)}</td><td>{percent(item.mean_realized_drawdown, 2)}</td><td>{percent(item.p90_realized_drawdown, 2)}</td></tr>)}</tbody>
-      </table>
-    </div>
-  )
-}
-
-function SignalMetricsTable({ items = [] }) {
-  if (!items.length) return null
-  return (
-    <div className="temporal-table-shell compact">
-      <table className="temporal-table temporal-signal-table">
-        <thead><tr><th>{tr('Signal')}</th><th>{tr('Positive Rate')}</th><th>{tr('Brier')}</th><th>{tr('Brier Skill')}</th><th>{tr('Calibration Error')}</th><th>{tr('AUC')}</th><th>{tr('High Confidence Hit Rate')}</th><th>{tr('High Confidence Lift')}</th></tr></thead>
-        <tbody>{items.map((item) => <tr key={item.signal}><td><strong>{tr(item.signal)}</strong></td><td>{percent(item.positive_rate, 2)}</td><td>{number(item.brier, 4)}</td><td>{percent(item.brier_skill, 2)}</td><td>{percent(item.calibration_error, 2)}</td><td>{number(item.auc, 3)}</td><td>{percent(item.high_confidence_positive_rate, 2)}</td><td>{percent(item.high_confidence_lift, 2)}</td></tr>)}</tbody>
       </table>
     </div>
   )
@@ -136,83 +82,12 @@ function LegacyForecastTable({ items = [] }) {
   )
 }
 
-function DecisionForecastTable({ items = [], capitalPolicyV2 = false, capitalPolicyV3 = false }) {
-  if (!items.length) return <div className="temporal-empty">{tr('No latest forecast is available for this horizon.')}</div>
-  return (
-    <div className="temporal-table-shell">
-      <table className="temporal-table temporal-decision-forecast-table">
-        <thead><tr><th>{tr('Asset')}</th><th>{tr('Shadow State')}</th>{capitalPolicyV3 ? <><th>{tr('Asset Rank')}</th><th>{tr('Opportunity Gate')}</th><th>{tr('Profit Percentile')}</th><th>{tr('P(Profit) vs Median')}</th><th>{tr('Top-1 Gap')}</th><th>{tr('Risk Safety')}</th></> : <th>{tr(capitalPolicyV2 ? 'Entry Score' : 'Decision Score')}</th>}{capitalPolicyV2 && !capitalPolicyV3 ? <><th>{tr('Entry Threshold')}</th><th>{tr('Adjusted P(Profit)')}</th><th>{tr('Expected Barrier Edge')}</th></> : null}<th>{tr('Trend')}</th><th>{tr('P(Profit before Loss)')}</th><th>{tr('P(Bottom)')}</th><th>{tr('P(Top)')}</th><th>{tr('P(Trend Persistence)')}</th><th>{tr('P(Reversal)')}</th><th>{tr('Expected Max Drawdown')}</th>{capitalPolicyV2 ? <><th>{tr('Profit Quality')}</th><th>{tr('Risk Quality')}</th><th>{tr('Bottom Quality')}</th><th>{tr('Top Quality')}</th><th>{tr('Trend Quality')}</th></> : null}</tr></thead>
-        <tbody>{items.map((item) => <tr key={`${item.horizon}-${item.symbol}`} className={item.shadow_target ? 'temporal-shadow-target' : ''}><td><strong>{item.symbol}</strong></td><td><span className={`temporal-decision-chip ${item.shadow_target ? 'positive' : ''}`}>{tr(item.shadow_state || 'CASH')}</span></td>{capitalPolicyV3 ? <><td>{number(item.asset_rank_score, 4)}</td><td>{number(item.opportunity_gate_score, 4)} / {number(item.entry_threshold, 4)}</td><td>{percent(item.profit_percentile, 1)}</td><td>{percent(item.profit_spread_vs_median, 2)}</td><td>{percent(item.profit_top_gap, 2)}</td><td>{percent(item.risk_safety_percentile, 1)}</td></> : <td>{number(capitalPolicyV2 ? item.entry_score : item.decision_score, 4)}</td>}{capitalPolicyV2 && !capitalPolicyV3 ? <><td>{number(item.entry_threshold, 4)}</td><td>{percent(item.adjusted_profit_probability, 2)}</td><td>{percent(item.expected_barrier_return, 2)}</td></> : null}<td>{tr(item.trend_state || 'flat')}</td><td>{percent(item.probability_profit_before_loss, 2)}</td><td>{percent(item.probability_bottom, 2)}</td><td>{percent(item.probability_top, 2)}</td><td>{percent(item.probability_trend_persistence, 2)}</td><td>{percent(item.probability_trend_reversal, 2)}</td><td>{percent(item.expected_max_drawdown, 2)}</td>{capitalPolicyV2 ? <><td>{percent(item.profit_quality_weight, 1)}</td><td>{percent(item.drawdown_quality_weight, 1)}</td><td>{percent(item.bottom_quality_weight, 1)}</td><td>{percent(item.top_quality_weight, 1)}</td><td>{percent(item.trend_quality_weight, 1)}</td></> : null}</tr>)}</tbody>
-      </table>
-    </div>
-  )
-}
-
-
-function MultiHorizonFoldTable({ items = [] }) {
-  if (!items.length) return null
-  return (
-    <div className="temporal-table-shell compact">
-      <table className="temporal-table">
-        <thead>
-          <tr><th>{tr('Fold')}</th><th>{tr('Test Window')}</th><th>{tr('Capital')}</th><th>{tr('Return')}</th><th>{tr('Sharpe')}</th><th>{tr('Max Drawdown')}</th><th>{tr('Exposure')}</th><th>{tr('Return Gap vs Winner')}</th><th>{tr('Return Gap vs Benchmark')}</th></tr>
-        </thead>
-        <tbody>
-          {items.map((item) => {
-            const capital = item.shadow_capital || {}
-            return <tr key={item.fold_id}><td><strong>#{item.fold_id}</strong></td><td>{String(item.test_start || '').slice(0, 10)} → {String(item.test_end || '').slice(0, 10)}</td><td>{money(capital.ending_capital)}</td><td>{percent(capital.total_return, 2)}</td><td>{number(capital.sharpe, 3)}</td><td>{percent(capital.max_drawdown, 2)}</td><td>{percent(capital.exposure, 2)}</td><td className={Number(item.return_gap_vs_winner || 0) >= 0 ? 'positive' : 'negative'}>{percent(item.return_gap_vs_winner, 2)}</td><td className={Number(item.return_gap_vs_benchmark || 0) >= 0 ? 'positive' : 'negative'}>{percent(item.return_gap_vs_benchmark, 2)}</td></tr>
-          })}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function MultiHorizonForecastTable({ items = [], horizons = [], trendCapturePolicy = false }) {
-  if (!items.length) return <div className="temporal-empty">{tr('No multi-horizon forecast is available.')}</div>
-  return (
-    <div className="temporal-table-shell">
-      <table className="temporal-table temporal-decision-forecast-table">
-        <thead>
-          <tr>
-            <th>{tr('Asset')}</th><th>{tr('Shadow State')}</th><th>{tr('Asset Rank')}</th><th>{tr('Opportunity Gate')}</th>
-            {trendCapturePolicy ? <><th>{tr('Risk-Adjusted Entry')}</th><th>{tr('Incumbent Persistence')}</th></> : null}
-            <th>{tr('Short Profit Consensus')}</th><th>{tr('Short Risk Safety')}</th><th>{tr('Short Agreement')}</th>
-            <th>{tr('Long Confirmation')}</th><th>{tr('Long Risk Safety')}</th><th>{tr('Horizon Agreement')}</th><th>{tr('Expected Max Drawdown')}</th>
-            {horizons.map((horizon) => <th key={`profit-${horizon}`}>{horizon}d {tr('Profit Rank')}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => (
-            <tr key={item.symbol} className={item.shadow_target ? 'temporal-shadow-target' : ''}>
-              <td><strong>{item.symbol}</strong></td>
-              <td><span className={`temporal-decision-chip ${item.shadow_target ? 'positive' : ''}`}>{tr(item.shadow_state || 'CASH')}</span></td>
-              <td>{number(item.asset_rank_score, 4)}</td>
-              <td>{number(item.opportunity_gate_score, 4)}</td>
-              {trendCapturePolicy ? <><td>{number(item.risk_adjusted_entry_score, 4)} / {number(item.entry_threshold, 4)}</td><td>{number(item.incumbent_persistence_score, 4)}</td></> : null}
-              <td>{percent(item.short_profit_consensus, 1)}</td>
-              <td>{percent(item.short_risk_safety, 1)}</td>
-              <td>{percent(item.short_horizon_agreement, 1)}</td>
-              <td>{percent(item.long_profit_confirmation, 1)}</td>
-              <td>{percent(item.long_risk_safety, 1)}</td>
-              <td>{percent(item.horizon_agreement, 1)}</td>
-              <td>{percent(item.expected_max_drawdown, 2)}</td>
-              {horizons.map((horizon) => <td key={`${item.symbol}-${horizon}`}>{percent(item[`profit_percentile_${horizon}d`], 1)}</td>)}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired }) {
+export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired, tuningStrategy = null }) {
   const canStart = hasCapability(capabilities, 'temporal_intelligence.start')
   const canStop = hasCapability(capabilities, 'temporal_intelligence.stop')
   const canExport = hasCapability(capabilities, 'temporal_intelligence.export')
   const canMaterializeStrategy = hasCapability(capabilities, 'temporal_intelligence.materialize_strategy')
   const [run, setRun] = useState(null)
-  const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -234,12 +109,8 @@ export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired 
   const load = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoading(true)
     try {
-      const [latest, historyResponse] = await Promise.all([
-        apiFetch(`${API}/temporal-intelligence/latest`),
-        apiFetch(`${API}/temporal-intelligence/history?limit=20`),
-      ])
+      const latest = await apiFetch(`${API}/temporal-intelligence/latest`)
       setRun(latest)
-      setHistory(historyResponse?.items || [])
       setError('')
     } catch (requestError) {
       handleError(requestError)
@@ -287,7 +158,6 @@ export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired 
   const multiHorizonMetrics = result?.multi_horizon_metrics || null
   const multiHorizonCapital = multiHorizonMetrics?.shadow_capital || {}
   const multiHorizonForecasts = result?.multi_horizon_latest_forecasts || []
-  const multiHorizonFoldMetrics = result?.multi_horizon_fold_metrics || []
   const multiHorizonBestForecast = multiHorizonForecasts.find((item) => item.shadow_target) || null
 
   async function start() {
@@ -359,8 +229,10 @@ export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired 
   return (
     <div className="temporal-intelligence-panel">
       <div className="temporal-toolbar">
-        <div className="temporal-run-meta">
-          <span>{tr('Strategy')}</span><strong>{run?.strategy_profile_name || '—'}</strong><i>·</i><span>{tr('Model')}</span><strong>{run?.model_label || 'LightGBM'}</strong>
+        <div className="temporal-run-meta temporal-source-context">
+          <span>{tr('Winner anchor')}</span><strong title={run?.strategy_profile_name || ''}>{run?.strategy_profile_name || '—'}</strong>
+          {tuningStrategy ? <><i>·</i><span>{tr('Selected for tuning')}</span><strong title={tuningStrategy.name || ''}>{tuningStrategy.name || '—'}</strong></> : null}
+          <i>·</i><span>{tr('Model')}</span><strong>{run?.model_label || 'LightGBM'}</strong>
           {run?.analysis_end_date ? <><i>·</i><span>{tr('Data through')}</span><strong>{run.analysis_end_date}</strong></> : null}
         </div>
         <div className="temporal-actions">
@@ -407,27 +279,21 @@ export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired 
               <span>{tr('Hold Horizons')}</span><strong>{(multiHorizonMetrics.hold_horizons || []).map((item) => `${item}d`).join(' · ')}</strong><i>·</i>
               <span>{tr('Risk Horizons')}</span><strong>{(multiHorizonMetrics.risk_horizons || []).map((item) => `${item}d`).join(' · ')}</strong>
             </div>
-            <div className="temporal-section-heading"><h3>{tr('Multi-Horizon Folds')}</h3></div>
-            <MultiHorizonFoldTable items={multiHorizonFoldMetrics} />
-            <div className="temporal-section-heading"><h3>{tr('Latest Multi-Horizon Decision')}</h3></div>
-            <MultiHorizonForecastTable items={multiHorizonForecasts} horizons={result.horizons || []} trendCapturePolicy={trendCapturePolicy} />
           </section>
         </> : null}
 
-        <section className="temporal-section"><div className="temporal-section-heading"><h3>{tr(decisionExperiment ? 'Decision Metrics by Horizon' : 'Out-of-Sample Metrics by Horizon')}</h3></div>{decisionExperiment ? <DecisionHorizonTable items={horizonMetrics} selectedHorizon={selectedHorizon} onSelect={setSelectedHorizon} showWinnerComparison={capitalPolicyV3} /> : <LegacyHorizonTable items={horizonMetrics} selectedHorizon={selectedHorizon} onSelect={setSelectedHorizon} />}</section>
+        {!decisionExperiment ? <section className="temporal-section"><div className="temporal-section-heading"><h3>{tr('Out-of-Sample Metrics by Horizon')}</h3></div><LegacyHorizonTable items={horizonMetrics} selectedHorizon={selectedHorizon} onSelect={setSelectedHorizon} /></section> : null}
 
         {selectedMetrics && decisionExperiment ? <section className="temporal-summary-grid selected-horizon"><Metric label={tr('Shadow Capital')} value={money(shadowCapital.ending_capital)} tone={Number(shadowCapital.total_return || 0) >= 0 ? 'positive' : 'negative'} /><Metric label={tr('CAGR')} value={percent(shadowCapital.cagr, 2)} tone={Number(shadowCapital.cagr || 0) >= 0 ? 'positive' : 'negative'} /><Metric label={tr('Sharpe')} value={number(shadowCapital.sharpe, 3)} /><Metric label={tr('Max Drawdown')} value={percent(shadowCapital.max_drawdown, 2)} tone={Number(shadowCapital.max_drawdown || 0) < 0 ? 'negative' : ''} /><Metric label={tr('Exposure')} value={percent(shadowCapital.exposure, 2)} />{capitalPolicyV3 ? <Metric label={tr('Vs Winner')} value={percent(selectedMetrics.capital_vs_winner, 2)} tone={Number(selectedMetrics.capital_vs_winner || 0) >= 0 ? 'positive' : 'negative'} /> : null}<Metric label={tr('Latest Shadow Target')} value={bestForecast?.symbol || tr('CASH')} note={bestForecast ? `${tr(capitalPolicyV3 ? 'Opportunity Gate' : capitalPolicyV2 ? 'Entry Score' : 'Decision Score')} ${number(capitalPolicyV3 ? bestForecast.opportunity_gate_score : capitalPolicyV2 ? bestForecast.entry_score : bestForecast.decision_score, 4)}` : ''} /></section> : null}
 
         {selectedMetrics && !decisionExperiment ? <section className="temporal-summary-grid selected-horizon"><Metric label={tr('P(Alpha > 0) Brier')} value={number(selectedMetrics.brier, 4)} /><Metric label={tr('Brier Skill')} value={percent(selectedMetrics.brier_skill, 2)} tone={Number(selectedMetrics.brier_skill || 0) >= 0 ? 'positive' : 'negative'} /><Metric label={tr('Calibration Error')} value={percent(selectedMetrics.calibration_error, 2)} /><Metric label={tr('Alpha MAE Skill')} value={percent(selectedMetrics.alpha_mae_skill, 2)} tone={Number(selectedMetrics.alpha_mae_skill || 0) >= 0 ? 'positive' : 'negative'} /><Metric label={tr('Drawdown MAE Skill')} value={percent(selectedMetrics.drawdown_mae_skill, 2)} tone={Number(selectedMetrics.drawdown_mae_skill || 0) >= 0 ? 'positive' : 'negative'} /><Metric label={tr('High Confidence Lift')} value={percent(selectedMetrics.high_confidence_lift, 2)} tone={Number(selectedMetrics.high_confidence_lift || 0) >= 0 ? 'positive' : 'negative'} /></section> : null}
 
-        {decisionExperiment && selectedMetrics?.signal_metrics?.length ? <section className="temporal-section"><div className="temporal-section-heading"><h3>{tr('Decision Signal Quality')}</h3><span>{selectedHorizon}d</span></div><SignalMetricsTable items={selectedMetrics.signal_metrics} /></section> : null}
         {!decisionExperiment && selectedMetrics?.confidence_bins?.length ? <section className="temporal-section"><div className="temporal-section-heading"><h3>{tr('Probability Calibration')}</h3><span>{selectedHorizon}d</span></div><ConfidenceTable items={selectedMetrics.confidence_bins} /></section> : null}
-        {selectedMetrics?.risk_buckets?.length ? <section className="temporal-section"><div className="temporal-section-heading"><h3>{tr('Drawdown Risk Separation')}</h3><span>{selectedHorizon}d</span></div><RiskTable items={selectedMetrics.risk_buckets} /></section> : null}
 
-        <section className="temporal-section"><div className="temporal-section-heading"><h3>{tr(decisionExperiment ? 'Latest Shadow Decision Signals' : 'Latest Shadow Forecast')}</h3><div className="temporal-horizon-buttons">{horizonMetrics.map((item) => <button type="button" key={item.horizon} className={Number(selectedHorizon) === Number(item.horizon) ? 'active' : ''} onClick={() => setSelectedHorizon(Number(item.horizon))}>{item.horizon}d</button>)}</div></div>{decisionExperiment ? <DecisionForecastTable items={forecasts} capitalPolicyV2={capitalPolicyV2} capitalPolicyV3={capitalPolicyV3} /> : <LegacyForecastTable items={forecasts} />}</section>
+        {!decisionExperiment ? <section className="temporal-section"><div className="temporal-section-heading"><h3>{tr('Latest Shadow Forecast')}</h3><div className="temporal-horizon-buttons">{horizonMetrics.map((item) => <button type="button" key={item.horizon} className={Number(selectedHorizon) === Number(item.horizon) ? 'active' : ''} onClick={() => setSelectedHorizon(Number(item.horizon))}>{item.horizon}d</button>)}</div></div><LegacyForecastTable items={forecasts} /></section> : null}
       </> : null}
 
-      {history.length > 1 ? <section className="temporal-section"><div className="temporal-section-heading"><h3>{tr('Recent Executions')}</h3></div><div className="temporal-table-shell compact"><table className="temporal-table"><thead><tr><th>{tr('Run')}</th><th>{tr('Status')}</th><th>{tr('Strategy')}</th><th>{tr('Created')}</th></tr></thead><tbody>{history.map((item) => <tr key={item.id}><td>{item.id}</td><td>{statusLabel(item.status)}</td><td>{item.strategy_profile_name || '—'}</td><td>{shortDateTime(item.created_at)}</td></tr>)}</tbody></table></div></section> : null}
+      <TemporalRotationQualityPanel capabilities={capabilities} onSessionExpired={onSessionExpired} sourceRun={run} />
     </div>
   )
 }

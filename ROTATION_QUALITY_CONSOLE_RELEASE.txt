@@ -1,0 +1,56 @@
+Market Cycle Trader — Strong Challenger Research + Monthly Rotation Quality Dashboard
+Front v3.32.1 | API v3.30.0
+
+LOCAL RELEASE — no production deployment performed.
+
+ROTATION QUALITY RESEARCH
+- Keeps the validated RQ baseline parameters frozen while enabling a Strong Challenger Override research hypothesis.
+- Search method remains configurable: Unified Adaptive CARO, Grid Search or Manual.
+- Strong Challenger Override is enabled by the backend default for the next research cycle, but remains editable in the UI.
+- Baseline drawdown trigger and rotation score tolerance are supplied by the screen and validated by the backend.
+- In Strong Challenger CARO mode, CARO searches only challenger_quality_floor; the frozen baseline parameters are not retuned.
+- challenger_quality_floor min/max, CARO budget, seed, exploration controls and research gates remain editable.
+- Grid research accepts an editable list of challenger quality floors.
+- Manual research accepts drawdown, tolerance and challenger quality floor.
+- Candidate results expose quality floor and Strong Challenger override count when applicable.
+
+DASHBOARD
+- Adds Rotation Quality monthly performance as a year x month return heatmap.
+- Execution and candidate are selectable.
+- Heatmap view switches between Strategy, Control and Strategy − Control.
+- Clicking a month opens monthly detail with Strategy/Control returns plus the existing asset price/trade, Strategy-vs-asset and allocation-timeline analysis.
+- Rotation Quality analytics are generated and persisted for newly completed Research, Validation and Certification runs.
+- The Dashboard Performance Explorer / Simulation versus reference graph is no longer rendered.
+- The Dashboard Recent Backtests list is no longer rendered.
+- Existing Backtest monthly capital analytics remain available.
+- Rotation Quality Dashboard visibility is capability-driven by temporal_intelligence.view.
+
+BACKEND ANALYTICS
+- Adds compressed Rotation Quality analytics persistence per execution/candidate.
+- Adds list/detail/month-period endpoints for the Dashboard.
+- Candidate and Control fold-reset equity curves are stitched into comparable compounded timelines before monthly analytics are calculated.
+- Monthly detail reuses stored market prices for the assets actually held/rotated by the candidate.
+
+CAUSALITY
+- Strong Challenger Override uses only decision-time information: current simulated drawdown, incumbent entry_rank_score, challenger entry_rank_score and the configured absolute challenger quality floor.
+- Future returns remain evaluation labels only and are not decision features.
+
+VERIFICATION
+- Python compileall: PASS.
+- Rotation Quality targeted tests: 14 passed, 1 skipped.
+- Integrated source/version/Rotation Quality/analytics subset with a temporary pymongo import shim: 42 passed, 1 skipped.
+- Real frozen Temporal B Strong Challenger CARO smoke: PASS with 8 trials (4 space-filling + 4 adaptive probability proposals).
+- Front JavaScript/JSX TypeScript-parser validation: PASS for 72 source files.
+- package.json validation: PASS.
+- CSS brace validation: PASS.
+- Full Vite build not executed because node_modules are not present in this environment.
+- No production deploy and no Alpaca live/paper mutation were performed.
+
+
+Front v3.32.1 dashboard correction
+- Restores the existing Monthly return heatmap / Return and consistency section.
+- Keeps Rotation Quality Monthly strategy performance.
+- Keeps Historical performance / Monthly Capital Movement Heatmap.
+- Does NOT restore Simulation versus reference / Performance Explorer.
+- Does NOT restore Recent Backtests on Dashboard.
+- API remains v3.30.0.

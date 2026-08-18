@@ -252,7 +252,7 @@ function AllocationTimeline({ detail }) {
   </div>
 }
 
-export function MonthlyAssetAnalysis({ jobId, processingId = null, month }) {
+export function MonthlyAssetAnalysis({ jobId, processingId = null, month, detailUrl = null }) {
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -265,7 +265,8 @@ export function MonthlyAssetAnalysis({ jobId, processingId = null, month }) {
     setLoading(true)
     setError('')
     setDetail(null)
-    apiFetch(`${API}/analytics/${processingId ? `processings/${encodeURIComponent(processingId)}` : `backtests/${encodeURIComponent(jobId)}`}/rotation-period?year=${encodeURIComponent(month.year)}&month=${encodeURIComponent(month.month)}`)
+    const url = detailUrl || `${API}/analytics/${processingId ? `processings/${encodeURIComponent(processingId)}` : `backtests/${encodeURIComponent(jobId)}`}/rotation-period?year=${encodeURIComponent(month.year)}&month=${encodeURIComponent(month.month)}`
+    apiFetch(url)
       .then((value) => {
         if (!active) return
         setDetail(value)
@@ -277,7 +278,7 @@ export function MonthlyAssetAnalysis({ jobId, processingId = null, month }) {
       })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [jobId, processingId, month?.month, month?.year])
+  }, [detailUrl, jobId, processingId, month?.month, month?.year])
 
   const asset = useMemo(() => (detail?.assets || []).find((item) => item.symbol === selectedAsset) || detail?.assets?.[0] || null, [detail?.assets, selectedAsset])
 

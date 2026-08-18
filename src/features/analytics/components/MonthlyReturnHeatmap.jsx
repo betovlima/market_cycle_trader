@@ -15,10 +15,10 @@ function monthNames() {
 const TOOLTIP_WIDTH = 248
 const TOOLTIP_PADDING = 12
 
-function selectedModeLabel(mode, referenceLabel = null) {
+function selectedModeLabel(mode, simulationLabel = null, referenceLabel = null, excessLabel = null) {
   if (mode === 'reference') return referenceLabel || tr('Reference')
-  if (mode === 'excess') return 'S − R'
-  return tr('Simulation')
+  if (mode === 'excess') return excessLabel || 'S − R'
+  return simulationLabel || tr('Simulation')
 }
 
 function mapMonthlyReturns(rows, mode) {
@@ -217,7 +217,7 @@ function MonthlyReturnDialog({ detail, rows, mode, referenceLabel = null, onClos
   </div>, document.body)
 }
 
-export function MonthlyReturnHeatmap({ rows, mode, referenceLabel = null }) {
+export function MonthlyReturnHeatmap({ rows, mode, simulationLabel = null, referenceLabel = null, excessLabel = null, onMonthSelect = null }) {
   const [tooltip, setTooltip] = useState(null)
   const [selectedMonth, setSelectedMonth] = useState(null)
   const mapped = useMemo(() => mapMonthlyReturns(rows, mode), [mode, rows])
@@ -246,7 +246,7 @@ export function MonthlyReturnHeatmap({ rows, mode, referenceLabel = null }) {
 
   if (!years.length) return <ChartEmpty>{tr("No monthly return observations in the selected range.")}</ChartEmpty>
 
-  const modeLabel = selectedModeLabel(mode, referenceLabel)
+  const modeLabel = selectedModeLabel(mode, simulationLabel, referenceLabel, excessLabel)
   const months = monthNames()
 
   return <>
@@ -272,6 +272,9 @@ export function MonthlyReturnHeatmap({ rows, mode, referenceLabel = null }) {
             year,
             ...data,
             selectedModeLabel: modeLabel,
+            simulationLabel: simulationLabel || tr('Simulation'),
+            referenceLabel: referenceLabel || tr('Reference'),
+            excessLabel: excessLabel || 'S − R',
             relativeResult,
           }
 
@@ -285,13 +288,13 @@ export function MonthlyReturnHeatmap({ rows, mode, referenceLabel = null }) {
             onMouseEnter={(event) => showTooltip(event, tooltipData)}
             onFocus={(event) => showTooltip(event, tooltipData)}
             onBlur={hideTooltip}
-            onClick={() => { hideTooltip(); setSelectedMonth(tooltipData) }}
+            onClick={() => { hideTooltip(); if (onMonthSelect) onMonthSelect(tooltipData); else setSelectedMonth(tooltipData) }}
           >{percent(data.selectedValue)}</button>
         })}
       </div>)}
     </div>
 
     <MonthlyReturnTooltip tooltip={tooltip} />
-    <MonthlyReturnDialog detail={selectedMonth} rows={rows} mode={mode} referenceLabel={referenceLabel} onClose={() => setSelectedMonth(null)} />
+    {!onMonthSelect ? <MonthlyReturnDialog detail={selectedMonth} rows={rows} mode={mode} referenceLabel={referenceLabel} onClose={() => setSelectedMonth(null)} /> : null}
   </>
 }

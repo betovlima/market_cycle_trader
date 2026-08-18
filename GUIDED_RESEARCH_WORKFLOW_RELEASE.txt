@@ -1,0 +1,11 @@
+Market Cycle Trader Front v3.33.0
+Guided Research Workflow + Free Strategy Catalog Baseline
+
+- Research Lab no longer stacks Temporal Intelligence and Model Tuning; they are separate inner views, with Model Tuning as the default when available.
+- Model Tuning follows BASELINE -> RESEARCH -> TUNING -> RESULTS.
+- Any Strategy Catalog entry can be selected as the research baseline; lifecycle status is guidance only.
+- Search and status filtering are available in the Strategy selector; default status filter is ALL.
+- Official Winner remains visible as a secondary reference.
+- During an active CARO campaign, advanced/idle controls recede and the live view focuses on progress, current best, Control, and current candidate.
+- Rotation Quality experiment result filter remains PASS by default with PASS / FAIL / PASS & FAIL.
+- Strategy Catalog's "Use in Model Tuning" action is available for all Strategy kinds/statuses.

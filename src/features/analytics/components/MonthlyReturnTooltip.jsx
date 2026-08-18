@@ -29,9 +29,9 @@ export function MonthlyReturnTooltip({ tooltip }) {
       </div>
 
       <div className="analytics-heatmap-tooltip-grid">
-        <Metric label={tr("Simulation")} value={tooltip.simulation} />
-        <Metric label={tr("Reference")} value={tooltip.reference} />
-        <Metric label="S − R" value={tooltip.excess} signed />
+        <Metric label={tooltip.simulationLabel || tr("Simulation")} value={tooltip.simulation} />
+        <Metric label={tooltip.referenceLabel || tr("Reference")} value={tooltip.reference} />
+        <Metric label={tooltip.excessLabel || "S − R"} value={tooltip.excess} signed />
       </div>
 
       <div className="analytics-heatmap-tooltip-result">
