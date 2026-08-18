@@ -83,6 +83,7 @@ export function ModelResearchSettingsPanel({
   onDirtyChange = null,
   parameterSearch = '',
   onSearchMatchCount = null,
+  readOnly = false,
 }) {
   const [payload, setPayload] = useState(null)
   const [selectedModelId, setSelectedModelId] = useState('')
@@ -174,6 +175,7 @@ export function ModelResearchSettingsPanel({
 
   const dirty = Boolean(
     strategy
+    && !readOnly
     && !strategy.locked
     && selectedModel
     && (selectedModelId !== savedModelFamily || !valuesEqual(formValues, savedValues)),
@@ -199,7 +201,7 @@ export function ModelResearchSettingsPanel({
 
   async function save(event) {
     event.preventDefault()
-    if (!strategy || strategy.locked || !selectedModel) return
+    if (!strategy || readOnly || strategy.locked || !selectedModel) return
     const normalizedReason = reason.trim()
     if (normalizedReason.length < 3) {
       setError(tr('Enter a reason for this change.'))
@@ -268,12 +270,12 @@ export function ModelResearchSettingsPanel({
       <div className="model-research-selector-row model-research-selector-single">
         <label>
           <span>{tr('Algorithm')}</span>
-          <select value={selectedModelId} onChange={(event) => selectModel(event.target.value)} disabled={Boolean(strategy?.locked)}>
+          <select value={selectedModelId} onChange={(event) => selectModel(event.target.value)} disabled={readOnly || Boolean(strategy?.locked)}>
             {(payload.models || []).map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}
           </select>
         </label>
         <div className="model-research-bound-state">
-          <span>{tr('Saved for Backtest')}</span>
+          <span>{tr(readOnly ? 'Saved with Strategy' : 'Saved for Backtest')}</span>
           <strong>{savedModel?.label || tr('Not saved yet')}</strong>
         </div>
       </div>
@@ -282,10 +284,10 @@ export function ModelResearchSettingsPanel({
         <form onSubmit={save} className="model-research-form">
           <div className="model-research-fields-grid">
             {visibleModelFields.map((field) => (
-              <ModelField key={field.name} field={field} value={formValues[field.name]} disabled={Boolean(strategy?.locked)} onChange={(value) => changeField(field, value)} />
+              <ModelField key={field.name} field={field} value={formValues[field.name]} disabled={readOnly || Boolean(strategy?.locked)} onChange={(value) => changeField(field, value)} />
             ))}
           </div>
-          {!strategy?.locked ? (
+          {!readOnly && !strategy?.locked ? (
             <div className="model-research-save-row">
               <label>
                 <span>{tr('Change reason')}</span>

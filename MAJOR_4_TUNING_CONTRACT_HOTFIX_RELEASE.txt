@@ -1,0 +1,5 @@
+Market Cycle Trader Front v4.1.1
+
+- Blocks Model Tuning Start when the deployed API does not expose the matching start-request contract.
+- Validation errors now include the exact request field path instead of only “Extra inputs are not permitted”.
+- No CARO mathematics or search policy changed.

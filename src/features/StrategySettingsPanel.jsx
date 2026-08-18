@@ -269,7 +269,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
       setError(tr('Save or discard the current strategy changes before selecting it for Model Tuning.'))
       return
     }
-    const note = window.prompt(tr('Reason for selecting this TEMPORAL Strategy for Model Tuning:'), `Tune ${strategy.name}`)?.trim()
+    const note = window.prompt(tr('Reason for selecting this Strategy for Model Tuning:'), `Tune ${strategy.name}`)?.trim()
     if (!note) return
     setBusy(`tune:${strategy.id}`)
     setError('')
@@ -282,7 +282,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
           note,
         },
       })
-      setNotice(tr('Research Lab will use this TEMPORAL Strategy for LightGBM Model Tuning or frozen Policy Tuning.'))
+      setNotice(tr('Research Lab will use this Strategy as the selected research baseline. Lifecycle status is guidance only.'))
       await loadCatalog(strategy.id)
     } catch (requestError) {
       handleError(requestError)
@@ -347,7 +347,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
     }
     const confirmation = window.confirm(
       tr('Promote {name} to the Trader winner?', { name: `"${strategy.name}"` }) + '\n\n' +
-      tr('This is a metadata-only Winner handoff. The current Winner will be preserved as Former Winner, the current Promoted Candidate will become historical, and this validated Candidate will become the single Promoted Candidate and the source of the new Winner. The current position, cash, trade history, scheduler and armed next-session run will be preserved. No Alpaca request, calibration, prediction or order is executed by this promotion. Promotion is allowed while the regular market is open only when the protected Paper pipeline is idle and no prepared, pending or executing plan exists. The new Winner and all of its assets will be loaded by the next scheduled pre-market evaluation.'),
+      tr('This is a metadata-only Winner handoff and is allowed only while XNYS is closed. The current Winner will be preserved as Former Winner, the current Promoted Candidate will become historical, and this validated Candidate will become the single Promoted Candidate and the source of the new Winner. The current position, cash, trade history, scheduler and armed next-session run will be preserved. No Alpaca request, calibration, prediction or order is executed by this promotion. The new Winner and all of its assets will be loaded by the next scheduled pre-market evaluation.'),
     )
     if (!confirmation) return
     const note = window.prompt(tr('Promotion reason:'), tr('Promote {name} after validated backtest', { name: strategy.name }))?.trim()
@@ -360,6 +360,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
         method: 'POST',
         body: {
           confirm_promote_to_trader: true,
+          confirm_market_closed: true,
           confirm_preserve_operational_state: true,
           expected_control_revision: catalog.control.revision,
           expected_strategy_revision: strategy.revision,
@@ -451,19 +452,22 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
   const modelTuningId = catalog.control?.model_tuning_strategy_id
   const hasActiveBacktest = Boolean(activeJob)
   const isTemporalStrategy = selected.strategy_kind === 'temporal_intelligence'
+  const traderRuntimeReady = Boolean(selected.trader_compatibility?.eligible)
+  const traderRuntimeBlockReason = tr(selected.trader_compatibility?.reason || 'This Strategy is not compatible with the installed Trader runtime.')
   const hasCompletedBacktestForSavedModel = selected.last_backtest_status === 'completed'
     && Number(selected.last_backtest_revision) === Number(selected.revision)
     && Boolean(selected.last_backtest_id)
     && Boolean(selected.last_backtest_model?.settings_hash)
     && selected.last_backtest_model?.settings_hash === selected.research_model?.settings_hash
-  const canMarkCandidate = !isTemporalStrategy
+  const canMarkCandidate = traderRuntimeReady
     && !selected.locked
     && selected.status === 'draft'
     && Boolean(selected.research_model?.family)
     && selected.research_model?.family !== 'iqn'
     && hasCompletedBacktestForSavedModel
     && !hasActiveBacktest
-  const canPromote = selected.status === 'candidate'
+  const canPromote = traderRuntimeReady
+    && selected.status === 'candidate'
     && selected.id === candidateId
     && Number(selected.candidate_revision) === Number(selected.revision)
     && Boolean(selected.candidate_backtest_id)
@@ -525,10 +529,10 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
             </div>
             <div className="strategy-editor-actions">
               {!isTemporalStrategy ? <button type="button" onClick={() => cloneStrategy(selected)} disabled={Boolean(busy)}>{tr("Clone for test")}</button> : null}
-              {isTemporalStrategy ? <button type="button" onClick={() => useForModelTuning(selected)} disabled={Boolean(busy) || selected.id === modelTuningId}>{tr(selected.id === modelTuningId ? 'Selected for Model Tuning' : 'Use in Model Tuning')}</button> : null}
+              <button type="button" onClick={() => useForModelTuning(selected)} disabled={Boolean(busy) || selected.id === modelTuningId}>{tr(selected.id === modelTuningId ? 'Selected for Model Tuning' : 'Use in Model Tuning')}</button>
               {selected.id !== researchId && !isTemporalStrategy ? <button type="button" onClick={() => useForBacktest(selected)} disabled={Boolean(busy) || hasActiveBacktest}>{tr("Use for backtest")}</button> : null}
-              {!isTemporalStrategy && !selected.locked && selected.status === 'draft' ? <button type="button" className="candidate-action" title={tr(canMarkCandidate ? 'Make the latest completed run for the selected model the single active Candidate' : 'Save XGBoost or LightGBM on this Strategy and complete its backtest first')} onClick={() => markAsCandidate(selected)} disabled={Boolean(busy) || !canMarkCandidate}>{tr("Mark as candidate")}</button> : null}
-              {!isTemporalStrategy && selected.id !== winnerId ? <button type="button" className="promote-action" title={tr(canPromote ? 'Promote metadata only, preserving the current position and next scheduled pipeline' : 'Mark a completed exact revision as candidate before promotion')} onClick={() => promoteToTrader(selected)} disabled={Boolean(busy) || !canPromote}>{tr("Promote to Trader winner")}</button> : null}
+              {!selected.locked && selected.status === 'draft' ? <button type="button" className="candidate-action" title={canMarkCandidate ? tr('Make the latest completed run for the selected model the single active Candidate') : (traderRuntimeReady ? tr('Complete an exact Backtest for the saved Strategy model before Candidate promotion') : traderRuntimeBlockReason)} onClick={() => markAsCandidate(selected)} disabled={Boolean(busy) || !canMarkCandidate}>{tr("Mark as candidate")}</button> : null}
+              {selected.id !== winnerId ? <button type="button" className="promote-action" title={canPromote ? tr('Promote metadata only while XNYS is closed, preserving the current position and next scheduled pipeline') : (traderRuntimeReady ? tr('Mark a completed exact revision as candidate before promotion') : traderRuntimeBlockReason)} onClick={() => promoteToTrader(selected)} disabled={Boolean(busy) || !canPromote}>{tr("Promote to Trader winner")}</button> : null}
               {selected.id !== winnerId && selected.id !== candidateId ? <button type="button" className="danger" onClick={() => deleteStrategy(selected)} disabled={Boolean(busy)}>{tr("Delete strategy")}</button> : null}
             </div>
           </div>
@@ -566,15 +570,16 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
           </>) : null}
 
 
-          {!isTemporalStrategy ? <ModelResearchSettingsPanel
+          <ModelResearchSettingsPanel
             onSessionExpired={onSessionExpired}
             embedded
             strategy={selected}
-            onStrategyModelSaved={handleStrategyModelSaved}
-            onDirtyChange={setModelHasUnsavedChanges}
-            parameterSearch={parameterSearch}
-            onSearchMatchCount={setModelParameterMatchCount}
-          /> : null}
+            readOnly={isTemporalStrategy}
+            onStrategyModelSaved={isTemporalStrategy ? null : handleStrategyModelSaved}
+            onDirtyChange={isTemporalStrategy ? null : setModelHasUnsavedChanges}
+            parameterSearch={isTemporalStrategy ? '' : parameterSearch}
+            onSearchMatchCount={isTemporalStrategy ? null : setModelParameterMatchCount}
+          />
 
           <StrategyLifecycleNotes selected={selected} />
 

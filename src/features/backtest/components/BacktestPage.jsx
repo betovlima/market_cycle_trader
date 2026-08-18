@@ -54,10 +54,17 @@ export function BacktestPage({ workspace, capabilities = {}, onSessionExpired })
   const [historyPage, setHistoryPage] = useState(1)
   const [selectedStrategyModel, setSelectedStrategyModel] = useState(null)
   const [researchWorkspaceMode, setResearchWorkspaceMode] = useState('simulation')
+  const [researchLabMode, setResearchLabMode] = useState(canViewTuning ? 'tuning' : 'temporal')
+  const [temporalTuningStrategy, setTemporalTuningStrategy] = useState(null)
   const [strategyContextError, setStrategyContextError] = useState('')
   const [researchExecutionModels, setResearchExecutionModels] = useState({})
   const selectedStrategyName = dashboard?.selected_backtest_strategy_name || tr('Not selected')
   const activeStrategyName = (running ? job?.strategy_profile_name : null) || selectedStrategyName
+
+  useEffect(() => {
+    if (researchLabMode === 'tuning' && !canViewTuning && canViewTemporalIntelligence) setResearchLabMode('temporal')
+    if (researchLabMode === 'temporal' && !canViewTemporalIntelligence && canViewTuning) setResearchLabMode('tuning')
+  }, [canViewTemporalIntelligence, canViewTuning, researchLabMode])
 
   useEffect(() => {
     let active = true
@@ -198,11 +205,16 @@ export function BacktestPage({ workspace, capabilities = {}, onSessionExpired })
             <div>
               <h2>{tr("Backtest")}</h2>
               <div className="backtest-context-line" aria-live="polite">
-                <span>{tr(running ? 'Evaluating' : 'Selected test')}:</span>
-                <strong title={activeStrategyName}>{activeStrategyName}</strong>
-                {!running && savedResearchModelLabel ? <><i>·</i><span>{tr('Saved model')}:</span><strong>{savedResearchModelLabel}</strong></> : null}
-                {running && activeResearchModelLabel ? <><i>·</i><span>{tr('Model')}:</span><strong>{activeResearchModelLabel}</strong></> : null}
-                {!running && detail?.strategy_profile_name ? <><i>·</i><span>{tr("Displayed:")}</span><strong title={detail.strategy_profile_name}>{detail.strategy_profile_name}</strong>{displayedResearchModelLabel ? <><i>·</i><span>{tr('Model')}:</span><strong>{displayedResearchModelLabel}</strong></> : null}</> : null}
+                {researchWorkspaceMode === 'research' && temporalTuningStrategy ? <>
+                  <span>{tr('Tuning target')}:</span>
+                  <strong title={temporalTuningStrategy.name || ''}>{temporalTuningStrategy.name || '—'}</strong>
+                </> : <>
+                  <span>{tr(running ? 'Evaluating' : 'Selected test')}:</span>
+                  <strong title={activeStrategyName}>{activeStrategyName}</strong>
+                  {!running && savedResearchModelLabel ? <><i>·</i><span>{tr('Saved model')}:</span><strong>{savedResearchModelLabel}</strong></> : null}
+                  {running && activeResearchModelLabel ? <><i>·</i><span>{tr('Model')}:</span><strong>{activeResearchModelLabel}</strong></> : null}
+                  {!running && detail?.strategy_profile_name ? <><i>·</i><span>{tr("Displayed:")}</span><strong title={detail.strategy_profile_name}>{detail.strategy_profile_name}</strong>{displayedResearchModelLabel ? <><i>·</i><span>{tr('Model')}:</span><strong>{displayedResearchModelLabel}</strong></> : null}</> : null}
+                </>}
               </div>
             </div>
           </div>
@@ -233,14 +245,21 @@ export function BacktestPage({ workspace, capabilities = {}, onSessionExpired })
 
         {researchWorkspaceMode === 'research' ? (
           <div className="backtest-research-lab-stack">
-            {canViewTemporalIntelligence ? <TemporalIntelligencePanel capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
-            {canViewTuning ? (
+            {canViewTuning && canViewTemporalIntelligence ? (
+              <div className="backtest-research-lab-mode-switch backtest-research-mode-switch" role="tablist" aria-label={tr('Research Lab')}>
+                <button type="button" role="tab" aria-selected={researchLabMode === 'tuning'} className={researchLabMode === 'tuning' ? 'active' : ''} onClick={() => setResearchLabMode('tuning')}>{tr('Model Tuning')}</button>
+                <button type="button" role="tab" aria-selected={researchLabMode === 'temporal'} className={researchLabMode === 'temporal' ? 'active' : ''} onClick={() => setResearchLabMode('temporal')}>{tr('Temporal Intelligence')}</button>
+              </div>
+            ) : null}
+            {canViewTuning && researchLabMode === 'tuning' ? (
               <ModelTuningPanel
                 capabilities={capabilities}
                 onSessionExpired={onSessionExpired}
                 onStrategyModelSaved={(updated) => setSelectedStrategyModel(updated?.research_model_configuration || updated?.research_model || null)}
+                onTuningContextChange={setTemporalTuningStrategy}
               />
             ) : null}
+            {canViewTemporalIntelligence && researchLabMode === 'temporal' ? <TemporalIntelligencePanel capabilities={capabilities} onSessionExpired={onSessionExpired} tuningStrategy={temporalTuningStrategy} /> : null}
           </div>
         ) : <>
         <ExecutionStatus workspace={workspace} modelLabel={activeResearchModelLabel} />

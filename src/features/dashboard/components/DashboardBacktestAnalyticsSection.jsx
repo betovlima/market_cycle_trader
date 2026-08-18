@@ -5,8 +5,8 @@ import { API } from '../../../config/env'
 import { tr } from '../../../i18n/runtime'
 import { shortDateTime } from '../../../shared/formatters'
 import { ParameterHint } from '../../../shared/components/ParameterHint'
-import { BacktestPerformanceExplorer } from '../../analytics/components/BacktestPerformanceExplorer'
 import { MonthlyCapitalMovementHeatmap } from '../../backtest/components/RotationPanel'
+import { DashboardMonthlyReturnConsistencySection } from './DashboardMonthlyReturnConsistencySection'
 
 function completedRows(rows) {
   return (Array.isArray(rows) ? rows : [])
@@ -94,7 +94,7 @@ export function DashboardBacktestAnalyticsSection({ fallbackJobs = [], initialPr
               details={[
                 { label: tr('Default'), value: tr('Latest completed processing') },
                 { label: tr('Backtest Analytics'), value: tr('Monthly capital movement') },
-                { label: tr('Return and consistency'), value: tr('Simulation vs Reference + monthly returns') },
+                { label: tr('Return and consistency'), value: tr('Monthly return heatmap') },
                 { label: tr('Scope'), value: tr('Selected processing only') },
               ]}
             />
@@ -116,7 +116,7 @@ export function DashboardBacktestAnalyticsSection({ fallbackJobs = [], initialPr
       {data ? (
         <div className="dashboard-analytics-charts">
           <MonthlyCapitalMovementHeatmap jobId={jobId} processingId={jobId} rotations={data.rotations || []} equity={data.equity || []} allowDrilldown />
-          <BacktestPerformanceExplorer data={data} jobId={jobId} />
+          <DashboardMonthlyReturnConsistencySection data={data} />
         </div>
       ) : null}
     </section>

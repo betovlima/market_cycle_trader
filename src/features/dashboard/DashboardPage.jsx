@@ -1,14 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 
 import { hasCapability } from '../../auth/capabilities'
 import { tr } from '../../i18n/runtime'
 import { DashboardIcon, PlayIcon, ShieldIcon } from '../../shared/components/Icons'
 import { money, percent, relativeTime, shortDateTime } from '../../shared/formatters'
-import { DASHBOARD_HINTS, DASHBOARD_PAGE_SIZE } from './dashboardConfig'
-import { dashboardSortValue, statusMatchesFilter } from './dashboardUtils'
+import { DASHBOARD_HINTS } from './dashboardConfig'
 import { DashboardMetric, MarketUpdateMetric } from './components/DashboardPrimitives'
-import { BacktestHistorySection } from './components/BacktestHistorySection'
 import { DashboardBacktestAnalyticsSection } from './components/DashboardBacktestAnalyticsSection'
+import { RotationQualityPerformanceSection } from './components/RotationQualityPerformanceSection'
 
 export function DashboardPage({ workspace, capabilities = {}, onOpenBacktest, initialProcessingId = "" }) {
   const { dashboard, loadingDashboard, running, restoringExecution, startingBacktest, startDisabled, runBacktest } = workspace
@@ -16,70 +15,12 @@ export function DashboardPage({ workspace, capabilities = {}, onOpenBacktest, in
   const last = dashboard?.last_backtest
   const recentBacktests = useMemo(() => dashboard?.recent_backtests || [], [dashboard])
   const canRunBacktest = hasCapability(capabilities, 'backtest.start')
-
-  const [query, setQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [sort, setSort] = useState({ key: 'date', direction: 'desc' })
-  const [page, setPage] = useState(1)
+  const canViewTemporal = hasCapability(capabilities, 'temporal_intelligence.view')
 
   async function startBacktest() {
     const created = await runBacktest()
     if (created) onOpenBacktest()
   }
-
-  const filteredRows = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase()
-    return recentBacktests
-      .filter((item) => statusMatchesFilter(item.status, statusFilter))
-      .filter((item) => {
-        if (!needle) return true
-        const searchable = [
-          item?.status,
-          item?.created_at,
-          shortDateTime(item?.created_at),
-          item?.strategy_profile_name,
-          item?.research_model_label,
-          item?.metrics?.simulation_return,
-          item?.metrics?.sharpe,
-          item?.metrics?.maximum_drawdown,
-          item?.metrics?.position_changes,
-          item?.duration_seconds,
-        ].filter((value) => value != null).join(' ').toLocaleLowerCase()
-        return searchable.includes(needle)
-      })
-      .sort((left, right) => {
-        const leftValue = dashboardSortValue(left, sort.key)
-        const rightValue = dashboardSortValue(right, sort.key)
-        const direction = sort.direction === 'asc' ? 1 : -1
-        if (typeof leftValue === 'string' || typeof rightValue === 'string') return String(leftValue).localeCompare(String(rightValue)) * direction
-        if (leftValue === rightValue) return 0
-        return (leftValue < rightValue ? -1 : 1) * direction
-      })
-  }, [query, recentBacktests, sort, statusFilter])
-
-  const pages = Math.max(1, Math.ceil(filteredRows.length / DASHBOARD_PAGE_SIZE))
-  const safePage = Math.min(page, pages)
-  const visibleRows = filteredRows.slice((safePage - 1) * DASHBOARD_PAGE_SIZE, safePage * DASHBOARD_PAGE_SIZE)
-
-  useEffect(() => { setPage(1) }, [query, statusFilter])
-  useEffect(() => { if (page > pages) setPage(pages) }, [page, pages])
-
-  function updateSort(key) {
-    setSort((current) => current.key === key
-      ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
-      : { key, direction: key === 'status' ? 'asc' : 'desc' })
-    setPage(1)
-  }
-
-  const statusCounts = useMemo(() => recentBacktests.reduce((accumulator, item) => {
-    const status = String(item?.status || '').toLocaleLowerCase()
-    accumulator.all += 1
-    if (status === 'completed') accumulator.completed += 1
-    else if (status === 'interrupted') accumulator.interrupted += 1
-    else if (status === 'failed') accumulator.failed += 1
-    else if (status === 'running' || status === 'queued') accumulator.active += 1
-    return accumulator
-  }, { all: 0, completed: 0, interrupted: 0, failed: 0, active: 0 }), [recentBacktests])
 
   return (
     <section className="page-stack dashboard-single-workspace">
@@ -102,22 +43,9 @@ export function DashboardPage({ workspace, capabilities = {}, onOpenBacktest, in
           <MarketUpdateMetric />
         </div>
 
-        <DashboardBacktestAnalyticsSection fallbackJobs={recentBacktests} initialProcessingId={initialProcessingId} />
+        {canViewTemporal ? <RotationQualityPerformanceSection /> : null}
 
-        <BacktestHistorySection
-          filteredRows={filteredRows}
-          query={query}
-          onQueryChange={setQuery}
-          statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
-          statusCounts={statusCounts}
-          visibleRows={visibleRows}
-          sort={sort}
-          updateSort={updateSort}
-          safePage={safePage}
-          pages={pages}
-          onPageChange={setPage}
-        />
+        <DashboardBacktestAnalyticsSection fallbackJobs={recentBacktests} initialProcessingId={initialProcessingId} />
       </section>
     </section>
   )

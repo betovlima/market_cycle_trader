@@ -9,7 +9,13 @@ export class ApiError extends Error {
 export function formatApiErrorDetail(detail, fallback) {
   if (!detail) return fallback
   if (typeof detail === 'string') return detail
-  if (Array.isArray(detail)) return detail.map((item) => item?.msg || item?.message || String(item)).join(' | ')
+  if (Array.isArray(detail)) return detail.map((item) => {
+    const message = item?.msg || item?.message || String(item)
+    const path = Array.isArray(item?.loc)
+      ? item.loc.filter((part) => part !== 'body').map(String).join('.')
+      : ''
+    return path ? `${path}: ${message}` : message
+  }).join(' | ')
   if (typeof detail === 'object') return detail.msg || detail.message || JSON.stringify(detail)
   return String(detail)
 }

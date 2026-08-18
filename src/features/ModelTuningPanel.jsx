@@ -9,6 +9,8 @@ import { CANDIDATE_RANKING_HINTS } from './modelTuning/modelTuningCandidateHints
 import { ACTIVE, PROBABILITY_METHOD } from './modelTuning/modelTuningConfig'
 import { candidateLabel, decimal, money, numberOr, pct } from './modelTuning/modelTuningUtils'
 
+const MODEL_TUNING_START_CONTRACT_VERSION = 1
+
 function CandidateCardMetric({ candidateId, label, value, tone = '' }) {
   const hint = CANDIDATE_RANKING_HINTS[label]
   return (
@@ -69,7 +71,7 @@ function TuningContextLabel({ id, label, description, align = 'left' }) {
   )
 }
 
-export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrategyModelSaved }) {
+export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrategyModelSaved, onTuningContextChange }) {
   const canStartTuning = hasCapability(capabilities, 'tuning.start')
   const canStopTuning = hasCapability(capabilities, 'tuning.stop')
   const canExportTuning = hasCapability(capabilities, 'tuning.export')
@@ -77,6 +79,11 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
   const canPromoteTuning = hasCapability(capabilities, 'tuning.promote')
   const [catalog, setCatalog] = useState(null)
   const [strategy, setStrategy] = useState(null)
+  const [strategyCatalogItems, setStrategyCatalogItems] = useState([])
+  const [strategyControlRevision, setStrategyControlRevision] = useState(null)
+  const [officialWinnerId, setOfficialWinnerId] = useState(null)
+  const [strategyStatusFilter, setStrategyStatusFilter] = useState('all')
+  const [strategySearch, setStrategySearch] = useState('')
   const [modelFamily, setModelFamily] = useState('')
   const [baselines, setBaselines] = useState([])
   const [run, setRun] = useState(null)
@@ -125,10 +132,11 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
 
   const loadWorkspace = useCallback(async () => {
     try {
-      const [nextCatalog, control] = await Promise.all([
+      const [nextCatalog, strategyCatalog] = await Promise.all([
         apiFetch(`${API}/admin/model-tuning/catalog`),
-        apiFetch(`${API}/admin/strategies/control`),
+        apiFetch(`${API}/admin/strategies`),
       ])
+      const control = strategyCatalog?.control || {}
       const strategyId = control?.model_tuning_strategy_id || control?.candidate_strategy_id || control?.promoted_candidate_strategy_id || control?.research_strategy_id
       const detail = strategyId ? await apiFetch(`${API}/admin/strategies/${encodeURIComponent(strategyId)}`) : null
       const [baselinePayload] = await Promise.all([
@@ -139,6 +147,9 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
       const savedModel = detail?.research_model_configuration || detail?.research_model || null
       const probability = nextCatalog?.probability || {}
       setCatalog(nextCatalog)
+      setStrategyCatalogItems(Array.isArray(strategyCatalog?.items) ? strategyCatalog.items : [])
+      setStrategyControlRevision(Number(control?.revision || 1))
+      setOfficialWinnerId(control?.trader_winner_strategy_id || null)
       setStrategy(detail)
       const temporalModes = Array.isArray(nextCatalog?.temporal_tuning_modes) ? nextCatalog.temporal_tuning_modes : []
       const temporalDefault = nextCatalog?.default_temporal_tuning_target || temporalModes[0]?.id || 'temporal_model'
@@ -174,6 +185,17 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
   useEffect(() => {
     loadWorkspace()
   }, [loadWorkspace])
+
+  useEffect(() => {
+    onTuningContextChange?.(strategy ? {
+      id: strategy.id,
+      name: strategy.name,
+      revision: strategy.revision,
+      strategy_kind: strategy.strategy_kind,
+      status: strategy.status,
+      source_temporal_run_id: strategy.source_temporal_run_id,
+    } : null)
+  }, [onTuningContextChange, strategy?.id, strategy?.name, strategy?.revision, strategy?.strategy_kind, strategy?.status, strategy?.source_temporal_run_id])
 
   useEffect(() => {
     if (!run?.id || !run?.fold_protocol) return
@@ -249,13 +271,44 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
     return control ? [control, ...challengers] : challengers
   }, [activeRun, baselineControlCandidate, runControlCandidate, runMatchesCurrentBaseline, sortedCandidates])
 
-  const visibleCandidates = useMemo(
-    () => displayedCandidates.filter((candidate) => {
-      if (candidate.is_control || candidate.status !== 'pending') return true
-      return Number(candidate.candidate_id) === Number(run?.current_candidate_id)
-    }),
-    [displayedCandidates, run?.current_candidate_id],
-  )
+  const currentChampionCandidateId = run?.probability_state?.last_champion_candidate_id ?? run?.probability_anchor?.candidate_id ?? 0
+  const bestCompletedChallenger = useMemo(() => {
+    const items = displayedCandidates
+      .filter((candidate) => !candidate.is_control && candidate.status === 'completed')
+      .sort((left, right) => {
+        const leftRank = Number(left.rank ?? Number.MAX_SAFE_INTEGER)
+        const rightRank = Number(right.rank ?? Number.MAX_SAFE_INTEGER)
+        if (leftRank !== rightRank) return leftRank - rightRank
+        return Number(right.metrics?.ending_capital || 0) - Number(left.metrics?.ending_capital || 0)
+      })
+    return items[0] || null
+  }, [displayedCandidates])
+  const currentBestCandidate = useMemo(() => {
+    const champion = run?.method === PROBABILITY_METHOD
+      ? displayedCandidates.find((candidate) => Number(candidate.candidate_id) === Number(currentChampionCandidateId))
+      : null
+    return champion || bestCompletedChallenger || baselineControlCandidate || null
+  }, [baselineControlCandidate, bestCompletedChallenger, currentChampionCandidateId, displayedCandidates, run?.method])
+  const currentBestImprovement = useMemo(() => {
+    const baselineCapital = Number(selectedBaseline?.metrics?.ending_capital)
+    const bestCapital = Number(currentBestCandidate?.metrics?.ending_capital)
+    if (!Number.isFinite(baselineCapital) || baselineCapital === 0 || !Number.isFinite(bestCapital)) return null
+    return (bestCapital - baselineCapital) / baselineCapital
+  }, [currentBestCandidate, selectedBaseline])
+
+  const visibleCandidates = useMemo(() => {
+    if (!activeRun) {
+      return displayedCandidates.filter((candidate) => {
+        if (candidate.is_control || candidate.status !== 'pending') return true
+        return Number(candidate.candidate_id) === Number(run?.current_candidate_id)
+      })
+    }
+    const importantIds = new Set([
+      Number(currentBestCandidate?.candidate_id),
+      Number(run?.current_candidate_id),
+    ].filter(Number.isFinite))
+    return displayedCandidates.filter((candidate) => candidate.is_control || importantIds.has(Number(candidate.candidate_id)))
+  }, [activeRun, currentBestCandidate?.candidate_id, displayedCandidates, run?.current_candidate_id])
 
   const selectedCandidate = useMemo(
     () => displayedCandidates.find((item) => item.candidate_id === selectedCandidateId) || null,
@@ -291,14 +344,42 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
     : temporalPolicyMode
       ? tr(probabilityMode ? 'Start Temporal Policy CARO' : 'Start Temporal Policy LHS')
       : probabilityMode ? tr('Start Unified CARO') : tr('Start Latin Hypercube')
-  const protectedCandidate = Boolean(strategy?.locked && ['candidate', 'promoted_candidate'].includes(String(strategy?.status || '')))
+  const filteredStrategyCatalog = useMemo(() => {
+    const query = strategySearch.trim().toLowerCase()
+    return strategyCatalogItems.filter((item) => {
+      if (strategyStatusFilter !== 'all' && String(item.status || 'draft') !== strategyStatusFilter) return false
+      if (!query) return true
+      return `${item.name || ''} ${item.id || ''} ${item.strategy_kind || ''} ${item.status || ''}`.toLowerCase().includes(query)
+    })
+  }, [strategyCatalogItems, strategySearch, strategyStatusFilter])
+  const selectableStrategyCatalog = useMemo(() => {
+    if (!strategy?.id || filteredStrategyCatalog.some((item) => item.id === strategy.id)) return filteredStrategyCatalog
+    const selected = strategyCatalogItems.find((item) => item.id === strategy.id)
+    return selected ? [selected, ...filteredStrategyCatalog] : filteredStrategyCatalog
+  }, [filteredStrategyCatalog, strategy?.id, strategyCatalogItems])
+  const strategyStatuses = useMemo(
+    () => [...new Set(strategyCatalogItems.map((item) => String(item.status || 'draft')))].sort(),
+    [strategyCatalogItems],
+  )
+  const officialWinner = useMemo(
+    () => strategyCatalogItems.find((item) => item.id === officialWinnerId) || null,
+    [officialWinnerId, strategyCatalogItems],
+  )
+  const tuningStartContractCompatible = Number(catalog?.start_request_contract_version || 0) === MODEL_TUNING_START_CONTRACT_VERSION
   const canTune = Boolean(
     canStartTuning
     && strategy
-    && (temporalStrategy || !strategy.locked || protectedCandidate)
+    && tuningStartContractCompatible
     && (temporalStrategy || modelFamily === catalog?.model_family)
     && selectedBaseline
   )
+  const workflowStepIndex = active
+    ? 2
+    : run?.status === 'completed' && runMatchesCurrentBaseline
+      ? 3
+      : canTune
+        ? 1
+        : 0
   const foldMinimum = Number(catalog?.fold_protocol?.minimum || 2)
   const foldProtocolValid = Number(researchFolds) >= foldMinimum
     && Number(validationFolds) >= Number(researchFolds)
@@ -308,9 +389,31 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
   const foldInputDisabled = !canStartTuning || !canTune || active || busy
 
 
+  async function selectTuningStrategy(strategyId) {
+    if (!canStartTuning || active || busy || !strategyId || Number(strategyControlRevision || 0) < 1) return
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      await apiFetch(`${API}/admin/strategies/${encodeURIComponent(strategyId)}/select-for-model-tuning`, {
+        method: 'POST',
+        body: {
+          expected_control_revision: Number(strategyControlRevision),
+          note: 'Selected from Model Tuning research baseline',
+        },
+      })
+      await loadWorkspace()
+      setNotice(tr('Research baseline Strategy selected. Status is guidance only; technical compatibility determines whether tuning can start.'))
+    } catch (requestError) {
+      handleError(requestError)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function start() {
     if (!canTune || busy || (temporalStrategy && !foldProtocolValid)) return
+    if (temporalModelMode && !window.confirm(tr('Temporal Model Tuning retrains LightGBM for every candidate. Start this campaign now?'))) return
     setBusy(true)
     setError('')
     setNotice('')
@@ -322,6 +425,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
       }
       if (temporalStrategy) {
         body.tuning_target = temporalTuningTarget
+        body.explicit_start_confirmation = temporalModelMode
         body.fold_protocol = {
           research_folds: Number(researchFolds),
           validation_folds: Number(validationFolds),
@@ -357,7 +461,8 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
 
 
   async function continueResearch() {
-    if (!run?.id || run.status !== 'completed' || run.method !== PROBABILITY_METHOD || busy || !foldProtocolValid || !continuationResearchFoldsCompatible) return
+    if (!run?.id || run.status !== 'completed' || run.method !== PROBABILITY_METHOD || busy || !tuningStartContractCompatible || !foldProtocolValid || !continuationResearchFoldsCompatible) return
+    if (run?.tuning_scope === 'temporal_model' && !window.confirm(tr('Temporal Model Tuning retrains LightGBM for every candidate. Continue this campaign now?'))) return
     setBusy(true)
     setError('')
     setNotice('')
@@ -368,6 +473,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
         seed: Number(seed),
         source_tuning_run_id: run.id,
         tuning_target: run.tuning_scope,
+        explicit_start_confirmation: run.tuning_scope === 'temporal_model',
         fold_protocol: {
           research_folds: Number(researchFolds),
           validation_folds: Number(validationFolds),
@@ -451,7 +557,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
     try {
       const updated = await apiFetch(`${API}/admin/model-tuning/${encodeURIComponent(run.id)}/stop`, { method: 'POST' })
       setRun(updated)
-      setNotice(tr('Stop requested. The active tuning candidate is being cancelled and no new candidate will start.'))
+      setNotice(tr(run?.tuning_scope === 'temporal_model' ? 'Stop requested. The active Temporal LightGBM candidate will stop at the next model checkpoint and no new candidate will start.' : 'Stop requested. The active tuning candidate is being cancelled and no new candidate will start.'))
     } catch (requestError) {
       handleError(requestError)
     } finally {
@@ -559,7 +665,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
   if (!catalog) return <div className="backtest-loading-row">{tr('Loading model tuning…')}</div>
 
   return (
-    <section className="model-tuning-panel model-tuning-workspace">
+    <section className={`model-tuning-panel model-tuning-workspace ${active ? 'is-running' : ''}`}>
       <div className="model-tuning-heading model-tuning-heading-compact">
         <div>
           <span className="panel-kicker">{tr('MODEL TUNING')}</span>
@@ -570,14 +676,28 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
 
       {error ? <div className="global-inline-message error-inline">{error}</div> : null}
       {notice ? <div className="global-inline-message success-inline">{notice}</div> : null}
-      {!strategy ? <div className="global-inline-message warning-inline">{tr('No Candidate or selected Strategy is available for model tuning.')}</div> : null}
-      {strategy?.locked && !protectedCandidate && !temporalTarget ? <div className="global-inline-message warning-inline">{tr('The protected Strategy is not an eligible Candidate tuning target.')}</div> : null}
+      {!strategy ? <div className="global-inline-message warning-inline">{tr('Select a Strategy from the catalog to begin research.')}</div> : null}
+      {catalog && !tuningStartContractCompatible ? <div className="global-inline-message warning-inline">{tr('Model Tuning API/Front contract mismatch. Refresh the application after both API and Front are deployed from the same release.')}</div> : null}
       {strategy && !temporalTarget && modelFamily !== catalog.model_family ? <div className="global-inline-message warning-inline">{tr('The current tuning target must use LightGBM.')}</div> : null}
-      {strategy && !temporalTarget && modelFamily === catalog.model_family && !baselines.length ? <div className="global-inline-message warning-inline">{tr("A completed certified Candidate Backtest is required before tuning. Adaptive CARO always uses the active Candidate's certified execution as its baseline.")}</div> : null}
+      {strategy && !temporalTarget && modelFamily === catalog.model_family && !baselines.length ? <div className="global-inline-message warning-inline">{tr('A compatible completed Backtest is required for this Strategy before tuning can start.')}</div> : null}
       {strategy && temporalTarget && !baselines.length ? <div className="global-inline-message warning-inline">{tr('The TEMPORAL Strategy source run is not available as a completed frozen replay.')}</div> : null}
 
+      <div className="model-tuning-workflow-steps" aria-label={tr('Research workflow')}>
+        {['1. BASELINE', '2. RESEARCH', '3. TUNING', '4. RESULTS'].map((label, index) => <span key={label} className={workflowStepIndex === index ? 'active' : ''}>{tr(label)}</span>)}
+      </div>
+
+      <section className="model-tuning-step model-tuning-step-baseline">
+        <div className="model-tuning-step-heading"><span>1</span><div><strong>{tr('Baseline')}</strong><small>{tr('Choose any Strategy from the catalog. Lifecycle status is guidance, not a research gate.')}</small></div></div>
+        <div className="model-tuning-strategy-picker model-tuning-idle-only">
+          <label><span>{tr('Search Strategy')}</span><input value={strategySearch} onChange={(event) => setStrategySearch(event.target.value)} placeholder={tr('Name, id, kind or status')} disabled={active || busy} /></label>
+          <label><span>{tr('Status')}</span><select value={strategyStatusFilter} onChange={(event) => setStrategyStatusFilter(event.target.value)} disabled={active || busy}><option value="all">{tr('All statuses')}</option>{strategyStatuses.map((status) => <option key={status} value={status}>{tr(status)}</option>)}</select></label>
+          <label className="wide"><span>{tr('Strategy catalog')}</span><select value={strategy?.id || ''} onChange={(event) => selectTuningStrategy(event.target.value)} disabled={!canStartTuning || active || busy}><option value="">{tr('Select Strategy')}</option>{selectableStrategyCatalog.map((item) => <option key={item.id} value={item.id}>{item.name} · {String(item.status || 'draft').toUpperCase()} · {item.strategy_kind || 'standard'} · r{item.revision}</option>)}</select></label>
+        </div>
+        {strategy ? <div className="model-tuning-selected-strategy"><div><span>{tr('Selected Strategy')}</span><strong>{strategy.name}</strong></div><div><span>{tr('Status')}</span><strong>{tr(strategy.status)}</strong></div><div><span>{tr('Kind')}</span><strong>{strategy.strategy_kind || 'standard'}</strong></div><div><span>{tr('Revision')}</span><strong>{strategy.revision}</strong></div>{officialWinner ? <div className="model-tuning-winner-reference"><span>{tr('Official Winner')}</span><strong>{officialWinner.name}</strong><small>{officialWinner.tuning_result_metrics?.ending_capital != null ? money(officialWinner.tuning_result_metrics.ending_capital) : tr(officialWinner.status || 'winner')}</small></div> : null}</div> : null}
+      </section>
+
       {temporalStrategy && temporalModes.length ? (
-        <div className="model-tuning-temporal-mode">
+        <div className="model-tuning-temporal-mode model-tuning-idle-only">
           <div className="model-tuning-temporal-mode-head">
             <div><span className="panel-kicker">{tr('TEMPORAL TUNING')}</span><strong>{tr('Choose what to optimize')}</strong></div>
             <small>{tr('Model first, then policy. Both use the same materialized TEMPORAL Strategy workflow.')}</small>
@@ -603,7 +723,38 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
         </div>
       ) : null}
 
-      <div className="model-tuning-context-grid model-tuning-context-grid-wide">
+      {temporalStrategy && catalog?.fold_protocol?.supported ? (
+        <section className="model-tuning-fold-protocol model-tuning-idle-only">
+          <div className="model-tuning-fold-protocol-heading">
+            <div>
+              <span className="panel-kicker">{tr('WALK-FORWARD PROTOCOL')}</span>
+              <strong>{tr('Research → Validation → Certification')}</strong>
+            </div>
+            <small>{tr('Folds are part of the experimental protocol and are never optimized by CARO.')}</small>
+          </div>
+          <div className="model-tuning-fold-protocol-grid">
+            <label>
+              <span>{tr('Research folds')}</span>
+              <input type="number" min={foldMinimum} step="1" value={researchFolds} disabled={foldInputDisabled} onChange={(event) => setResearchFolds(event.target.value)} />
+              <small>{tr('Used by CARO candidate search. For Policy Tuning, changing this value builds one new frozen Temporal LightGBM prediction cache before the fast policy replays begin.')}</small>
+            </label>
+            <label>
+              <span>{tr('Validation folds')}</span>
+              <input type="number" min={Math.max(foldMinimum, Number(researchFolds) || foldMinimum)} step="1" value={validationFolds} disabled={foldInputDisabled} onChange={(event) => setValidationFolds(event.target.value)} />
+              <small>{tr('Used only when you validate a selected CARO finalist. The Temporal LightGBM models are fully retrained under the new walk-forward split.')}</small>
+            </label>
+            <label>
+              <span>{tr('Certification folds')}</span>
+              <input type="number" min={Math.max(foldMinimum, Number(validationFolds) || foldMinimum)} step="1" value={certificationFolds} disabled={foldInputDisabled} onChange={(event) => setCertificationFolds(event.target.value)} />
+              <small>{tr('Used after a finalist passes validation. Certification performs another full Temporal LightGBM walk-forward rerun before Winner eligibility can be considered.')}</small>
+            </label>
+          </div>
+          {!foldProtocolValid ? <small className="model-tuning-fold-protocol-error">{tr('Fold protocol must satisfy Research ≤ Validation ≤ Certification, with at least 2 folds at every stage.')}</small> : null}
+          {run?.id && run?.status === 'completed' && run?.method === PROBABILITY_METHOD ? <small>{tr('Continue Research must keep the same Research fold count because the imported CARO observations belong to that protocol. Start a new campaign to change Research folds.')}</small> : null}
+        </section>
+      ) : null}
+
+      <div className="model-tuning-context-grid model-tuning-context-grid-wide model-tuning-idle-only">
         <div className="model-tuning-context-card model-tuning-target-card">
           <TuningContextLabel
             id="model-tuning-hint-target"
@@ -647,11 +798,11 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
         <div className="model-tuning-baseline-head">
           <div className="model-tuning-baseline-title">
             <span className="model-tuning-context-label">
-              <span>{tr(temporalTarget ? 'Materialized TEMPORAL baseline' : 'Certified Candidate baseline')}</span>
+              <span>{tr('Selected Strategy baseline')}</span>
               <ParameterHint
                 id="model-tuning-hint-baseline"
-                title={tr(temporalTarget ? 'Materialized TEMPORAL baseline' : 'Certified Candidate baseline')}
-                description={tr(temporalModelMode ? 'The API reuses the completed Temporal run as Control, retrains challenger LightGBM models against the same frozen market snapshot, and never downloads new market data.' : temporalPolicyMode ? 'The API reuses the completed Temporal Intelligence source run and frozen replay stored with this TEMPORAL Strategy.' : 'The API uses the certified Candidate Backtest automatically. No clone, baseline selection or prior tuning campaign is required.')}
+                title={tr('Selected Strategy baseline')}
+                description={tr(temporalModelMode ? 'The API reuses the completed Temporal run as Control, retrains challenger LightGBM models against the same frozen market snapshot, and never downloads new market data.' : temporalPolicyMode ? 'The API reuses the completed Temporal Intelligence source run and frozen replay stored with this TEMPORAL Strategy.' : 'The API uses the latest compatible completed Backtest for the selected Strategy and freezes its execution context for this campaign.')}
               />
             </span>
             <strong title={selectedBaseline?.job_id || ''}>{selectedBaseline?.job_id || tr('No compatible completed baseline execution was found.')}</strong>
@@ -669,7 +820,8 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
         ) : null}
       </div>
 
-      <div className="model-tuning-method-selector model-tuning-method-selector-compact">
+      <div className="model-tuning-step-heading model-tuning-idle-only"><span>2</span><div><strong>{tr('Research')}</strong><small>{tr('Choose the research method and protocol. Advanced settings stay optional.')}</small></div></div>
+      <div className="model-tuning-method-selector model-tuning-method-selector-compact model-tuning-idle-only">
         <label>
           <span className="model-tuning-context-label">
             <span>{tr('Research method')}</span>
@@ -690,6 +842,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
         <div className="model-tuning-method-summary"><strong>{selectedMethod?.label || '—'}</strong></div>
       </div>
 
+      <div className="model-tuning-step-heading"><span>3</span><div><strong>{tr('Tuning')}</strong><small>{tr(active ? 'Campaign is running. No additional action is required unless you want to stop it.' : 'Set the research budget and start the campaign.')}</small></div></div>
       <div className="model-tuning-controls">
         <label>
           <span>{tr(probabilityMode ? 'Research budget (trials)' : 'Exploration candidates')}</span>
@@ -710,39 +863,8 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
         </div> : null}
       </div>
 
-      {temporalStrategy && catalog?.fold_protocol?.supported ? (
-        <section className="model-tuning-fold-protocol">
-          <div className="model-tuning-fold-protocol-heading">
-            <div>
-              <span className="panel-kicker">{tr('WALK-FORWARD PROTOCOL')}</span>
-              <strong>{tr('Research → Validation → Certification')}</strong>
-            </div>
-            <small>{tr('Folds are part of the experimental protocol and are never optimized by CARO.')}</small>
-          </div>
-          <div className="model-tuning-fold-protocol-grid">
-            <label>
-              <span>{tr('Research folds')}</span>
-              <input type="number" min={foldMinimum} step="1" value={researchFolds} disabled={foldInputDisabled} onChange={(event) => setResearchFolds(event.target.value)} />
-              <small>{tr('Used by CARO candidate search. For Policy Tuning, changing this value builds one new frozen Temporal LightGBM prediction cache before the fast policy replays begin.')}</small>
-            </label>
-            <label>
-              <span>{tr('Validation folds')}</span>
-              <input type="number" min={Math.max(foldMinimum, Number(researchFolds) || foldMinimum)} step="1" value={validationFolds} disabled={foldInputDisabled} onChange={(event) => setValidationFolds(event.target.value)} />
-              <small>{tr('Used only when you validate a selected CARO finalist. The Temporal LightGBM models are fully retrained under the new walk-forward split.')}</small>
-            </label>
-            <label>
-              <span>{tr('Certification folds')}</span>
-              <input type="number" min={Math.max(foldMinimum, Number(validationFolds) || foldMinimum)} step="1" value={certificationFolds} disabled={foldInputDisabled} onChange={(event) => setCertificationFolds(event.target.value)} />
-              <small>{tr('Used after a finalist passes validation. Certification performs another full Temporal LightGBM walk-forward rerun before Winner eligibility can be considered.')}</small>
-            </label>
-          </div>
-          {!foldProtocolValid ? <small className="model-tuning-fold-protocol-error">{tr('Fold protocol must satisfy Research ≤ Validation ≤ Certification, with at least 2 folds at every stage.')}</small> : null}
-          {run?.id && run?.status === 'completed' && run?.method === PROBABILITY_METHOD ? <small>{tr('Continue Research must keep the same Research fold count because the imported CARO observations belong to that protocol. Start a new campaign to change Research folds.')}</small> : null}
-        </section>
-      ) : null}
-
       {adaptiveMode ? (
-        <details className="model-tuning-space model-tuning-advanced">
+        <details className="model-tuning-space model-tuning-advanced model-tuning-idle-only">
           <summary>{tr('Advanced CARO settings')}<span>{tr('Optional')}</span></summary>
           <div className="model-tuning-probability-config">
             <div className="model-tuning-probability-grid">
@@ -758,7 +880,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
         </details>
       ) : null}
 
-      <details className="model-tuning-space">
+      <details className="model-tuning-space model-tuning-idle-only">
         <summary>{tr('Search space')}<span>{(effectivePlan?.search_space || catalog.search_space || []).length} {tr('parameters')}</span></summary>
         <div className="model-tuning-space-grid">
           {(effectivePlan?.search_space || catalog.search_space || []).map((field) => (
@@ -770,22 +892,32 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
         </div>
       </details>
 
+      <div className="model-tuning-step-heading model-tuning-results-step-heading"><span>4</span><div><strong>{tr('Results')}</strong><small>{tr(active ? 'Live campaign status and current challengers.' : 'Compare challengers with the selected baseline Strategy.')}</small></div></div>
+
       {run ? (
         <div className="model-tuning-run">
           <div className="model-tuning-progress-row">
             <div>
               <strong>{tr('Campaign')} {run.id}</strong>
               <span>{tr(run.status)} · {run.research_completed_candidates ?? run.completed_candidates}/{run.research_total_candidates ?? run.total_candidates} {tr('completed')}{run.cancelled_candidates ? ` · ${run.cancelled_candidates} ${tr('cancelled')}` : ''} · {tr(run.tuning_scope_label || catalog?.tuning_scope_label || '')} · {(catalog.methods || []).find((item) => item.id === run.method)?.label || run.method}</span>
+              <span>{tr('Created at')} {run.created_at ? new Date(run.created_at).toLocaleString() : '—'}{run.created_by ? ` · ${tr('Started by')} ${run.created_by}` : ''}</span>
             </div>
             <div className="model-tuning-run-actions">
               {canViewTuningLogs ? <button type="button" className="secondary-action compact" onClick={openCampaignLog} disabled={logLoading}>{tr('Campaign log')}</button> : null}
               {canExportTuning && !active ? <button type="button" className="secondary-action compact" onClick={exportCampaign} disabled={exporting}>{tr(exporting ? 'Exporting…' : 'Export Campaign')}</button> : null}
-              {canStartTuning && temporalStrategy && run.status === 'completed' && run.method === PROBABILITY_METHOD ? <button type="button" className="secondary-action compact" onClick={continueResearch} disabled={busy || !foldProtocolValid || !continuationResearchFoldsCompatible}>{tr('Continue Research')}</button> : null}
+              {canStartTuning && temporalStrategy && run.status === 'completed' && run.method === PROBABILITY_METHOD ? <button type="button" className="secondary-action compact" onClick={continueResearch} disabled={busy || !tuningStartContractCompatible || !foldProtocolValid || !continuationResearchFoldsCompatible}>{tr('Continue Research')}</button> : null}
               {run.validation_processing_id ? <button type="button" className="secondary-action compact" onClick={viewChampionAnalytics}>{tr('View Analytics')}</button> : null}
               <strong>{Number(run.progress || 0).toFixed(1)}%</strong>
             </div>
           </div>
           <div className="model-tuning-progress-track"><i style={{ width: `${Math.max(0, Math.min(100, Number(run.progress || 0)))}%` }} /></div>
+          {active && currentBestCandidate ? (
+            <div className="model-tuning-current-best">
+              <div><span>{tr('Current best')}</span><strong>{candidateLabel(currentBestCandidate)}</strong></div>
+              <div><span>{tr('Capital')}</span><strong>{money(currentBestCandidate.metrics?.ending_capital)}</strong></div>
+              <div><span>{tr('vs selected baseline')}</span><strong className={signedMetricTone(currentBestImprovement)}>{currentBestImprovement == null ? '—' : pct(currentBestImprovement)}</strong></div>
+            </div>
+          ) : null}
           {run.tuning_scope === 'temporal_model' && run.current_candidate_id != null ? (
             <div className="model-tuning-current-candidate-progress">
               <span>{tr('Candidate')} #{run.current_candidate_id} · {tr(run.current_candidate_stage || 'Training Temporal LightGBM')}</span>
@@ -797,7 +929,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
           {run.method === PROBABILITY_METHOD && run.probability_state ? <small>{tr('Unified state')} · {tr('Champion')} #{run.probability_state.last_champion_candidate_id ?? run.probability_anchor?.candidate_id ?? 0} · {tr('Exploration trials')} {run.probability_state.exploration_trials_completed || 0} · {tr('Adaptive trials')} {run.probability_state.adaptive_trials_completed || 0} · {tr('Trust region')} {(Number(run.probability_state.trust_region_radius || 0) * 100).toFixed(1)}% · {tr('No-improvement streak')} {run.probability_state.no_improvement_streak || 0}</small> : null}
           {run.market_data_cutoff_date ? <small>{tr('Frozen market-data cutoff')} · {run.market_data_cutoff_date}</small> : null}
           {run.adaptive_early_stopped ? <small>{tr(run.adaptive_early_stop_reason || 'Adaptive early stopping completed the campaign after convergence.')}</small> : null}
-          {run.status === 'stop_requested' ? <small>{tr('Cancelling the active tuning candidate now. Partial research artifacts will be discarded.')}</small> : null}
+          {run.status === 'stop_requested' ? <small>{tr(run?.tuning_scope === 'temporal_model' ? 'Cancelling the active Temporal LightGBM candidate at the next model checkpoint. Partial research artifacts will be discarded.' : 'Cancelling the active tuning candidate now. Partial research artifacts will be discarded.')}</small> : null}
           {run.active_candidate_ids?.length ? <small>{tr(run.status === 'stop_requested' ? 'Cancelling candidate' : 'Active candidates')} · {run.active_candidate_ids.map((id) => `#${id}`).join(', ')}</small> : null}
         </div>
       ) : null}

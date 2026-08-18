@@ -1,0 +1,8 @@
+Market Cycle Trader Front v4.1.0
+
+Structural market-time separation for Major 4.
+- certified_backtest_cutoff remains immutable certification metadata.
+- live_market_cutoff advances with the latest SIP-safe completed XNYS session.
+- research_snapshot_cutoff is frozen when a Temporal/research campaign starts.
+- Temporal Intelligence refreshes market data once before freezing the campaign snapshot.
+- UI shows certification, live data, and research snapshot dates separately.
