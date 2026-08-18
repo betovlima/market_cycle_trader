@@ -8781,3 +8781,25 @@ a { color: inherit; }
 @media (max-width: 760px) {
   .backtest-research-lab-mode-switch { justify-self: stretch; margin: 0 8px 2px; }
 }
+
+.model-tuning-validation-progress {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(17, 42, 70, .34);
+}
+
+.model-tuning-validation-progress > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.model-tuning-validation-progress span {
+  color: var(--muted);
+}

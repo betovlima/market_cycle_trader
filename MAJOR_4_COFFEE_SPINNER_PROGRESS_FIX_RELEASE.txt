@@ -1,0 +1,7 @@
+Market Cycle Trader Front v4.1.3 — Coffee Spinner Live Progress Fix
+
+- Fixes the percentage rendered inside the coffee-cup spinner for the active CARO candidate.
+- The active candidate now uses run.current_candidate_progress, the canonical live progress exposed by the campaign, with candidate.job_progress kept as a persistence fallback.
+- Prevents the cup from remaining at 0% while the Temporal candidate is visibly advancing.
+- No API, CARO mathematics, Temporal training, validation, Winner lifecycle or Alpaca behavior changes.
+- API remains v4.1.2.

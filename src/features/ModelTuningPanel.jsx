@@ -111,6 +111,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
   const [logLoading, setLogLoading] = useState(false)
   const [logError, setLogError] = useState('')
   const timerRef = useRef(null)
+  const validationTimerRef = useRef(null)
 
   const handleError = useCallback((requestError) => {
     if (requestError instanceof ApiError && requestError.status === 401) {
@@ -221,6 +222,28 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
       timerRef.current = null
     }
   }, [handleError, run?.id, run?.status])
+
+  const activeValidation = useMemo(() => (
+    (run?.candidates || []).find((candidate) => ['queued', 'running'].includes(String(candidate?.validation?.status || '').toLowerCase())) || null
+  ), [run?.candidates])
+
+  useEffect(() => {
+    if (validationTimerRef.current) window.clearInterval(validationTimerRef.current)
+    validationTimerRef.current = null
+    if (!run?.id || !activeValidation) return undefined
+    validationTimerRef.current = window.setInterval(async () => {
+      try {
+        const updated = await apiFetch(`${API}/admin/model-tuning/${encodeURIComponent(run.id)}`)
+        setRun(updated)
+      } catch (requestError) {
+        handleError(requestError)
+      }
+    }, 2000)
+    return () => {
+      if (validationTimerRef.current) window.clearInterval(validationTimerRef.current)
+      validationTimerRef.current = null
+    }
+  }, [activeValidation?.candidate_id, handleError, run?.id])
 
   const sortedCandidates = useMemo(() => {
     const items = [...(run?.candidates || [])]
@@ -505,13 +528,12 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
     setError('')
     setNotice('')
     try {
-      const validation = await apiFetch(`${API}/admin/model-tuning/${encodeURIComponent(run.id)}/candidates/${candidate.candidate_id}/validate-champion`, {
+      await apiFetch(`${API}/admin/model-tuning/${encodeURIComponent(run.id)}/candidates/${candidate.candidate_id}/validate-champion`, {
         method: 'POST',
       })
       const updated = await apiFetch(`${API}/admin/model-tuning/${encodeURIComponent(run.id)}`)
       setRun(updated)
-      setNotice(tr('CARO finalist validation completed with a full Temporal LightGBM walk-forward rerun. Open Dashboard Analytics to inspect the validation processing before certification.'))
-      if (validation?.id) viewProcessing(validation.id)
+      setNotice(tr('Validation started. The full Temporal LightGBM walk-forward is running in the background. Progress is shown on this candidate.'))
     } catch (requestError) {
       handleError(requestError)
     } finally {
@@ -949,8 +971,12 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
               const isFinalChampion = !active && candidate.status === 'completed' && !candidate.is_control && Number(run?.best_candidate_id) === Number(candidate.candidate_id)
               const candidateValidation = candidate.validation || null
               const candidateCertification = candidate.certification || null
-              const canValidateFinalist = temporalPolicyMode && canPromoteTuning && !active && candidate.status === 'completed' && !candidate.is_control && !candidateValidation
-              const canCertifyCandidate = temporalPolicyMode && canPromoteTuning && !active && Boolean(candidateValidation?.passed) && !candidateCertification
+              const validationStatus = String(candidateValidation?.status || '').toLowerCase()
+              const validationRunning = ['queued', 'running'].includes(validationStatus)
+              const validationCompleted = validationStatus === 'completed'
+              const validationTechnicalFailure = validationStatus === 'failed'
+              const canValidateFinalist = temporalPolicyMode && canPromoteTuning && !active && candidate.status === 'completed' && !candidate.is_control && (!candidateValidation || validationTechnicalFailure)
+              const canCertifyCandidate = temporalPolicyMode && canPromoteTuning && !active && validationCompleted && Boolean(candidateValidation?.passed) && !candidateCertification
               const typeLabel = candidate.is_control
                 ? tr('Control')
                 : candidate.kind === 'champion_probability'
@@ -977,7 +1003,14 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
                 failed: 'Failed',
                 cancelled: 'Cancelled',
               }[status] || 'Status'
-              const jobProgress = Math.max(0, Math.min(100, Number(candidate.job_progress || 0)))
+              const persistedJobProgress = Math.max(0, Math.min(100, Number(candidate.job_progress || 0)))
+              const liveCurrentCandidate = candidate.status === 'running'
+                && run?.current_candidate_id != null
+                && Number(run.current_candidate_id) === Number(candidate.candidate_id)
+              const liveCurrentCandidateProgress = Math.max(0, Math.min(100, Number(run?.current_candidate_progress || 0)))
+              const jobProgress = liveCurrentCandidate
+                ? Math.max(persistedJobProgress, liveCurrentCandidateProgress)
+                : persistedJobProgress
               const jobProgressLabel = `${jobProgress.toFixed(0)}%`
               const statusTitle = candidate.status === 'running'
                 ? `${tr(statusLabelKey)} · ${jobProgressLabel}`
@@ -1035,6 +1068,16 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
                   ) : null}
 
                   {candidate.status === 'failed' ? <small className="model-tuning-candidate-card-error">{candidate.failure_type || candidate.failure_message || tr('See log')}</small> : null}
+                  {validationRunning ? (
+                    <div className="model-tuning-validation-progress">
+                      <div>
+                        <span>{tr('Validating')} · {candidateValidation.fold_count || run?.fold_protocol?.validation_folds || validationFolds} {tr('folds')} · {tr(candidateValidation.stage || 'Starting validation')}</span>
+                        <strong>{Number(candidateValidation.progress || 0).toFixed(1)}%</strong>
+                      </div>
+                      <div className="model-tuning-progress-track"><i style={{ width: `${Math.max(0, Math.min(100, Number(candidateValidation.progress || 0)))}%` }} /></div>
+                    </div>
+                  ) : null}
+                  {validationTechnicalFailure ? <small className="model-tuning-candidate-card-error">{tr('Validation processing failed')} · {candidateValidation.failure_message || tr('See log')}</small> : null}
 
                   <footer className="model-tuning-candidate-card-actions">
                     {hasParameters ? <button type="button" onClick={() => setParameterCandidateId(candidate.candidate_id)}>{tr('Parameters')}</button> : null}
@@ -1042,9 +1085,9 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
                     {canViewTuningLogs && !candidate.baseline_preview ? <button type="button" onClick={() => openCandidateLog(candidate)} disabled={logLoading}>{tr('Log')}</button> : null}
                     {previouslyPromoted && !temporalTarget ? <span className="model-tuning-adopted">{tr('Promoted')}</span> : null}
                     {temporalModelMode && canPromoteTuning && isFinalChampion ? <button type="button" onClick={() => adopt(candidate)} disabled={busy}>{tr('Continue to Policy Tuning')}</button> : null}
-                    {canValidateFinalist ? <button type="button" onClick={() => validateFinalist(candidate)} disabled={busy}>{tr('Validate')} · {run?.fold_protocol?.validation_folds || validationFolds} {tr('folds')}</button> : null}
-                    {candidateValidation ? <span className={`model-tuning-adopted ${candidateValidation.passed ? '' : 'failed'}`}>{tr(candidateValidation.passed ? 'Validation passed' : 'Validation failed')} · {candidateValidation.fold_count || run?.fold_protocol?.validation_folds || validationFolds}</span> : null}
-                    {candidateValidation?.processing_id ? <button type="button" onClick={() => viewProcessing(candidateValidation.processing_id)}>{tr('Validation Analytics')}</button> : null}
+                    {canValidateFinalist ? <button type="button" onClick={() => validateFinalist(candidate)} disabled={busy}>{tr(validationTechnicalFailure ? 'Retry Validation' : 'Validate')} · {run?.fold_protocol?.validation_folds || validationFolds} {tr('folds')}</button> : null}
+                    {validationCompleted ? <span className={`model-tuning-adopted ${candidateValidation.passed ? '' : 'failed'}`}>{tr(candidateValidation.passed ? 'Validation passed' : 'Validation failed')} · {candidateValidation.fold_count || run?.fold_protocol?.validation_folds || validationFolds}</span> : null}
+                    {validationCompleted && candidateValidation?.processing_id ? <button type="button" onClick={() => viewProcessing(candidateValidation.processing_id)}>{tr('Validation Analytics')}</button> : null}
                     {canCertifyCandidate ? <button type="button" onClick={() => certifyCandidate(candidate)} disabled={busy}>{tr('Certify')} · {run?.fold_protocol?.certification_folds || certificationFolds} {tr('folds')}</button> : null}
                     {candidateCertification ? <span className={`model-tuning-adopted ${candidateCertification.passed ? '' : 'failed'}`}>{tr(candidateCertification.passed ? 'Certification passed' : 'Certification failed')} · {candidateCertification.fold_count || run?.fold_protocol?.certification_folds || certificationFolds}</span> : null}
                     {candidateCertification?.processing_id ? <button type="button" onClick={() => viewProcessing(candidateCertification.processing_id)}>{tr('Certification Analytics')}</button> : null}

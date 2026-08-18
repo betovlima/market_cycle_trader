@@ -2045,5 +2045,10 @@ export const ES_TRANSLATIONS = {
   'Research Lab will use this Strategy as the selected research baseline. Lifecycle status is guidance only.': 'Research Lab usará esta Strategy como baseline de investigación seleccionada. El estado del lifecycle es solo una guía.',
   'Official Winner': 'Winner oficial',
   'Model Tuning API/Front contract mismatch. Refresh the application after both API and Front are deployed from the same release.': 'El contrato de Model Tuning entre API y Front es incompatible. Actualiza la aplicación después de publicar API y Front desde la misma versión.',
+  'Validation started. The full Temporal LightGBM walk-forward is running in the background. Progress is shown on this candidate.': 'Validación iniciada. El walk-forward Temporal LightGBM completo se está ejecutando en segundo plano. El progreso aparece en este candidato.',
+  'Validating': 'Validando',
+  'Starting validation': 'Iniciando validación',
+  'Validation processing failed': 'Fallo técnico en el procesamiento de la validación',
+  'Retry Validation': 'Repetir validación',
 
 }
