@@ -7,9 +7,6 @@ import appLogoUrl from '../assets/market-cycle-trader-logo.png'
 import { LanguageSelector } from '../i18n/LanguageSelector'
 import { getIntlLocale } from '../i18n/runtime'
 
-let googleIdentityInitialized = false
-let googleCredentialHandler = null
-
 function accessFromLocation() {
   if (typeof window === 'undefined') return { invitation_id: '', token: '' }
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
@@ -54,7 +51,7 @@ function GoogleIdentityButton({ disabled, onCredential, onError }) {
 
     function render() {
       if (cancelled) return
-      const googleIdentity = Reflect.get(window, 'google')?.accounts?.id
+      const googleIdentity = window.google?.accounts?.id
       if (!googleIdentity) {
         attempts += 1
         if (attempts > 80) {
@@ -65,19 +62,19 @@ function GoogleIdentityButton({ disabled, onCredential, onError }) {
         return
       }
       try {
-        googleCredentialHandler = (response) => {
+        window.__marketCycleGoogleCredentialHandler = (response) => {
           if (response?.credential) credentialHandlerRef.current(response.credential)
           else errorHandlerRef.current(tr('Google did not return a verified identity credential.'))
         }
-        if (!googleIdentityInitialized) {
+        if (!window.__marketCycleGoogleInitialized) {
           googleIdentity.initialize({
             client_id: GOOGLE_CLIENT_ID,
-            callback: (response) => googleCredentialHandler?.(response),
+            callback: (response) => window.__marketCycleGoogleCredentialHandler?.(response),
             auto_select: false,
             cancel_on_tap_outside: true,
             ux_mode: 'popup',
           })
-          googleIdentityInitialized = true
+          window.__marketCycleGoogleInitialized = true
         }
         if (buttonRef.current) {
           buttonRef.current.replaceChildren()

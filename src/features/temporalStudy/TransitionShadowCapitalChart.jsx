@@ -14,7 +14,7 @@ import { AnalyticsModeTabs, AnalyticsResponsiveContainer, ChartCell, ChartEmpty 
 import { usePerformanceZoom } from '../analytics/hooks/usePerformanceZoom'
 import { analyticsAxisLabel, analyticsTimestamp } from '../analytics/utils/performance'
 
-function ShadowTooltip({ active = false, payload = [], mode, hasCalibrated }) {
+function ShadowTooltip({ active, payload, mode, hasCalibrated }) {
   if (!active || !payload?.length) return null
   const point = payload.find((item) => item?.payload?.timestamp)?.payload
   if (!point) return null

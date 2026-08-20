@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiFetch } from '../../api/http'
 import { API } from '../../config/env'
 import { PortfolioIcon } from '../../shared/components/Icons'
-import { money, shortDateTime } from '../../shared/formatters'
+import { money, number, percent, shortDateTime } from '../../shared/formatters'
 import { POLL_MS, ROBOT_POLL_MS } from './portfolioConfig'
 import { CurrentPosition, PortfolioMetricsStrip, TradingSessionStrip } from './components/PortfolioPrimitives'
 

@@ -5,7 +5,7 @@ import { API } from '../../config/env'
 import { tr } from '../../i18n/runtime'
 import { PlayIcon } from '../../shared/components/Icons'
 import { number, percent, shortDateTime } from '../../shared/formatters'
-import { MonthlyCapitalMovementHeatmap } from '../backtest/components/MonthlyCapitalMovementHeatmap'
+import { MonthlyCapitalMovementHeatmap } from '../backtest/components/RotationPanel'
 import { TemporalPolicySearchPanel } from './TemporalPolicySearchPanel'
 import { WinnerTransitionAttributionPanel } from './WinnerTransitionAttributionPanel'
 import { WinnerTransitionRiskSearchPanel } from './WinnerTransitionRiskSearchPanel'
@@ -171,7 +171,7 @@ export function TemporalStudyPanel({ run = null, processing = null, canRun = fal
     setTransitionStatefulReplay(null)
     try {
       setPipelineStage('study')
-      await runStudyStep()
+      const value = await runStudyStep()
       const body = { processing_id: processing.id, start_month: startMonth, end_month: endMonth }
 
       setPipelineStage('risk')

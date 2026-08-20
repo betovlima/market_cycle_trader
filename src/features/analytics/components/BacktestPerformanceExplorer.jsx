@@ -30,7 +30,7 @@ const PERFORMANCE_LAYOUT_STORAGE_KEY = 'market-cycle-trader.analytics.performanc
 const DEFAULT_PERFORMANCE_LAYOUT = ['performance', 'heatmap']
 
 
-function PerformanceTooltip({ active = false, payload = [], referenceLabel = null }) {
+function PerformanceTooltip({ active, payload, referenceLabel = null }) {
   if (!active || !payload?.length) return null
   const point = payload.find((item) => item?.payload?.timestamp)?.payload
   if (!point) return null

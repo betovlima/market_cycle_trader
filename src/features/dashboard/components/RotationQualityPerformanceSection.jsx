@@ -53,7 +53,7 @@ function SummaryMetric({ label, value, tone = '' }) {
   return <div className={`rq-dashboard-metric ${tone}`}><span>{tr(label)}</span><strong>{value}</strong></div>
 }
 
-function ExperimentTooltip({ active = false, payload = [] }) {
+function ExperimentTooltip({ active, payload }) {
   if (!active || !payload?.length) return null
   const point = payload.find((item) => item?.payload?.candidate_id)?.payload
   if (!point) return null

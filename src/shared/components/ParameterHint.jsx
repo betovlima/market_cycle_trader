@@ -7,7 +7,7 @@ const CARD_GAP = 8
 const CLOSE_DELAY_MS = 120
 
 export function ParameterHint({
-  id = undefined,
+  id,
   title,
   description,
   relationship = '',

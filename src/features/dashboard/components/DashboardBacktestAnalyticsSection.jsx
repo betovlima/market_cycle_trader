@@ -5,7 +5,7 @@ import { API } from '../../../config/env'
 import { tr } from '../../../i18n/runtime'
 import { shortDateTime } from '../../../shared/formatters'
 import { ParameterHint } from '../../../shared/components/ParameterHint'
-import { MonthlyCapitalMovementHeatmap } from '../../backtest/components/MonthlyCapitalMovementHeatmap'
+import { MonthlyCapitalMovementHeatmap } from '../../backtest/components/RotationPanel'
 import { DashboardMonthlyReturnConsistencySection } from './DashboardMonthlyReturnConsistencySection'
 
 function completedRows(rows) {

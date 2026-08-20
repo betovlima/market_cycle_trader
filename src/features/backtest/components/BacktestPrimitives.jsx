@@ -79,7 +79,7 @@ export function MetricLabel({ id, label, hint, hintDetails = [] }) {
   )
 }
 
-export function Metric({ id, label, value, note = null, tone = '', hint = '', hintDetails = [] }) {
+export function Metric({ id, label, value, note, tone = '', hint = '', hintDetails = [] }) {
   return (
     <article className={`result-metric ${tone}`}>
       <MetricLabel id={id} label={label} hint={hint} hintDetails={hintDetails} />

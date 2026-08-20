@@ -70,7 +70,7 @@ export function TradingSessionStrip({ connection, marketClock, robot, now, refre
   )
 }
 
-export function PortfolioMetric({ label, value, detail = null, tone = '' }) {
+export function PortfolioMetric({ label, value, detail, tone = '' }) {
   return (
     <div className={`portfolio-workspace-metric ${tone}`}>
       <span>{tr(label)}</span>

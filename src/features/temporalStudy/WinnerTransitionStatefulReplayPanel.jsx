@@ -4,7 +4,7 @@ import { apiFetch } from '../../api/http'
 import { API } from '../../config/env'
 import { tr } from '../../i18n/runtime'
 import { money, number, percent } from '../../shared/formatters'
-import { MonthlyCapitalMovementHeatmap } from '../backtest/components/MonthlyCapitalMovementHeatmap'
+import { MonthlyCapitalMovementHeatmap } from '../backtest/components/RotationPanel'
 
 function Metric({ label, value, tone = '' }) {
   return <div className={`winner-risk-metric ${tone}`}><span>{label}</span><strong>{value}</strong></div>
