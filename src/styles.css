@@ -8803,3 +8803,110 @@ a { color: inherit; }
 .model-tuning-validation-progress span {
   color: var(--muted);
 }
+
+/* Temporal study heatmap totals and scale legend */
+.rotation-monthly-heatmap-head,
+.rotation-monthly-heatmap-row {
+  min-width: 980px;
+  grid-template-columns: 49px repeat(12, minmax(58px, 1fr)) minmax(72px, 1.12fr);
+}
+.rotation-monthly-heatmap-head .summary-heading {
+  color: #a8bfd8;
+  font-weight: 900;
+}
+.rotation-monthly-heatmap-cell.summary {
+  cursor: default;
+  border-style: dashed;
+  box-shadow: inset 0 0 0 1px rgba(215, 234, 255, .035);
+}
+.rotation-monthly-heatmap-cell.summary:hover {
+  filter: none;
+  transform: none;
+  box-shadow: inset 0 0 0 1px rgba(215, 234, 255, .035);
+}
+.rotation-monthly-heatmap-row.totals-row {
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(95, 126, 158, .16);
+}
+.rotation-monthly-heatmap-cell.grand-total {
+  font-weight: 950;
+  border-style: solid;
+}
+.rotation-monthly-heatmap-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: #7892ad;
+  font-size: .54rem;
+  font-weight: 750;
+}
+.rotation-monthly-heatmap-legend em {
+  flex-basis: 100%;
+  color: #657e98;
+  text-align: center;
+  font-style: normal;
+  font-weight: 650;
+}
+.rotation-heatmap-swatch {
+  width: 30px;
+  height: 8px;
+  border: 1px solid rgba(95, 126, 158, .15);
+  border-radius: 999px;
+}
+.rotation-heatmap-swatch.positive { background: rgba(44, 196, 139, var(--movement-heat-alpha)); }
+.rotation-heatmap-swatch.negative { background: rgba(219, 91, 111, var(--movement-heat-alpha)); }
+.rotation-heatmap-swatch.movements { background: rgba(43, 132, 221, var(--movement-heat-alpha)); }
+.rotation-heatmap-swatch.cash { background: rgba(139, 95, 236, var(--movement-heat-alpha)); }
+.rotation-heatmap-swatch.holding { background: rgba(211, 157, 60, var(--movement-heat-alpha)); }
+.rotation-decision-context-cell { min-width: 210px; max-width: 320px; }
+.rotation-decision-context-cell strong,
+.rotation-decision-context-cell span,
+.rotation-decision-context-cell small { display: block; }
+.rotation-decision-context-cell strong { color: #cfe3f7; font-size: .58rem; line-height: 1.35; }
+.rotation-decision-context-cell span { margin-top: 2px; color: #8fa8c2; font-size: .55rem; }
+.rotation-decision-context-cell small { margin-top: 2px; color: #708aa4; font-size: .52rem; }
+.rotation-monthly-heatmap-heading-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+.rotation-monthly-series-selector {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #7994b0;
+  font-size: .57rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+.rotation-monthly-series-selector select {
+  min-height: 31px;
+  min-width: 170px;
+  padding: 4px 28px 4px 9px;
+  border: 1px solid rgba(79, 111, 146, .22);
+  border-radius: 8px;
+  background: rgba(2, 13, 27, .46);
+  color: #dce9f7;
+  font-size: .6rem;
+  font-weight: 800;
+}
+@media (max-width: 920px) {
+  .rotation-monthly-heatmap-heading-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .rotation-monthly-series-selector {
+    justify-content: space-between;
+  }
+  .rotation-monthly-series-selector select {
+    flex: 1;
+    min-width: 0;
+  }
+}

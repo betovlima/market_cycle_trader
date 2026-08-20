@@ -1,9 +1,0 @@
-Market Cycle Trader Front v4.0.0
-Major 4 — Trader Winner Lifecycle
-
-- Strategy Catalog consumes backend-owned trader_compatibility.
-- Candidate/Promote actions are enabled by technical runtime compatibility, not by Strategy kind/status rules in the Front.
-- Promotion confirmation states that XNYS must be closed.
-- Promotion request includes confirm_market_closed=true and preserves operational state.
-- Incompatible Strategies keep research freedom but cannot be promoted to the Trader lifecycle.
-- Existing guided Research Lab workflow from Front v3.33.0 is preserved.

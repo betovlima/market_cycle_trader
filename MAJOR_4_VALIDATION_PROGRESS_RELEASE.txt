@@ -1,7 +1,0 @@
-Market Cycle Trader Front v4.1.2 — CARO Finalist Validation Progress
-
-- Shows live validation progress directly on the CARO candidate card.
-- Polls the completed Model Tuning run while finalist validation is queued/running.
-- Displays current Temporal LightGBM stage and percentage, including fold progression returned by the backend.
-- Shows Validation Analytics only after completion.
-- Allows retry only for technical processing failures; analytical validation FAIL remains preserved as evidence.

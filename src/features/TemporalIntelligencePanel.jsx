@@ -5,84 +5,12 @@ import { hasCapability } from '../auth/capabilities'
 import { API } from '../config/env'
 import { tr } from '../i18n/runtime'
 import { PlayIcon } from '../shared/components/Icons'
-import { TemporalRotationQualityPanel } from './TemporalRotationQualityPanel'
+import { TemporalStudyPanel } from './temporalStudy/TemporalStudyPanel'
+import { ConfidenceTable, LegacyForecastTable, LegacyHorizonTable, TemporalMetric as Metric } from './temporalIntelligence/components/TemporalIntelligencePrimitives'
+import { temporalStatusLabel as statusLabel } from './temporalIntelligence/temporalIntelligenceUtils'
 import { money, number, percent, shortDateTime } from '../shared/formatters'
 
-function statusLabel(value) {
-  const normalized = String(value || '').toLowerCase()
-  if (normalized === 'completed') return tr('Completed')
-  if (normalized === 'running') return tr('Running')
-  if (normalized === 'queued') return tr('Queued')
-  if (normalized === 'stop_requested') return tr('Stopping')
-  if (normalized === 'cancelled') return tr('Stopped')
-  if (normalized === 'interrupted') return tr('Interrupted')
-  if (normalized === 'failed') return tr('Failed')
-  return value || '—'
-}
-
-function Metric({ label, value, note, tone = '' }) {
-  return (
-    <div className={`temporal-metric ${tone}`}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-      {note ? <small>{note}</small> : null}
-    </div>
-  )
-}
-
-function LegacyHorizonTable({ items = [], selectedHorizon, onSelect }) {
-  return (
-    <div className="temporal-table-shell">
-      <table className="temporal-table">
-        <thead>
-          <tr>
-            <th>{tr('Horizon')}</th><th>{tr('OOS Samples')}</th><th>{tr('Brier')}</th><th>{tr('Brier Skill')}</th>
-            <th>{tr('Calibration Error')}</th><th>{tr('AUC')}</th><th>{tr('Alpha Rank Correlation')}</th>
-            <th>{tr('Alpha MAE')}</th><th>{tr('Alpha MAE Skill')}</th><th>{tr('Drawdown MAE')}</th>
-            <th>{tr('Drawdown MAE Skill')}</th><th>{tr('High Confidence Hit Rate')}</th><th>{tr('High Confidence Lift')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => (
-            <tr key={item.horizon} className={Number(selectedHorizon) === Number(item.horizon) ? 'selected' : ''} onClick={() => onSelect(Number(item.horizon))}>
-              <td><strong>{item.horizon}d</strong></td><td>{number(item.samples, 0)}</td><td>{number(item.brier, 4)}</td>
-              <td>{percent(item.brier_skill, 2)}</td><td>{percent(item.calibration_error, 2)}</td><td>{number(item.auc, 3)}</td>
-              <td>{number(item.alpha_rank_correlation, 3)}</td><td>{percent(item.alpha_mae, 2)}</td><td>{percent(item.alpha_mae_skill, 2)}</td>
-              <td>{percent(item.drawdown_mae, 2)}</td><td>{percent(item.drawdown_mae_skill, 2)}</td>
-              <td>{percent(item.high_confidence_positive_rate, 2)}</td><td>{percent(item.high_confidence_lift, 2)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function ConfidenceTable({ items = [] }) {
-  if (!items.length) return null
-  return (
-    <div className="temporal-table-shell compact">
-      <table className="temporal-table">
-        <thead><tr><th>{tr('Probability Band')}</th><th>{tr('Samples')}</th><th>{tr('Mean Probability')}</th><th>{tr('Realized Hit Rate')}</th><th>{tr('Realized Alpha')}</th><th>{tr('Predicted Alpha')}</th><th>{tr('Realized Drawdown')}</th></tr></thead>
-        <tbody>{items.map((item) => <tr key={`${item.from_probability}-${item.to_probability}`}><td>{percent(item.from_probability, 0)}–{percent(item.to_probability, 0)}</td><td>{number(item.samples, 0)}</td><td>{percent(item.mean_probability, 2)}</td><td>{percent(item.realized_positive_rate, 2)}</td><td>{percent(item.mean_realized_alpha, 2)}</td><td>{percent(item.mean_predicted_alpha, 2)}</td><td>{percent(item.mean_realized_drawdown, 2)}</td></tr>)}</tbody>
-      </table>
-    </div>
-  )
-}
-
-function LegacyForecastTable({ items = [] }) {
-  if (!items.length) return <div className="temporal-empty">{tr('No latest forecast is available for this horizon.')}</div>
-  return (
-    <div className="temporal-table-shell">
-      <table className="temporal-table temporal-forecast-table">
-        <thead><tr><th>{tr('Asset')}</th><th>{tr('Expected Alpha')}</th><th>{tr('P(Alpha > 0)')}</th><th>{tr('Expected Max Drawdown')}</th></tr></thead>
-        <tbody>{items.map((item) => <tr key={`${item.horizon}-${item.symbol}`}><td><strong>{item.symbol}</strong></td><td className={Number(item.expected_alpha) >= 0 ? 'positive' : 'negative'}>{percent(item.expected_alpha, 2)}</td><td>{percent(item.probability_positive_alpha, 2)}</td><td>{percent(item.expected_max_drawdown, 2)}</td></tr>)}</tbody>
-      </table>
-    </div>
-  )
-}
-
-export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired, tuningStrategy = null }) {
+export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired, tuningStrategy = null, studyProcessing = null }) {
   const canStart = hasCapability(capabilities, 'temporal_intelligence.start')
   const canStop = hasCapability(capabilities, 'temporal_intelligence.stop')
   const canExport = hasCapability(capabilities, 'temporal_intelligence.export')
@@ -308,7 +236,7 @@ export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired,
         {!decisionExperiment ? <section className="temporal-section"><div className="temporal-section-heading"><h3>{tr('Latest Shadow Forecast')}</h3><div className="temporal-horizon-buttons">{horizonMetrics.map((item) => <button type="button" key={item.horizon} className={Number(selectedHorizon) === Number(item.horizon) ? 'active' : ''} onClick={() => setSelectedHorizon(Number(item.horizon))}>{item.horizon}d</button>)}</div></div><LegacyForecastTable items={forecasts} /></section> : null}
       </> : null}
 
-      <TemporalRotationQualityPanel capabilities={capabilities} onSessionExpired={onSessionExpired} sourceRun={run} />
+      <TemporalStudyPanel run={run} processing={studyProcessing} canRun={canStart} canExport={canExport} />
     </div>
   )
 }
