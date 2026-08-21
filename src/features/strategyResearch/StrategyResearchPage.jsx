@@ -12,6 +12,20 @@ import './strategyResearch.css'
 const ACTIVE_TEMPORAL = new Set(['queued', 'running', 'stop_requested'])
 const ACTIVE_JOB = new Set(['queued', 'running'])
 const FAILED = new Set(['failed', 'interrupted', 'cancelled'])
+const RESTORE_TIMEOUT_MS = 20_000
+
+async function apiFetchTimed(url, options = {}, timeoutMs = RESTORE_TIMEOUT_MS) {
+  const controller = new AbortController()
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    return await apiFetch(url, { ...options, signal: controller.signal })
+  } catch (requestError) {
+    if (requestError?.name === 'AbortError') throw new Error('Strategy Research restore request timed out.')
+    throw requestError
+  } finally {
+    window.clearTimeout(timer)
+  }
+}
 
 function currentMonth() {
   const date = new Date()
@@ -111,7 +125,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     let loadedAnalytics = null
     if (processingId) {
       try {
-        loadedAnalytics = await apiFetch(`${API}/analytics/processings/${encodeURIComponent(processingId)}`)
+        loadedAnalytics = await apiFetchTimed(`${API}/analytics/processings/${encodeURIComponent(processingId)}`)
         setAnalytics(loadedAnalytics)
         nextState.reference = 'completed'
       } catch {
@@ -123,7 +137,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     if (query) {
       const fetchLatest = async (endpoint) => {
         try {
-          const value = await apiFetch(`${API}/temporal-intelligence/${encodeURIComponent(loadedRun.id)}/${endpoint}?${query.toString()}`)
+          const value = await apiFetchTimed(`${API}/temporal-intelligence/${encodeURIComponent(loadedRun.id)}/${endpoint}?${query.toString()}`)
           return value?.id ? value : null
         } catch {
           return null
@@ -156,7 +170,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     const processingId = String(loadedRun?.research_processing_id || '').trim()
     if (processingId) {
       try {
-        const loadedAnalytics = await apiFetch(`${API}/analytics/processings/${encodeURIComponent(processingId)}`)
+        const loadedAnalytics = await apiFetchTimed(`${API}/analytics/processings/${encodeURIComponent(processingId)}`)
         setAnalytics(loadedAnalytics)
         nextState.reference = Array.isArray(loadedAnalytics?.equity) && loadedAnalytics.equity.length ? 'completed' : 'prepared'
       } catch {
@@ -170,31 +184,50 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     activeTemporalRunRef.current = loadedRun.id
   }, [])
 
+  const restorePipeline = useCallback(async (summaryRun) => {
+    if (!summaryRun?.id) return
+    if (ACTIVE_TEMPORAL.has(String(summaryRun?.status || '').toLowerCase())) {
+      await loadActivePipelineData(summaryRun)
+      return
+    }
+    let detailedRun = summaryRun
+    try {
+      detailedRun = await apiFetchTimed(`${API}/temporal-intelligence/${encodeURIComponent(summaryRun.id)}`)
+      setRun(detailedRun)
+    } catch (requestError) {
+      handleError(requestError)
+      return
+    }
+    const start = monthValue(detailedRun?.result?.oos_start, '2020-01')
+    const end = monthValue(detailedRun?.result?.oos_end || detailedRun?.research_snapshot_cutoff || detailedRun?.analysis_end_date, currentMonth())
+    setStartMonth(start)
+    setEndMonth(end)
+    await loadExistingPipelineData(detailedRun, start, end)
+  }, [handleError, loadActivePipelineData, loadExistingPipelineData])
+
   const load = useCallback(async () => {
     setLoading(true)
     setError('')
+    let currentRun = null
     try {
       let nextControl = null
       try {
-        nextControl = await apiFetch(`${API}/admin/strategies/control`)
+        nextControl = await apiFetchTimed(`${API}/admin/strategies/control`)
         setControl(nextControl)
       } catch (requestError) {
         if (!(requestError instanceof ApiError) || requestError.status !== 403) throw requestError
       }
-      const latest = await apiFetch(`${API}/temporal-intelligence/latest`)
+      const history = await apiFetchTimed(`${API}/temporal-intelligence/history?limit=1`)
+      const latest = Array.isArray(history?.items) ? history.items[0] || null : null
       const selectedStrategy = nextControl?.strategy_research_strategy || nextControl?.research_strategy || null
       const latestIsActive = ACTIVE_TEMPORAL.has(String(latest?.status || '').toLowerCase())
       const matchesSelected = !selectedStrategy || runMatchesStrategy(latest, selectedStrategy)
-      const currentRun = matchesSelected ? latest : null
+      currentRun = matchesSelected ? latest : null
       setBlockingRun(latestIsActive && !matchesSelected ? latest : null)
       setRun(currentRun)
-      const start = monthValue(currentRun?.result?.oos_start, '2020-01')
-      const end = monthValue(currentRun?.result?.oos_end || currentRun?.research_snapshot_cutoff || currentRun?.analysis_end_date, currentMonth())
-      setStartMonth(start)
+      const end = monthValue(currentRun?.research_snapshot_cutoff || currentRun?.analysis_end_date, currentMonth())
       setEndMonth(end)
-      if (currentRun && ACTIVE_TEMPORAL.has(String(currentRun?.status || '').toLowerCase())) await loadActivePipelineData(currentRun)
-      else if (currentRun) await loadExistingPipelineData(currentRun, start, end)
-      else setStageState(defaultStageState())
+      if (!currentRun) setStageState(defaultStageState())
       if (!nextControl && latest?.strategy_profile_name) {
         setControl({ strategy_research_strategy: { id: latest.strategy_profile_id, name: latest.strategy_profile_name, revision: latest.strategy_profile_revision, strategy_kind: latest.strategy_kind, temporal_strategy_variant: latest.temporal_strategy_variant, research_model: { label: latest.model_label } } })
       }
@@ -203,7 +236,12 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     } finally {
       setLoading(false)
     }
-  }, [handleError, loadActivePipelineData, loadExistingPipelineData])
+    if (currentRun) {
+      window.setTimeout(() => {
+        restorePipeline(currentRun).catch(handleError)
+      }, 0)
+    }
+  }, [handleError, restorePipeline])
 
   useEffect(() => { load() }, [load])
 
@@ -233,7 +271,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
           const processingId = String(value?.research_processing_id || '').trim()
           if (!referenceReady && processingId) {
             try {
-              const loadedAnalytics = await apiFetch(`${API}/analytics/processings/${encodeURIComponent(processingId)}`)
+              const loadedAnalytics = await apiFetchTimed(`${API}/analytics/processings/${encodeURIComponent(processingId)}`)
               if (!disposed) {
                 setAnalytics(loadedAnalytics)
                 setStageState((current) => ({ ...current, reference: Array.isArray(loadedAnalytics?.equity) && loadedAnalytics.equity.length ? 'completed' : 'prepared', temporal: 'running' }))
