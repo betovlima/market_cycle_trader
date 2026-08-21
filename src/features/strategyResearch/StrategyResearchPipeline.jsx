@@ -1,11 +1,11 @@
 import { tr } from '../../i18n/runtime'
 
 const STAGES = [
-  { id: 'reference', label: 'Reference Replay', icon: '↻' },
+  { id: 'reference', label: 'Strategy Replay', icon: '↻' },
   { id: 'temporal', label: 'Temporal Intelligence', icon: '⚙' },
   { id: 'risk', label: 'Risk & Intervention', icon: '◉' },
   { id: 'confidence', label: 'Confidence Calibration', icon: '◇' },
-  { id: 'stateful', label: 'Stateful Replay', icon: '⇄' },
+  { id: 'stateful', label: 'Decision Policy Replay', icon: '⇄' },
   { id: 'validation', label: 'Final Validation', icon: '✓' },
 ]
 

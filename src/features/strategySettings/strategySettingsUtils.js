@@ -32,26 +32,19 @@ export function statusLabel(value) {
   return tr(STATUS_LABELS[String(value || 'draft')] || titleFromName(String(value || 'draft')))
 }
 
-export function lifecycleSummary(item, isWinner, isCandidate, isPromotedCandidate) {
-  if (isWinner) return tr('Active Trader winner')
-  if (isCandidate) return tr('Active validated candidate')
-  if (isPromotedCandidate) return tr('Active promoted candidate')
-  if (item.status === 'superseded_candidate' && item.historical_lifecycle_status === 'promoted_candidate') return tr('Historical promoted candidate')
-  if (item.status === 'superseded_candidate') return tr('Replaced by a newer candidate')
-  if (item.status === 'promoted_candidate') return tr('Promoted to a protected winner snapshot')
-  if (item.status === 'former_winner') return tr('Historical former Trader winner')
-  if (item.strategy_kind === 'temporal_intelligence' && item.temporal_strategy_variant === 'winner_transition_stateful') return tr('Conservative Stateful')
-  if (item.last_backtest_status === 'completed') return tr('Backtest completed · eligible for candidate')
-  return tr('Backtest required')
+export function lifecycleSummary(item, isWinner, isResearch) {
+  if (isWinner) return tr('Active Winner')
+  if (isResearch) return tr('Active Research Strategy')
+  return tr('Saved Strategy')
 }
 
-export function strategyCatalogRank(item, winnerId, researchId, candidateId, promotedCandidateId) {
+export function strategyCatalogRank(item, winnerId, latestSavedId, researchId) {
   if (item.id === winnerId) return 0
-  if (item.id === researchId) return 1
-  if (item.id === candidateId) return 2
-  if (item.id === promotedCandidateId) return 3
-  return 4
+  if (item.id === latestSavedId) return 1
+  if (item.id === researchId) return 2
+  return 3
 }
+
 
 export function resolveFieldSchema(schema, name) {
   const property = schema?.properties?.[name] || {}

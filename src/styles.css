@@ -1264,6 +1264,17 @@ a { color: inherit; }
   color: #8bbcf2;
 }
 
+.strategy-status.status-saved {
+  color: var(--muted);
+  border-color: var(--border);
+}
+
+.strategy-status.status-research {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
 .strategy-status.status-winner {
   background: rgba(240, 190, 57, 0.14);
   color: #efca62;
@@ -8910,3 +8921,8 @@ a { color: inherit; }
     min-width: 0;
   }
 }
+
+.strategy-list-description { display: block; margin-top: 3px; color: var(--muted); font-size: .72rem; line-height: 1.35; }
+.strategy-list-markers .latest { opacity: .72; }
+
+.strategy-editor-commit { display:block; margin-top:4px; color:var(--muted); font-size:.78rem; }

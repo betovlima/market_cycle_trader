@@ -116,7 +116,7 @@ function HeatmapDetailDialog({ detail, yearSummary, onClose }) {
   return createPortal(<div className="strategy-research-heatmap-dialog-backdrop" role="presentation" onMouseDown={onClose}>
     <section className="strategy-research-heatmap-dialog" role="dialog" aria-modal="true" aria-label={title} onMouseDown={(event) => event.stopPropagation()}>
       <header className="strategy-research-heatmap-dialog-header">
-        <div><span className="panel-kicker">{tr('REFERENCE REPLAY')}</span><h3>{title}</h3><p>{tr(isYear ? 'Annual return detail for the reference replay.' : 'Monthly return detail for the reference replay.')}</p></div>
+        <div><span className="panel-kicker">{tr('STRATEGY REPLAY')}</span><h3>{title}</h3><p>{tr(isYear ? 'Annual return detail for the Strategy replay.' : 'Monthly return detail for the Strategy replay.')}</p></div>
         <button type="button" onClick={onClose} aria-label={tr('Close')}>×</button>
       </header>
       <div className="strategy-research-heatmap-dialog-metrics">
@@ -159,7 +159,7 @@ function MonthlyHeatmap({ analytics }) {
   const [selectedDetail, setSelectedDetail] = useState(null)
   const rows = useMemo(() => monthlyReturns(analytics?.equity || []), [analytics?.equity])
   const yearMap = useMemo(() => yearlyReturns(rows), [rows])
-  if (!rows.length) return <EmptyVisual title="Reference replay visualization will appear here." />
+  if (!rows.length) return <EmptyVisual title="Strategy replay visualization will appear here." />
   const years = [...new Set(rows.map((item) => item.month.slice(0, 4)))]
   const byMonth = new Map(rows.map((item) => [item.month, item]))
   const maxAbs = Math.max(...rows.map((item) => Math.abs(Number(item.value || 0))), ...[...yearMap.values()].map((item) => Math.abs(Number(item.value || 0))), 0.0001)
@@ -167,7 +167,7 @@ function MonthlyHeatmap({ analytics }) {
   return <div className="strategy-research-calendar-heatmap-wrap">
     <div className="strategy-research-heatmap-heading">
       <div><strong>{tr('Monthly Return Heatmap')}</strong></div>
-      <span>{tr('Monthly change in reference equity')}</span>
+      <span>{tr('Monthly change in Strategy equity')}</span>
     </div>
     <div className="strategy-research-calendar-heatmap" role="grid" aria-label={tr('Monthly Return Heatmap')}>
       <div className="strategy-research-month-labels"><span />{months.map((name) => <span key={name}>{name}</span>)}<strong>{tr('Year total')}</strong></div>
@@ -326,16 +326,16 @@ function ConfidenceTiles({ confidence }) {
       title: `${tr('Test year')} ${row?.test_year || '—'}`,
       description: active
         ? tr('Shows the out-of-sample economic result obtained with the confidence threshold selected for this chronological test year.')
-        : tr('No confidence intervention was activated for this chronological test year. The Strategy Research reference decision was preserved.'),
+        : tr('No confidence intervention was activated for this chronological test year. The original Strategy decision was preserved.'),
       metrics: [
         { label: tr('Mode'), value: active ? tr('Active') : tr('Control') },
         { label: tr('Capital delta'), value: Number.isFinite(delta) ? percent(delta, 2) : active ? '—' : percent(0, 2), tone: Number(delta) > 0 ? 'positive' : Number(delta) < 0 ? 'negative' : '' },
         { label: tr('Margin threshold'), value: Number.isFinite(threshold) ? number(threshold, 3) : '—' },
-        { label: tr('Tail safety'), value: active ? (safe ? tr('Tail safe') : tr('Tail warning')) : tr('Reference preserved') },
+        { label: tr('Tail safety'), value: active ? (safe ? tr('Tail safe') : tr('Tail warning')) : tr('Original Strategy preserved') },
       ],
       notes: [
         { label: tr('Selection reason'), text: reason },
-        { label: tr('Interpretation'), text: tr('The calibration chooses how much confidence margin is required before a risk signal is allowed to change the reference decision.') },
+        { label: tr('Interpretation'), text: tr('The calibration chooses how much confidence margin is required before a risk signal is allowed to change the original Strategy decision.') },
         { label: tr('Validation'), text: tr('Each tile represents an out-of-sample chronological test year, not an in-sample fit result.') },
         ...(Number.isFinite(endingCapital) ? [{ label: tr('Ending capital'), text: money(endingCapital) }] : []),
       ],
@@ -364,7 +364,7 @@ function SankeyVisual({ stateful }) {
   const [selectedDetail, setSelectedDetail] = useState(null)
   const candidateEquity = stateful?.candidate_a?.analytics?.equity || []
   const referenceEquity = stateful?.control_replay?.analytics?.equity || []
-  if (!candidateEquity.length || !referenceEquity.length) return <EmptyVisual title="Stateful transition flow will appear here." />
+  if (!candidateEquity.length || !referenceEquity.length) return <EmptyVisual title="Decision policy flow will appear here." />
   const referenceByTimestamp = new Map(referenceEquity.map((row, index) => [String(row?.timestamp || ''), { row, index }]))
   const counts = new Map()
   let aligned = 0
@@ -388,7 +388,7 @@ function SankeyVisual({ stateful }) {
   const orderedNodes = ['HOLD', 'ROTATE', 'BUY', 'CASH']
   const links = [...counts.values()].sort((a, b) => b.value - a.value)
   const nodes = orderedNodes.filter((name) => links.some((link) => link.from === name || link.to === name))
-  if (!links.length || !nodes.length) return <EmptyVisual title="Stateful transition flow will appear here." />
+  if (!links.length || !nodes.length) return <EmptyVisual title="Decision policy flow will appear here." />
   const yMap = Object.fromEntries(nodes.map((name, index) => [name, 54 + index * (210 / Math.max(1, nodes.length - 1))]))
   const max = Math.max(...links.map((link) => link.value), 1)
   const total = Math.max(1, links.reduce((sum, link) => sum + link.value, 0))
@@ -396,27 +396,27 @@ function SankeyVisual({ stateful }) {
   const openLink = (link) => {
     const sameDecision = link.from === link.to
     setSelectedDetail({
-      kicker: 'STATEFUL REPLAY',
+      kicker: 'DECISION POLICY REPLAY',
       title: `${link.from} → ${link.to}`,
-      description: tr('Compares the decision produced by the Reference Replay with the decision taken by the Stateful Replay for the same market session.'),
+      description: tr('Compares the original Strategy decision with the decision after the Decision Policy is applied for the same market session.'),
       metrics: [
-        { label: tr('Reference decision'), value: link.from },
-        { label: tr('Stateful decision'), value: link.to },
+        { label: tr('Original Strategy decision'), value: link.from },
+        { label: tr('Decision after policy'), value: link.to },
         { label: tr('Sessions'), value: number(link.value, 0) },
         { label: tr('Share of analyzed sessions'), value: percent(link.value / total, 1) },
-        { label: tr('Stateful interventions'), value: number(link.interventions, 0) },
+        { label: tr('Policy interventions'), value: number(link.interventions, 0) },
         { label: tr('Decision effect'), value: sameDecision ? tr('Decision preserved') : tr('Decision changed') },
       ],
       notes: [
-        { label: tr('How to read the flow'), text: tr('The left side is the Reference Replay decision. The right side is the decision after the Stateful policy is applied. Thicker flows represent more sessions.') },
-        { label: tr('Why it matters'), text: sameDecision ? tr('This flow shows sessions where Stateful preserved the reference decision.') : tr('This flow shows sessions where Stateful changed the reference decision. These are the interventions that must be evaluated economically.') },
+        { label: tr('How to read the flow'), text: tr('The left side is the original Strategy decision. The right side is the decision after the Decision Policy is applied. Thicker flows represent more sessions.') },
+        { label: tr('Why it matters'), text: sameDecision ? tr('This flow shows sessions where the Decision Policy preserved the original Strategy decision.') : tr('This flow shows sessions where the Decision Policy changed the original Strategy decision. These are the interventions that must be evaluated economically.') },
       ],
     })
   }
   return <div className="strategy-research-sankey-wrap">
-    <div className="strategy-research-sankey-heading"><div><strong>{tr('Stateful Decision Flow')}</strong><span>{tr('Reference Replay versus Stateful Replay')}</span></div><small>{tr('Thickness represents the number of aligned market sessions. Click a flow for details.')}</small></div>
-    <div className="strategy-research-sankey-side-labels"><strong>{tr('REFERENCE DECISION')}</strong><strong>{tr('STATEFUL DECISION')}</strong></div>
-    <svg viewBox="0 0 760 340" role="img" aria-label={tr('Stateful action transitions')}>
+    <div className="strategy-research-sankey-heading"><div><strong>{tr('Decision Flow')}</strong><span>{tr('Original Strategy versus Decision Policy')}</span></div><small>{tr('Thickness represents the number of aligned market sessions. Click a flow for details.')}</small></div>
+    <div className="strategy-research-sankey-side-labels"><strong>{tr('ORIGINAL STRATEGY DECISION')}</strong><strong>{tr('DECISION AFTER POLICY')}</strong></div>
+    <svg viewBox="0 0 760 340" role="img" aria-label={tr('Decision policy action transitions')}>
       {links.map((link, index) => {
         const y1 = yMap[link.from]
         const y2 = yMap[link.to]
@@ -429,7 +429,7 @@ function SankeyVisual({ stateful }) {
     <div className="strategy-research-compact-metrics">
       <MetricCard label={tr('Analyzed sessions')} value={number(aligned, 0)} />
       <MetricCard label={tr('Changed decisions')} value={number(changed, 0)} />
-      <MetricCard label={tr('Stateful interventions')} value={number(stateful?.candidate_a?.analytics?.metrics?.interventions, 0)} />
+      <MetricCard label={tr('Policy interventions')} value={number(stateful?.candidate_a?.analytics?.metrics?.interventions, 0)} />
       <MetricCard label={tr('Candidate A capital')} value={money(stateful?.candidate_a?.analytics?.metrics?.ending_capital)} />
     </div>
     <ResearchDetailDialog detail={selectedDetail} onClose={() => setSelectedDetail(null)} />
@@ -486,7 +486,7 @@ export function StrategyResearchVisuals({ selectedStage, stageState = {}, pipeli
   const selectedProgress = selectedStage === 'temporal' && Number.isFinite(temporalProgress) ? temporalProgress : pipelineProgress
   const empty = (title, detail) => <EmptyVisual title={title} detail={detail} loading={selectedStageRunning} progress={selectedProgress} />
   const content = {
-    reference: analytics?.equity?.length ? <MonthlyHeatmap analytics={analytics} /> : empty('Reference replay visualization will appear here.'),
+    reference: analytics?.equity?.length ? <MonthlyHeatmap analytics={analytics} /> : empty('Strategy replay visualization will appear here.'),
     temporal: run?.result?.horizon_metrics?.length ? <TemporalHeatmap run={run} /> : empty('Temporal horizon analysis will appear here.'),
     risk: (risk?.oos?.high_risk_transitions || risk?.oos?.scored_transitions || []).length
       ? <BubbleQuadrant risk={risk} intervention={intervention} />
@@ -494,7 +494,7 @@ export function StrategyResearchVisuals({ selectedStage, stageState = {}, pipeli
         ? <EmptyVisual title={pipelineError} detail={tr('The pipeline stopped before Risk & Intervention produced a valid research dataset. Export Results includes the available partial processing data.')} />
         : empty('Risk and intervention bubbles will appear here.'),
     confidence: confidence?.outer_results?.length ? <ConfidenceTiles confidence={confidence} /> : empty('Confidence calibration tiles will appear here.'),
-    stateful: stateful?.candidate_a ? <SankeyVisual stateful={stateful} /> : empty('Stateful transition flow will appear here.'),
+    stateful: stateful?.candidate_a ? <SankeyVisual stateful={stateful} /> : empty('Decision policy flow will appear here.'),
     validation: stageState.validation === 'completed' || stateful?.candidate_a ? <FoldHeatmap run={run} stateful={stateful} /> : empty('Fold validation heatmap will appear here.'),
   }[selectedStage]
 

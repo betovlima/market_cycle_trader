@@ -189,7 +189,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
       name: strategy.name,
       revision: strategy.revision,
       strategy_kind: strategy.strategy_kind,
-      status: strategy.status,
+      status: strategy.catalog_status || strategy.status,
       source_temporal_run_id: strategy.source_temporal_run_id,
     } : null)
   }, [onTuningContextChange, strategy?.id, strategy?.name, strategy?.revision, strategy?.strategy_kind, strategy?.status, strategy?.source_temporal_run_id])
@@ -670,7 +670,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
 
       <section className="model-tuning-step model-tuning-step-baseline">
         <div className="model-tuning-step-heading"><span>1</span><div><strong>{tr('Baseline')}</strong><small>{tr('Model Tuning always uses the Strategy selected for Strategy Research.')}</small></div></div>
-        {strategy ? <div className="model-tuning-selected-strategy"><div><span>{tr('Selected Strategy')}</span><strong>{strategy.name}</strong></div><div><span>{tr('Status')}</span><strong>{tr(strategy.status)}</strong></div><div><span>{tr('Kind')}</span><strong>{strategy.strategy_kind || 'standard'}</strong></div><div><span>{tr('Revision')}</span><strong>{strategy.revision}</strong></div>{officialWinner ? <div className="model-tuning-winner-reference"><span>{tr('Official Winner')}</span><strong>{officialWinner.name}</strong><small>{officialWinner.tuning_result_metrics?.ending_capital != null ? money(officialWinner.tuning_result_metrics.ending_capital) : tr(officialWinner.status || 'winner')}</small></div> : null}</div> : null}
+        {strategy ? <div className="model-tuning-selected-strategy"><div><span>{tr('Selected Strategy')}</span><strong>{strategy.name}</strong></div><div><span>{tr('Status')}</span><strong>{tr(strategy.catalog_status || strategy.status)}</strong></div><div><span>{tr('Kind')}</span><strong>{strategy.strategy_kind || 'standard'}</strong></div><div><span>{tr('Revision')}</span><strong>{strategy.revision}</strong></div>{officialWinner ? <div className="model-tuning-winner-reference"><span>{tr('Official Winner')}</span><strong>{officialWinner.name}</strong><small>{officialWinner.tuning_result_metrics?.ending_capital != null ? money(officialWinner.tuning_result_metrics.ending_capital) : tr(officialWinner.status || 'winner')}</small></div> : null}</div> : null}
       </section>
 
       {temporalStrategy && temporalModes.length ? (
@@ -736,10 +736,10 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
           <TuningContextLabel
             id="model-tuning-hint-target"
             label="Tuning target"
-            description={temporalTarget ? tr('The selected materialized TEMPORAL Strategy is the immutable baseline for both LightGBM Model Tuning and fast Policy Tuning.') : tr('The active Candidate Strategy whose certified Backtest is used as the starting point for this research campaign.')}
+            description={temporalTarget ? tr('The selected materialized TEMPORAL Strategy is the immutable baseline for both LightGBM Model Tuning and fast Policy Tuning.') : tr('The Strategy selected as RESEARCH is used as the starting point for this research campaign.')}
           />
           <strong title={strategy?.name || ''}>{strategy?.name || '—'}</strong>
-          <small>{strategy ? `${tr(strategy.status)} · ${tr('Revision')} ${strategy.revision}` : '—'}</small>
+          <small>{strategy ? `${tr(strategy.catalog_status || strategy.status)} · ${tr('Revision')} ${strategy.revision}` : '—'}</small>
         </div>
         <div className="model-tuning-context-card model-tuning-scope-card">
           <TuningContextLabel
@@ -754,7 +754,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
           <TuningContextLabel
             id="model-tuning-hint-saved-model"
             label="Saved model"
-            description={temporalModelMode ? tr('The Temporal LightGBM classifiers and regressors are retrained for every challenger. Winner allocation and Temporal policy thresholds remain frozen.') : temporalPolicyMode ? tr('The Temporal LightGBM predictions and underlying Winner remain frozen. Only the Winner-Anchored timing thresholds are replayed.') : tr('Model family currently saved with the Candidate Strategy. Joint CARO may tune the supported LightGBM hyperparameters, while fixed model settings remain unchanged.')}
+            description={temporalModelMode ? tr('The Temporal LightGBM classifiers and regressors are retrained for every challenger. Winner allocation and Temporal policy thresholds remain frozen.') : temporalPolicyMode ? tr('The Temporal LightGBM predictions and underlying Winner remain frozen. Only the Winner-Anchored timing thresholds are replayed.') : tr('Model family currently saved with the RESEARCH Strategy. Joint CARO may tune the supported LightGBM hyperparameters, while fixed model settings remain unchanged.')}
           />
           <strong>{temporalModelMode ? tr('LightGBM Temporal Intelligence') : temporalPolicyMode ? tr('Temporal Policy') : (strategy?.research_model_configuration?.label || strategy?.research_model?.label || '—')}</strong>
           <small>{temporalModelMode ? tr('Retrained per candidate') : temporalPolicyMode ? tr('LightGBM + Winner frozen') : (modelFamily || '—')}</small>

@@ -13,7 +13,7 @@ const ACTIVE_TEMPORAL = new Set(['queued', 'running', 'stop_requested'])
 const ACTIVE_JOB = new Set(['queued', 'running'])
 const FAILED = new Set(['failed', 'interrupted', 'cancelled'])
 const ACTIVE_PIPELINE = new Set(['running', 'pause_requested', 'stop_requested'])
-const RESUMABLE_PIPELINE = new Set(['paused', 'stopped', 'failed'])
+const RESUMABLE_PIPELINE = new Set(['paused', 'failed'])
 const RESTORE_TIMEOUT_MS = 20_000
 
 async function apiFetchTimed(url, options = {}, timeoutMs = RESTORE_TIMEOUT_MS) {
@@ -62,6 +62,15 @@ function runMatchesStrategy(run, strategy) {
   const runHash = String(run.strategy_configuration_hash || '').trim()
   const strategyHash = String(strategy.configuration_hash || '').trim()
   return !runHash || !strategyHash || runHash === strategyHash
+}
+
+function strategyTypeLabel(strategy, run) {
+  const variant = String(strategy?.temporal_strategy_variant || run?.temporal_strategy_variant || '').trim()
+  const kind = String(strategy?.strategy_kind || run?.strategy_kind || 'standard').trim()
+  if (variant === 'winner_transition_stateful') return tr('Conservative Decision Policy')
+  if (kind === 'temporal_intelligence') return tr('Temporal Intelligence Strategy')
+  if (kind === 'standard') return tr('Standard Strategy')
+  return String(variant || kind || '—').replaceAll('_', ' ')
 }
 
 export function StrategyResearchPage({ workspace, capabilities = {}, onSessionExpired }) {
@@ -182,44 +191,46 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     const processingId = String(loadedRun?.research_processing_id || '').trim()
     const nextState = defaultStageState()
     nextState.temporal = 'completed'
-    let loadedAnalytics = null
+
     if (processingId) {
       try {
-        loadedAnalytics = await apiFetchTimed(`${API}/analytics/processings/${encodeURIComponent(processingId)}`)
+        const loadedAnalytics = await apiFetchTimed(`${API}/analytics/processings/${encodeURIComponent(processingId)}`)
         setAnalytics(loadedAnalytics)
-        nextState.reference = 'completed'
+        nextState.reference = Array.isArray(loadedAnalytics?.equity) && loadedAnalytics.equity.length ? 'completed' : 'prepared'
       } catch {
         setAnalytics(null)
-        nextState.reference = 'waiting'
+        nextState.reference = 'prepared'
       }
     }
-    const query = processingId && periodStart && periodEnd ? new URLSearchParams({ processing_id: processingId, start_month: periodStart, end_month: periodEnd }) : null
-    if (query) {
-      const fetchLatest = async (endpoint) => {
-        try {
-          const value = await apiFetchTimed(`${API}/temporal-intelligence/${encodeURIComponent(loadedRun.id)}/${endpoint}?${query.toString()}`)
-          return value?.id ? value : null
-        } catch {
-          return null
-        }
-      }
-      const [riskValue, interventionValue, confidenceValue, statefulValue] = await Promise.all([
-        fetchLatest('winner-transition-risk-search/latest'),
-        fetchLatest('winner-transition-intervention-search/latest'),
-        fetchLatest('winner-transition-confidence-calibration/latest'),
-        fetchLatest('winner-transition-stateful-replay/latest'),
-      ])
-      setRisk(riskValue)
-      setIntervention(interventionValue)
-      setConfidence(confidenceValue)
-      setStateful(statefulValue)
-      if (riskValue?.id && interventionValue?.id) nextState.risk = 'completed'
-      else if (riskValue?.id || interventionValue?.id) nextState.risk = 'paused'
-      if (confidenceValue?.id) nextState.confidence = 'completed'
-      if (statefulValue?.id) nextState.stateful = 'completed'
+
+    let snapshot = null
+    try {
+      snapshot = await apiFetchTimed(`${API}/temporal-intelligence/${encodeURIComponent(loadedRun.id)}/strategy-research/pipeline/snapshot`)
+    } catch {
+      snapshot = null
     }
+
+    const riskValue = snapshot?.risk?.id ? snapshot.risk : null
+    const interventionValue = snapshot?.intervention?.id ? snapshot.intervention : null
+    const confidenceValue = snapshot?.confidence?.id ? snapshot.confidence : null
+    const statefulValue = snapshot?.stateful?.id ? snapshot.stateful : null
+    setRisk(riskValue)
+    setIntervention(interventionValue)
+    setConfidence(confidenceValue)
+    setStateful(statefulValue)
+
+    if (riskValue?.id && interventionValue?.id) nextState.risk = 'completed'
+    else if (riskValue?.id || interventionValue?.id) nextState.risk = 'paused'
+    if (confidenceValue?.id) nextState.confidence = 'completed'
+    if (statefulValue?.id) nextState.stateful = 'completed'
     if (nextState.stateful === 'completed') nextState.validation = 'completed'
-    const persisted = loadedRun?.strategy_research_pipeline
+
+    const snapshotStart = monthValue(snapshot?.period_start, periodStart)
+    const snapshotEnd = monthValue(snapshot?.period_end, periodEnd)
+    if (snapshotStart) setStartMonth(snapshotStart)
+    if (snapshotEnd) setEndMonth(snapshotEnd)
+
+    const persisted = snapshot?.pipeline || loadedRun?.strategy_research_pipeline
     const persistedStatus = String(persisted?.status || '').toLowerCase()
     const resolvedState = persisted?.stage_states && persistedStatus && persistedStatus !== 'idle'
       ? { ...nextState, ...persisted.stage_states }
@@ -272,8 +283,9 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       handleError(requestError)
       return
     }
-    const start = monthValue(detailedRun?.result?.oos_start, '2020-01')
-    const end = monthValue(detailedRun?.result?.oos_end || detailedRun?.research_snapshot_cutoff || detailedRun?.analysis_end_date, currentMonth())
+    const persistedPeriod = detailedRun?.strategy_research_pipeline || {}
+    const start = monthValue(persistedPeriod?.start_month || detailedRun?.result?.oos_start, '2020-01')
+    const end = monthValue(persistedPeriod?.end_month || detailedRun?.result?.oos_end || detailedRun?.research_snapshot_cutoff || detailedRun?.analysis_end_date, currentMonth())
     setStartMonth(start)
     setEndMonth(end)
     await loadExistingPipelineData(detailedRun, start, end)
@@ -338,6 +350,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
         if (disposed) return
         setRun(value)
         setBlockingRun(null)
+        if (value?.strategy_research_pipeline) applyPipelineControl(value.strategy_research_pipeline, { selectCurrent: false })
         const status = String(value?.status || '').toLowerCase()
         if (ACTIVE_TEMPORAL.has(status)) {
           activeTemporalRunRef.current = value.id
@@ -380,24 +393,31 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       disposed = true
       if (timer) window.clearInterval(timer)
     }
-  }, [analytics?.equity, endMonth, handleError, loadExistingPipelineData, run?.id, running, startMonth, temporalActive])
+  }, [analytics?.equity, applyPipelineControl, endMonth, handleError, loadExistingPipelineData, run?.id, running, startMonth, temporalActive])
 
   useEffect(() => {
-    if (!run?.id || running || temporalActive || !persistedPipelineActive) return undefined
+    if (!run?.id || running || !persistedPipelineActive) return undefined
     let disposed = false
     let timer = null
 
     const syncPipelineControl = async () => {
       try {
-        const value = await apiFetch(`${API}/temporal-intelligence/${encodeURIComponent(run.id)}`)
+        const controlValue = await apiFetch(`${API}/temporal-intelligence/${encodeURIComponent(run.id)}/strategy-research/pipeline`)
         if (disposed) return
-        setRun(value)
-        const controlValue = value?.strategy_research_pipeline
         if (controlValue) applyPipelineControl(controlValue)
         const statusValue = String(controlValue?.status || '').toLowerCase()
         if (!ACTIVE_PIPELINE.has(statusValue)) {
           if (timer) window.clearInterval(timer)
-          await loadExistingPipelineData(value, startMonth, endMonth)
+          try {
+            const value = await apiFetch(`${API}/temporal-intelligence/${encodeURIComponent(run.id)}`)
+            if (disposed) return
+            setRun(value)
+            if (String(value?.status || '').toLowerCase() === 'completed') {
+              await loadExistingPipelineData(value, startMonth, endMonth)
+            }
+          } catch (requestError) {
+            if (!disposed) handleError(requestError)
+          }
         }
       } catch (requestError) {
         if (!disposed) handleError(requestError)
@@ -410,13 +430,13 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       disposed = true
       if (timer) window.clearInterval(timer)
     }
-  }, [applyPipelineControl, endMonth, handleError, loadExistingPipelineData, persistedPipelineActive, run?.id, running, startMonth, temporalActive])
+  }, [applyPipelineControl, endMonth, handleError, loadExistingPipelineData, persistedPipelineActive, run?.id, running, startMonth])
 
   async function waitForBacktest(jobId) {
     while (true) {
       const job = await apiFetch(`${API}/jobs/${encodeURIComponent(jobId)}`)
       if (job?.status === 'completed') return job
-      if (FAILED.has(String(job?.status || '').toLowerCase())) throw new Error(job?.failure_message || 'Reference Backtest failed.')
+      if (FAILED.has(String(job?.status || '').toLowerCase())) throw new Error(job?.failure_message || 'Strategy Replay Backtest failed.')
       await wait(2500)
     }
   }
@@ -448,7 +468,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
 
   async function hydrateReferenceReplay(createdRun) {
     const processingId = String(createdRun?.research_processing_id || '').trim()
-    if (!processingId) throw new Error('The selected Strategy did not produce a compatible Reference Replay source.')
+    if (!processingId) throw new Error('The selected Strategy did not produce a compatible Strategy Replay source.')
     const processingAnalytics = await apiFetch(`${API}/analytics/processings/${encodeURIComponent(processingId)}`)
     setAnalytics(processingAnalytics)
     return processingId
@@ -602,10 +622,9 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       const stopped = pipelineState === 'stopped' || stopRequestedRef.current || String(requestError?.message || '').includes('stopped by user')
       const activeStageId = activeStageRef.current
       if (paused || stopped) {
-        if (activeStageId) setStage(activeStageId, stopped ? 'stopped' : 'paused')
         setNotice(tr(stopped
-          ? 'Research Pipeline stopped. Continue resumes from the first unfinished stage.'
-          : 'Research Pipeline paused. Continue resumes from the first unfinished stage.'))
+          ? 'Research Pipeline stopped. Restart begins a new pipeline.'
+          : 'Research Pipeline paused. Continue resumes from the next unfinished stage.'))
       } else {
         if (activeStageId) setStage(activeStageId, 'failed')
         if (completedRun?.id && activeStageId) {
@@ -627,31 +646,48 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
 
   async function pausePipeline() {
     if ((!running && !persistedPipelineActive) || pausing || stopping) return
-    pauseRequestedRef.current = true
     setPausing(true)
-    setNotice(tr('Pause requested. The current stage will finish safely before the pipeline pauses.'))
-    if (!run?.id) return
+    setError('')
+    setNotice('')
+    if (!run?.id) {
+      pauseRequestedRef.current = true
+      setNotice(tr('Pause requested. The current stage will finish safely before the pipeline pauses.'))
+      return
+    }
     try {
       const value = await apiFetch(`${API}/temporal-intelligence/${encodeURIComponent(run.id)}/strategy-research/pipeline/pause`, { method: 'POST' })
       applyPipelineControl(value)
+      const status = String(value?.status || '').toLowerCase()
+      pauseRequestedRef.current = status === 'pause_requested' || status === 'paused'
+      if (pauseRequestedRef.current) {
+        setNotice(tr('Pause requested. The current stage will finish safely before the pipeline pauses.'))
+      }
     } catch (requestError) {
+      pauseRequestedRef.current = false
       setPausing(false)
+      setNotice('')
       handleError(requestError)
     }
   }
 
   async function stopPipeline() {
-    const stoppable = running || persistedPipelineActive || pipelineStatus === 'paused'
-    if (!stoppable || stopping) return
+    const stoppable = running || temporalActive || persistedPipelineActive || pipelineStatus === 'paused'
+    if (!stoppable || stopping || !run?.id) return
     stopRequestedRef.current = true
     setStopping(true)
-    setNotice(tr('Stop requested. The current stage will finish safely before the pipeline stops.'))
-    if (!run?.id) return
+    setError('')
+    setNotice('')
     try {
       const value = await apiFetch(`${API}/temporal-intelligence/${encodeURIComponent(run.id)}/strategy-research/pipeline/stop`, { method: 'POST' })
       applyPipelineControl(value)
+      const status = String(value?.status || '').toLowerCase()
+      setNotice(tr(status === 'stopped'
+        ? 'Research Pipeline stopped. Restart begins a new pipeline.'
+        : 'Stop requested. The active processing is being stopped.'))
     } catch (requestError) {
+      stopRequestedRef.current = false
       setStopping(false)
+      setNotice('')
       handleError(requestError)
     }
   }
@@ -672,6 +708,8 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       setConfidence(null)
       setStateful(null)
       setPipelineControl(null)
+      setRun(null)
+      setBlockingRun(null)
       setStageState(defaultStageState())
       setSelectedStage('reference')
       await runPipeline({ forceNew: true })
@@ -702,11 +740,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     setError('')
     setNotice('')
     try {
-      const canCreateStateful = stateful?.id && stateful?.candidate_a && stateful?.control_parity?.status === 'passed'
-      const endpoint = canCreateStateful
-        ? `${API}/temporal-intelligence/${encodeURIComponent(run.id)}/winner-transition-stateful-replay/${encodeURIComponent(stateful.id)}/candidate-a/strategy`
-        : `${API}/temporal-intelligence/${encodeURIComponent(run.id)}/strategy`
-      const response = await apiFetch(endpoint, { method: 'POST' })
+      const response = await apiFetch(`${API}/temporal-intelligence/${encodeURIComponent(run.id)}/strategy`, { method: 'POST' })
       setNotice(tr(response?.created ? 'Strategy created in Strategy catalog.' : 'Strategy already exists in Strategy catalog.'))
     } catch (requestError) {
       handleError(requestError)
@@ -715,10 +749,18 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     }
   }
 
+  const canCreateCatalogStrategy = Boolean(
+    canMaterialize
+    && run?.id
+    && run?.result
+    && String(run?.status || '').toLowerCase() === 'completed'
+    && stageState.validation === 'completed'
+  )
+
   if (loading) return <div className="strategy-research-loading"><span className="loading-ring" />{tr('Loading Strategy Research…')}</div>
 
   const strategyName = strategy?.name || run?.strategy_profile_name || tr('Not selected')
-  const strategyType = strategy?.temporal_strategy_variant || strategy?.strategy_kind || run?.temporal_strategy_variant || run?.strategy_kind || '—'
+  const strategyType = strategyTypeLabel(strategy, run)
   const model = strategy?.research_model?.label || strategy?.winner_model?.label || run?.model_label || '—'
   const hasUnfinishedStage = STRATEGY_RESEARCH_STAGES.some((stage) => !['completed', 'skipped'].includes(stageState[stage.id]))
   const canContinueCurrent = Boolean(
@@ -737,12 +779,14 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
         ? 'Research Pipeline Pausing'
         : pipelineStatus === 'stop_requested'
           ? 'Research Pipeline Stopping'
-          : persistedPipelineActive
-            ? 'Research Pipeline Running'
-            : canContinueCurrent || persistedPipelineResumable
-              ? 'Continue Research Pipeline'
-              : 'Run Research Pipeline'
-  const effectivePipelineBusy = running || persistedPipelineActive
+          : pipelineStatus === 'stopped'
+            ? 'Restart Research Pipeline'
+            : persistedPipelineActive
+              ? 'Research Pipeline Running'
+              : canContinueCurrent || persistedPipelineResumable
+                ? 'Continue Research Pipeline'
+                : 'Run Research Pipeline'
+  const effectivePipelineBusy = running || temporalActive || persistedPipelineActive
   const canPausePipeline = canStop && effectivePipelineBusy && pipelineStatus !== 'stop_requested'
   const canStopPipeline = canStop && (effectivePipelineBusy || pipelineStatus === 'paused')
   const temporalProgress = Number(run?.progress)
@@ -751,11 +795,11 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     : pipelineStatus === 'pause_requested'
       ? tr('Pause requested. The current stage will finish safely before the pipeline pauses.')
       : pipelineStatus === 'stop_requested'
-        ? tr('Stop requested. The current stage will finish safely before the pipeline stops.')
+        ? tr('Stop requested. The active processing is being stopped.')
         : pipelineStatus === 'paused'
-          ? tr('Research Pipeline paused. Continue resumes from the first unfinished stage.')
+          ? tr('Research Pipeline paused. Continue resumes from the next unfinished stage.')
           : pipelineStatus === 'stopped'
-            ? tr('Research Pipeline stopped. Continue resumes from the first unfinished stage.')
+            ? tr('Research Pipeline stopped. Restart begins a new pipeline.')
             : running || persistedPipelineActive
               ? tr('Preparing pipeline…')
               : tr('Changing inputs only prepares the pipeline. Processing starts with Run Research Pipeline.')
@@ -764,15 +808,15 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     <section className="strategy-research-header data-panel">
       <div className="strategy-research-title-block">
         <div className="page-title-icon"><AnalyticsIcon size={20} /></div>
-        <div><span className="panel-kicker">{tr('STRATEGY RESEARCH')}</span><h2>{tr('Research Pipeline')}</h2><div className="strategy-research-context"><strong>{strategyName}</strong><span>·</span><span>{String(strategyType).replaceAll('_', ' ')}</span><span>·</span><span>{model}</span></div></div>
+        <div><span className="panel-kicker">{tr('STRATEGY RESEARCH')}</span><h2>{tr('Research Pipeline')}</h2><div className="strategy-research-context"><strong>{strategyName}</strong><span>·</span><span>{strategyType}</span><span>·</span><span>{model}</span></div></div>
       </div>
       <div className="strategy-research-actions">
         {canPausePipeline ? <button type="button" className="secondary-action compact" onClick={pausePipeline} disabled={pausing || pipelineStatus === 'pause_requested'}>{tr(pausing || pipelineStatus === 'pause_requested' ? 'Pausing…' : 'Pause Pipeline')}</button> : null}
         {canStopPipeline ? <button type="button" className="secondary-action compact" onClick={stopPipeline} disabled={stopping || pipelineStatus === 'stop_requested'}>{tr(stopping || pipelineStatus === 'stop_requested' ? 'Stopping…' : 'Stop Pipeline')}</button> : null}
-        {!effectivePipelineBusy && !temporalActive && run?.id && canRun ? <button type="button" className="secondary-action compact" onClick={restartPipeline} disabled={restarting || blockingTemporalActive}>{tr(restarting ? 'Restarting…' : 'Restart Pipeline')}</button> : null}
+        {!effectivePipelineBusy && !temporalActive && pipelineStatus !== 'stopped' && run?.id && canRun ? <button type="button" className="secondary-action compact" onClick={restartPipeline} disabled={restarting || blockingTemporalActive}>{tr(restarting ? 'Restarting…' : 'Restart Pipeline')}</button> : null}
         {canExport && run?.result ? <button type="button" className="secondary-action compact" onClick={exportPipeline} disabled={exporting}>{tr(exporting ? 'Exporting…' : 'Export Results')}</button> : null}
-        {!effectivePipelineBusy && !temporalActive && canMaterialize && stateful?.id && stateful?.control_parity?.status === 'passed' ? <button type="button" className="secondary-action compact" onClick={materializeStrategy} disabled={materializing}>{tr(materializing ? 'Creating Strategy…' : 'Create Strategy')}</button> : null}
-        {canRun ? <button type="button" className="primary-action compact" onClick={() => runPipeline()} disabled={effectivePipelineBusy || temporalActive || blockingTemporalActive || !validPeriod(startMonth, endMonth)}><PlayIcon />{tr(runButtonLabel)}</button> : null}
+        {!effectivePipelineBusy && !temporalActive && canCreateCatalogStrategy ? <button type="button" className="secondary-action compact" onClick={materializeStrategy} disabled={materializing}>{tr(materializing ? 'Creating Strategy…' : 'Create Strategy')}</button> : null}
+        {canRun ? <button type="button" className="primary-action compact" onClick={pipelineStatus === 'stopped' ? restartPipeline : () => runPipeline()} disabled={restarting || effectivePipelineBusy || temporalActive || blockingTemporalActive || !validPeriod(startMonth, endMonth)}><PlayIcon />{tr(runButtonLabel)}</button> : null}
       </div>
     </section>
 
