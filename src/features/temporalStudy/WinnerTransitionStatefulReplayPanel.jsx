@@ -29,7 +29,7 @@ function worstMonth(metrics) {
   return `${row.month} · ${percent(row.return, 2)}`
 }
 
-function CandidateRow({ label, candidate, controlCapital }) {
+function CandidateRow({ label, candidate, controlCapital, action = null }) {
   const metrics = candidate?.analytics?.metrics || {}
   const capital = Number(metrics.ending_capital || 0)
   const delta = controlCapital > 0 ? capital / controlCapital - 1 : null
@@ -43,19 +43,23 @@ function CandidateRow({ label, candidate, controlCapital }) {
     <td>{worstMonth(metrics)}</td>
     <td>{number(metrics.interventions, 0)}</td>
     <td>{number(metrics.deferred_sessions, 0)}</td>
+    {action ? <td>{action}</td> : null}
   </tr>
 }
 
-export function WinnerTransitionStatefulReplayPanel({ study, runId, processingId, confidenceSearch, canRun = false, showRunButton = true, refreshToken = 0, onChange }) {
+export function WinnerTransitionStatefulReplayPanel({ study, runId, processingId, confidenceSearch, canRun = false, canMaterializeStrategy = false, showRunButton = true, refreshToken = 0, onChange }) {
   const [result, setResult] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [materializingA, setMaterializingA] = useState(false)
   const [error, setError] = useState('')
+  const [strategyNotice, setStrategyNotice] = useState('')
   const scopeKey = `${runId || ''}:${processingId || ''}:${study?.start_month || ''}:${study?.end_month || ''}`
 
   useEffect(() => {
     let active = true
     setResult(null)
     setError('')
+    setStrategyNotice('')
     if (!runId || !processingId || !study?.start_month || !study?.end_month) return () => { active = false }
     const query = new URLSearchParams({ processing_id: processingId, start_month: study.start_month, end_month: study.end_month })
     apiFetch(`${API}/temporal-intelligence/${encodeURIComponent(runId)}/winner-transition-stateful-replay/latest?${query.toString()}`)
@@ -80,6 +84,25 @@ export function WinnerTransitionStatefulReplayPanel({ study, runId, processingId
       setError(tr(requestError?.message || 'Unable to run stateful transition replay.'))
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function materializeCandidateA() {
+    if (!canMaterializeStrategy || materializingA || !runId || !result?.id || result?.control_parity?.status !== 'passed' || !result?.candidate_a) return
+    setMaterializingA(true)
+    setError('')
+    setStrategyNotice('')
+    try {
+      const response = await apiFetch(`${API}/temporal-intelligence/${encodeURIComponent(runId)}/winner-transition-stateful-replay/${encodeURIComponent(result.id)}/candidate-a/strategy`, { method: 'POST' })
+      const strategy = response?.strategy || null
+      if (strategy) {
+        setResult((current) => current ? { ...current, candidate_a_materialized_strategy_id: strategy.id, candidate_a_materialized_strategy_name: strategy.name } : current)
+        setStrategyNotice(tr(response?.created ? 'Candidate A Strategy created in Strategy catalog.' : 'Candidate A Strategy already exists in Strategy catalog.'))
+      }
+    } catch (requestError) {
+      setError(tr(requestError?.message || 'Unable to create Candidate A Strategy.'))
+    } finally {
+      setMaterializingA(false)
     }
   }
 
@@ -108,6 +131,7 @@ export function WinnerTransitionStatefulReplayPanel({ study, runId, processingId
     </div>
 
     {error ? <div className="global-inline-message error-inline">{error}</div> : null}
+    {strategyNotice ? <div className="global-inline-message success-inline">{strategyNotice}</div> : null}
 
     {result ? <>
       <div className="winner-risk-metrics winner-risk-shadow-metrics">
@@ -119,10 +143,10 @@ export function WinnerTransitionStatefulReplayPanel({ study, runId, processingId
       </div>
 
       {model.parity?.status === 'passed' ? <div className="temporal-table-shell winner-risk-table-shell"><table className="temporal-table winner-risk-table">
-        <thead><tr><th>{tr('Replay')}</th><th>{tr('Ending capital')}</th><th>{tr('Delta vs control')}</th><th>CAGR</th><th>Sharpe</th><th>MaxDD</th><th>{tr('Worst month')}</th><th>{tr('Interventions')}</th><th>{tr('Deferred sessions')}</th></tr></thead>
+        <thead><tr><th>{tr('Replay')}</th><th>{tr('Ending capital')}</th><th>{tr('Delta vs control')}</th><th>CAGR</th><th>Sharpe</th><th>MaxDD</th><th>{tr('Worst month')}</th><th>{tr('Interventions')}</th><th>{tr('Deferred sessions')}</th>{canMaterializeStrategy ? <th>{tr('Strategy')}</th> : null}</tr></thead>
         <tbody>
-          <CandidateRow label={tr('Candidate A — Conservative Stateful')} candidate={model.a} controlCapital={controlCapital} />
-          <CandidateRow label={tr('Candidate B — Adaptive Long Stateful')} candidate={model.b} controlCapital={controlCapital} />
+          <CandidateRow label={tr('Candidate A — Conservative Stateful')} candidate={model.a} controlCapital={controlCapital} action={canMaterializeStrategy ? <button type="button" className="secondary-action compact" onClick={materializeCandidateA} disabled={materializingA || Boolean(result?.candidate_a_materialized_strategy_id)}>{tr(materializingA ? 'Creating Strategy…' : result?.candidate_a_materialized_strategy_id ? 'Strategy created' : 'Create Strategy')}</button> : null} />
+          <CandidateRow label={tr('Candidate B — Adaptive Long Stateful')} candidate={model.b} controlCapital={controlCapital} action={canMaterializeStrategy ? <span>—</span> : null} />
         </tbody>
       </table></div> : <div className="global-inline-message error-inline">{tr('Stateful candidates are blocked until Control parity passes.')}</div>}
 

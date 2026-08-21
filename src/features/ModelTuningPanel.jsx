@@ -80,10 +80,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
   const [catalog, setCatalog] = useState(null)
   const [strategy, setStrategy] = useState(null)
   const [strategyCatalogItems, setStrategyCatalogItems] = useState([])
-  const [strategyControlRevision, setStrategyControlRevision] = useState(null)
   const [officialWinnerId, setOfficialWinnerId] = useState(null)
-  const [strategyStatusFilter, setStrategyStatusFilter] = useState('all')
-  const [strategySearch, setStrategySearch] = useState('')
   const [modelFamily, setModelFamily] = useState('')
   const [baselines, setBaselines] = useState([])
   const [run, setRun] = useState(null)
@@ -138,7 +135,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
         apiFetch(`${API}/admin/strategies`),
       ])
       const control = strategyCatalog?.control || {}
-      const strategyId = control?.model_tuning_strategy_id || control?.candidate_strategy_id || control?.promoted_candidate_strategy_id || control?.research_strategy_id
+      const strategyId = control?.strategy_research_strategy_id || control?.research_strategy_id
       const detail = strategyId ? await apiFetch(`${API}/admin/strategies/${encodeURIComponent(strategyId)}`) : null
       const [baselinePayload] = await Promise.all([
         apiFetch(`${API}/admin/model-tuning/baselines?limit=20`),
@@ -149,7 +146,6 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
       const probability = nextCatalog?.probability || {}
       setCatalog(nextCatalog)
       setStrategyCatalogItems(Array.isArray(strategyCatalog?.items) ? strategyCatalog.items : [])
-      setStrategyControlRevision(Number(control?.revision || 1))
       setOfficialWinnerId(control?.trader_winner_strategy_id || null)
       setStrategy(detail)
       const temporalModes = Array.isArray(nextCatalog?.temporal_tuning_modes) ? nextCatalog.temporal_tuning_modes : []
@@ -367,31 +363,16 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
     : temporalPolicyMode
       ? tr(probabilityMode ? 'Start Temporal Policy CARO' : 'Start Temporal Policy LHS')
       : probabilityMode ? tr('Start Unified CARO') : tr('Start Latin Hypercube')
-  const filteredStrategyCatalog = useMemo(() => {
-    const query = strategySearch.trim().toLowerCase()
-    return strategyCatalogItems.filter((item) => {
-      if (strategyStatusFilter !== 'all' && String(item.status || 'draft') !== strategyStatusFilter) return false
-      if (!query) return true
-      return `${item.name || ''} ${item.id || ''} ${item.strategy_kind || ''} ${item.status || ''}`.toLowerCase().includes(query)
-    })
-  }, [strategyCatalogItems, strategySearch, strategyStatusFilter])
-  const selectableStrategyCatalog = useMemo(() => {
-    if (!strategy?.id || filteredStrategyCatalog.some((item) => item.id === strategy.id)) return filteredStrategyCatalog
-    const selected = strategyCatalogItems.find((item) => item.id === strategy.id)
-    return selected ? [selected, ...filteredStrategyCatalog] : filteredStrategyCatalog
-  }, [filteredStrategyCatalog, strategy?.id, strategyCatalogItems])
-  const strategyStatuses = useMemo(
-    () => [...new Set(strategyCatalogItems.map((item) => String(item.status || 'draft')))].sort(),
-    [strategyCatalogItems],
-  )
   const officialWinner = useMemo(
     () => strategyCatalogItems.find((item) => item.id === officialWinnerId) || null,
     [officialWinnerId, strategyCatalogItems],
   )
   const tuningStartContractCompatible = Number(catalog?.start_request_contract_version || 0) === MODEL_TUNING_START_CONTRACT_VERSION
+  const strategyTuningCompatible = catalog?.strategy_compatibility?.eligible !== false
   const canTune = Boolean(
     canStartTuning
     && strategy
+    && strategyTuningCompatible
     && tuningStartContractCompatible
     && (temporalStrategy || modelFamily === catalog?.model_family)
     && selectedBaseline
@@ -411,28 +392,6 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
     || Number(researchFolds) === Number(run.fold_protocol.research_folds || 3)
   const foldInputDisabled = !canStartTuning || !canTune || active || busy
 
-
-  async function selectTuningStrategy(strategyId) {
-    if (!canStartTuning || active || busy || !strategyId || Number(strategyControlRevision || 0) < 1) return
-    setBusy(true)
-    setError('')
-    setNotice('')
-    try {
-      await apiFetch(`${API}/admin/strategies/${encodeURIComponent(strategyId)}/select-for-model-tuning`, {
-        method: 'POST',
-        body: {
-          expected_control_revision: Number(strategyControlRevision),
-          note: 'Selected from Model Tuning research baseline',
-        },
-      })
-      await loadWorkspace()
-      setNotice(tr('Research baseline Strategy selected. Status is guidance only; technical compatibility determines whether tuning can start.'))
-    } catch (requestError) {
-      handleError(requestError)
-    } finally {
-      setBusy(false)
-    }
-  }
 
   async function start() {
     if (!canTune || busy || (temporalStrategy && !foldProtocolValid)) return
@@ -700,6 +659,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
       {notice ? <div className="global-inline-message success-inline">{notice}</div> : null}
       {!strategy ? <div className="global-inline-message warning-inline">{tr('Select a Strategy from the catalog to begin research.')}</div> : null}
       {catalog && !tuningStartContractCompatible ? <div className="global-inline-message warning-inline">{tr('Model Tuning API/Front contract mismatch. Refresh the application after both API and Front are deployed from the same release.')}</div> : null}
+      {strategy && !strategyTuningCompatible ? <div className="global-inline-message warning-inline">{tr(catalog?.strategy_compatibility?.reason || 'The selected Strategy is not compatible with the current Model Tuning engine.')}</div> : null}
       {strategy && !temporalTarget && modelFamily !== catalog.model_family ? <div className="global-inline-message warning-inline">{tr('The current tuning target must use LightGBM.')}</div> : null}
       {strategy && !temporalTarget && modelFamily === catalog.model_family && !baselines.length ? <div className="global-inline-message warning-inline">{tr('A compatible completed Backtest is required for this Strategy before tuning can start.')}</div> : null}
       {strategy && temporalTarget && !baselines.length ? <div className="global-inline-message warning-inline">{tr('The TEMPORAL Strategy source run is not available as a completed frozen replay.')}</div> : null}
@@ -709,12 +669,7 @@ export function ModelTuningPanel({ capabilities = {}, onSessionExpired, onStrate
       </div>
 
       <section className="model-tuning-step model-tuning-step-baseline">
-        <div className="model-tuning-step-heading"><span>1</span><div><strong>{tr('Baseline')}</strong><small>{tr('Choose any Strategy from the catalog. Lifecycle status is guidance, not a research gate.')}</small></div></div>
-        <div className="model-tuning-strategy-picker model-tuning-idle-only">
-          <label><span>{tr('Search Strategy')}</span><input value={strategySearch} onChange={(event) => setStrategySearch(event.target.value)} placeholder={tr('Name, id, kind or status')} disabled={active || busy} /></label>
-          <label><span>{tr('Status')}</span><select value={strategyStatusFilter} onChange={(event) => setStrategyStatusFilter(event.target.value)} disabled={active || busy}><option value="all">{tr('All statuses')}</option>{strategyStatuses.map((status) => <option key={status} value={status}>{tr(status)}</option>)}</select></label>
-          <label className="wide"><span>{tr('Strategy catalog')}</span><select value={strategy?.id || ''} onChange={(event) => selectTuningStrategy(event.target.value)} disabled={!canStartTuning || active || busy}><option value="">{tr('Select Strategy')}</option>{selectableStrategyCatalog.map((item) => <option key={item.id} value={item.id}>{item.name} · {String(item.status || 'draft').toUpperCase()} · {item.strategy_kind || 'standard'} · r{item.revision}</option>)}</select></label>
-        </div>
+        <div className="model-tuning-step-heading"><span>1</span><div><strong>{tr('Baseline')}</strong><small>{tr('Model Tuning always uses the Strategy selected for Strategy Research.')}</small></div></div>
         {strategy ? <div className="model-tuning-selected-strategy"><div><span>{tr('Selected Strategy')}</span><strong>{strategy.name}</strong></div><div><span>{tr('Status')}</span><strong>{tr(strategy.status)}</strong></div><div><span>{tr('Kind')}</span><strong>{strategy.strategy_kind || 'standard'}</strong></div><div><span>{tr('Revision')}</span><strong>{strategy.revision}</strong></div>{officialWinner ? <div className="model-tuning-winner-reference"><span>{tr('Official Winner')}</span><strong>{officialWinner.name}</strong><small>{officialWinner.tuning_result_metrics?.ending_capital != null ? money(officialWinner.tuning_result_metrics.ending_capital) : tr(officialWinner.status || 'winner')}</small></div> : null}</div> : null}
       </section>
 

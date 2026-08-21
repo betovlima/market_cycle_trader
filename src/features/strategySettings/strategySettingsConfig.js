@@ -35,8 +35,8 @@ export const BOUNDARY_HINTS = {
     relationship: 'Research edits remain isolated until an explicitly validated candidate is promoted.',
   },
   backtest: {
-    description: 'Strategy revision currently selected as the source for the next backtest.',
-    relationship: 'Selecting a backtest strategy does not change the Trader winner.',
+    description: 'Strategy revision selected as the shared source for Simulation Backtest, Model Tuning and Temporal Intelligence.',
+    relationship: 'Selecting a Strategy Research baseline does not change the Trader winner.',
   },
   candidate: {
     description: 'Single validated strategy revision eligible for promotion to Trader winner.',

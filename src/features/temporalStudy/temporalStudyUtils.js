@@ -53,7 +53,13 @@ export function temporalStudyParameters(run, processing, start, end) {
   const capital = multi?.shadow_capital || {}
   return {
     source_processing_id: processing?.id || null,
-    source_strategy: processing?.strategy_profile_name || null,
+    source_strategy: processing?.strategy_profile_name || run?.strategy_profile_name || null,
+    strategy_research_id: run?.strategy_profile_id || processing?.strategy_profile_id || null,
+    strategy_research_name: run?.strategy_profile_name || processing?.strategy_profile_name || null,
+    strategy_research_revision: run?.strategy_profile_revision ?? processing?.strategy_profile_revision ?? null,
+    strategy_research_configuration_hash: run?.strategy_configuration_hash || processing?.strategy_configuration_hash || null,
+    strategy_research_kind: run?.strategy_kind || null,
+    strategy_research_temporal_variant: run?.temporal_strategy_variant || null,
     temporal_run_id: run?.id || null,
     experiment: run?.experiment || run?.result?.experiment || null,
     model: run?.model_label || run?.result?.model_label || null,

@@ -82,7 +82,7 @@ function LegacyForecastTable({ items = [] }) {
   )
 }
 
-export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired, tuningStrategy = null, studyProcessing = null }) {
+export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired, tuningStrategy = null }) {
   const canStart = hasCapability(capabilities, 'temporal_intelligence.start')
   const canStop = hasCapability(capabilities, 'temporal_intelligence.stop')
   const canExport = hasCapability(capabilities, 'temporal_intelligence.export')
@@ -142,6 +142,22 @@ export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired,
       pollRef.current = null
     }
   }, [active, load])
+
+  const researchProcessing = useMemo(() => {
+    const id = String(run?.research_processing_id || '').trim()
+    if (!id) return null
+    return {
+      id,
+      strategy_profile_id: run?.strategy_profile_id || null,
+      strategy_profile_name: run?.strategy_profile_name || null,
+      strategy_profile_revision: run?.strategy_profile_revision ?? null,
+      strategy_configuration_hash: run?.strategy_configuration_hash || null,
+      processing_kind: run?.research_processing_kind || null,
+      processing_label: run?.research_processing_label || null,
+      created_at: run?.created_at || null,
+      finished_at: run?.finished_at || null,
+    }
+  }, [run?.created_at, run?.finished_at, run?.research_processing_id, run?.research_processing_kind, run?.research_processing_label, run?.strategy_configuration_hash, run?.strategy_profile_id, run?.strategy_profile_name, run?.strategy_profile_revision])
 
   const result = run?.result || null
   const horizonMetrics = result?.horizon_metrics || []
@@ -233,9 +249,9 @@ export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired,
 
   const shadowCapital = selectedMetrics?.shadow_capital || {}
   const bestForecast = decisionExperiment ? forecasts.find((item) => item.shadow_target) : null
-  const currentWinner = marketContext?.trader_winner || null
-  const winnerAnchorName = run?.strategy_profile_name || currentWinner?.name || '—'
-  const certifiedBacktestCutoff = run?.certified_backtest_cutoff || currentWinner?.certified_backtest_cutoff || null
+  const currentResearchStrategy = marketContext?.strategy_research_strategy || marketContext?.research_strategy || null
+  const winnerAnchorName = run?.strategy_profile_name || currentResearchStrategy?.name || '—'
+  const certifiedBacktestCutoff = run?.certified_backtest_cutoff || currentResearchStrategy?.certified_backtest_cutoff || null
   const liveMarketCutoff = marketContext?.live_market_cutoff || run?.live_market_cutoff || null
   const researchSnapshotCutoff = run?.research_snapshot_cutoff || run?.analysis_end_date || null
 
@@ -243,9 +259,9 @@ export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired,
     <div className="temporal-intelligence-panel">
       <div className="temporal-toolbar">
         <div className="temporal-run-meta temporal-source-context">
-          <span>{tr('Winner anchor')}</span><strong title={winnerAnchorName}>{winnerAnchorName}</strong>
+          <span>{tr('Strategy anchor')}</span><strong title={winnerAnchorName}>{winnerAnchorName}</strong>
           {tuningStrategy ? <><i>·</i><span>{tr('Selected for tuning')}</span><strong title={tuningStrategy.name || ''}>{tuningStrategy.name || '—'}</strong></> : null}
-          <i>·</i><span>{tr('Model')}</span><strong>{run?.model_label || currentWinner?.winner_model?.label || 'LightGBM'}</strong>
+          <i>·</i><span>{tr('Model')}</span><strong>{run?.model_label || currentResearchStrategy?.research_model?.label || currentResearchStrategy?.winner_model?.label || 'LightGBM'}</strong>
           {certifiedBacktestCutoff ? <><i>·</i><span>{tr('Certified through')}</span><strong>{certifiedBacktestCutoff}</strong></> : null}
           {liveMarketCutoff ? <><i>·</i><span>{tr('Live market data')}</span><strong>{liveMarketCutoff}</strong></> : null}
           {researchSnapshotCutoff ? <><i>·</i><span>{tr('Research snapshot')}</span><strong>{researchSnapshotCutoff}</strong></> : null}
@@ -308,7 +324,7 @@ export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired,
         {!decisionExperiment ? <section className="temporal-section"><div className="temporal-section-heading"><h3>{tr('Latest Shadow Forecast')}</h3><div className="temporal-horizon-buttons">{horizonMetrics.map((item) => <button type="button" key={item.horizon} className={Number(selectedHorizon) === Number(item.horizon) ? 'active' : ''} onClick={() => setSelectedHorizon(Number(item.horizon))}>{item.horizon}d</button>)}</div></div><LegacyForecastTable items={forecasts} /></section> : null}
       </> : null}
 
-      <TemporalStudyPanel run={run} processing={studyProcessing} canRun={canStart} canExport={canExport} />
+      <TemporalStudyPanel run={run} processing={researchProcessing} canRun={canStart} canExport={canExport} canMaterializeStrategy={canMaterializeStrategy} />
     </div>
   )
 }

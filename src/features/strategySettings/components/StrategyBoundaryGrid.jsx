@@ -18,7 +18,7 @@ export function StrategyBoundaryGrid({ catalog }) {
         <article>
           <ActivityIcon size={20} />
           <div>
-            <span className="strategy-boundary-label">{tr("Backtest strategy")}{' '}<ParameterHint id="hint-boundary-backtest" title={tr("Backtest strategy")} {...BOUNDARY_HINTS.backtest} /></span>
+            <span className="strategy-boundary-label">{tr("Strategy Research")}{' '}<ParameterHint id="hint-boundary-strategy-research" title={tr("Strategy Research")} {...BOUNDARY_HINTS.backtest} /></span>
             <strong>{catalog.control.research_strategy?.name}</strong>
             {catalog.control.research_strategy?.research_model?.label ? <small>{catalog.control.research_strategy.research_model.label}</small> : null}
           </div>

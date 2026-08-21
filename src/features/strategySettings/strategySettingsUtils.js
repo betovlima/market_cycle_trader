@@ -40,6 +40,7 @@ export function lifecycleSummary(item, isWinner, isCandidate, isPromotedCandidat
   if (item.status === 'superseded_candidate') return tr('Replaced by a newer candidate')
   if (item.status === 'promoted_candidate') return tr('Promoted to a protected winner snapshot')
   if (item.status === 'former_winner') return tr('Historical former Trader winner')
+  if (item.strategy_kind === 'temporal_intelligence' && item.temporal_strategy_variant === 'winner_transition_stateful') return tr('Conservative Stateful')
   if (item.last_backtest_status === 'completed') return tr('Backtest completed · eligible for candidate')
   return tr('Backtest required')
 }

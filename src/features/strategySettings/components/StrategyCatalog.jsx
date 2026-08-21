@@ -37,8 +37,7 @@ export function StrategyCatalog({
                     <span>{lifecycleSummary(item, isWinner, isCandidate, isPromotedCandidate)}</span>
                   </button>
                   <div className="strategy-list-markers">
-                    {isResearch ? <span>{tr("BACKTEST")}</span> : null}
-                    {item.strategy_kind === 'temporal_intelligence' ? <span className="temporal">{tr("TEMPORAL")}</span> : null}
+                    {isResearch ? <span>{tr("RESEARCH")}</span> : null}
                     {isCandidate ? <span className="candidate">{tr("CANDIDATE")}</span> : null}
                     {isPromotedCandidate ? <span className="promoted">{tr("PROMOTED")}</span> : null}
                     {isWinner ? <span className="winner">{tr("TRADER")}</span> : null}

@@ -7,6 +7,7 @@ import { API, FRONT_VERSION } from './config/env'
 import { useI18n } from './i18n/I18nProvider'
 import { AppHeader } from './features/backtest/components/AppHeader'
 import { BacktestPage } from './features/backtest/components/BacktestPage'
+import { StrategyResearchPage } from './features/strategyResearch/StrategyResearchPage'
 import { useBacktestWorkspace } from './features/backtest/hooks/useBacktestWorkspace'
 import { AdministrationPage } from './features/AdministrationPage'
 import { SystemSettingsPage } from './features/SystemSettingsPage'
@@ -17,6 +18,7 @@ import { PaperPortfolioDashboard } from './features/paperPortfolio/PaperPortfoli
 
 const TAB_CAPABILITIES = {
   dashboard: 'dashboard.view',
+  research: 'backtest.view',
   backtest: 'backtest.view',
   'asset-discovery': 'asset_discovery.view',
   portfolio: 'portfolio.view',
@@ -43,8 +45,8 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
   )
 
   useEffect(() => {
-    if (workspace.running && hasCapability(capabilities, 'backtest.view')) setActiveTab('backtest')
-  }, [capabilities, workspace.running])
+    if (workspace.running && hasCapability(capabilities, 'backtest.view') && activeTab !== 'research') setActiveTab('backtest')
+  }, [activeTab, capabilities, workspace.running])
 
   useEffect(() => {
     const openDashboardProcessing = (event) => {
@@ -87,6 +89,7 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
     {workspace.error && !isPermissionDeniedMessage(workspace.error) ? <div className="global-error"><strong>{tr("Unable to load data")}</strong><span>{tr(workspace.error)}</span><button type="button" onClick={() => workspace.setError('')}>×</button></div> : null}
     <main className="workspace-main">
       {activeTab === 'dashboard' && hasCapability(capabilities, 'dashboard.view') ? <DashboardPage workspace={workspace} capabilities={capabilities} onOpenBacktest={() => setActiveTab('backtest')} initialProcessingId={dashboardProcessingId} /> : null}
+      {activeTab === 'research' && hasCapability(capabilities, 'backtest.view') ? <StrategyResearchPage workspace={workspace} capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'backtest' && hasCapability(capabilities, 'backtest.view') ? <BacktestPage workspace={workspace} capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'asset-discovery' && hasCapability(capabilities, 'asset_discovery.view') ? <AssetDiscoveryPage onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'portfolio' && hasCapability(capabilities, 'portfolio.view') ? <PaperPortfolioDashboard /> : null}

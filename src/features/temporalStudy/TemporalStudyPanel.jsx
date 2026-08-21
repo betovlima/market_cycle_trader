@@ -60,9 +60,8 @@ function writeStoredPeriod(runId, processingId, value) {
   }
 }
 
-export function TemporalStudyPanel({ run = null, processing = null, canRun = false, canExport = false }) {
-  const [sourceRun, setSourceRun] = useState(run?.status === 'completed' && run?.result ? run : null)
-  const effectiveRun = sourceRun || run
+export function TemporalStudyPanel({ run = null, processing = null, canRun = false, canExport = false, canMaterializeStrategy = false }) {
+  const effectiveRun = run
   const defaults = useMemo(() => periodFromSnapshot(effectiveRun?.research_snapshot_cutoff || effectiveRun?.analysis_end_date), [effectiveRun?.analysis_end_date, effectiveRun?.research_snapshot_cutoff])
   const [startMonth, setStartMonth] = useState(defaults.start)
   const [endMonth, setEndMonth] = useState(defaults.end)
@@ -78,23 +77,6 @@ export function TemporalStudyPanel({ run = null, processing = null, canRun = fal
   const [transitionStatefulReplay, setTransitionStatefulReplay] = useState(null)
   const [pipelineStage, setPipelineStage] = useState('')
   const [pipelineRefresh, setPipelineRefresh] = useState(0)
-
-  useEffect(() => {
-    let active = true
-    if (run?.status === 'completed' && run?.result) {
-      setSourceRun(run)
-      return () => { active = false }
-    }
-    apiFetch(`${API}/temporal-intelligence/history?limit=30`)
-      .then((payload) => {
-        const completed = (payload?.items || []).find((item) => String(item?.status || '').toLowerCase() === 'completed')
-        if (!active || !completed?.id) return null
-        return apiFetch(`${API}/temporal-intelligence/${encodeURIComponent(completed.id)}`)
-      })
-      .then((value) => { if (active && value?.result) setSourceRun(value) })
-      .catch(() => { if (active) setSourceRun(null) })
-    return () => { active = false }
-  }, [run?.id, run?.result, run?.status])
 
   async function fetchStudyData(periodStart, periodEnd, executedAt, { includeTransition = false } = {}) {
     const requests = [apiFetch(`${API}/analytics/processings/${encodeURIComponent(processing.id)}`)]
@@ -351,6 +333,7 @@ export function TemporalStudyPanel({ run = null, processing = null, canRun = fal
           processingId={processing?.id || null}
           confidenceSearch={transitionConfidenceSearch}
           canRun={canRun}
+          canMaterializeStrategy={canMaterializeStrategy}
           showRunButton={false}
           refreshToken={pipelineRefresh}
           onChange={setTransitionStatefulReplay}
