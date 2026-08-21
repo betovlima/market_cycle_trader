@@ -296,35 +296,55 @@ function BubbleQuadrant({ risk, intervention }) {
   </div>
 }
 
+function confidenceReason(reason) {
+  if (reason === 'warmup_no_prior_oos_year') return tr('Warm-up year: no prior out-of-sample year is available to calibrate a confidence threshold.')
+  if (reason === 'insufficient_prior_oos_alerts') return tr('Control kept: prior out-of-sample years do not contain enough risk alerts for a reliable confidence threshold.')
+  if (reason === 'no_positive_tail_safe_confidence_gate') return tr('Control kept: no tested confidence threshold improved capital while preserving tail safety consistently across prior out-of-sample years.')
+  if (reason === 'best_positive_tail_safe_prior_oos_confidence_gate') return tr('Confidence gate activated: the selected threshold was positive, tail-safe and chronologically consistent on prior out-of-sample years.')
+  return tr('The calibration result did not activate a confidence intervention for this year.')
+}
+
 function ConfidenceTiles({ confidence }) {
   const [selectedDetail, setSelectedDetail] = useState(null)
   const rows = confidence?.outer_results || []
   if (!rows.length) return <EmptyVisual title="Confidence calibration tiles will appear here." />
-  const values = rows.map((row) => Number(row?.test_result?.ending_capital_delta_rate)).filter(Number.isFinite)
+  const values = rows.map((row) => row?.test_result?.ending_capital_delta_rate).filter((value) => value != null).map(Number).filter(Number.isFinite)
   const maxAbs = Math.max(...values.map(Math.abs), 0.0001)
   return <div className="strategy-research-confidence-tiles">{rows.map((row, index) => {
-    const delta = Number(row?.test_result?.ending_capital_delta_rate)
+    const selectedMode = String(row?.selected_mode || '')
+    const active = selectedMode === 'confidence_calibrated_one_session'
+    const rawDelta = row?.test_result?.ending_capital_delta_rate
+    const delta = rawDelta == null ? null : Number(rawDelta)
     const safe = Boolean(row?.test_result?.tail_safe)
-    const threshold = Number(row?.selected_margin_threshold)
+    const rawThreshold = row?.selected_margin_threshold
+    const threshold = rawThreshold == null ? null : Number(rawThreshold)
     const endingCapital = Number(row?.test_result?.ending_capital)
-    return <button type="button" className={`strategy-research-confidence-tile ${Number.isFinite(delta) ? heatTone(delta, maxAbs) : 'neutral'}`} key={`${row?.test_year || index}`} onClick={() => setSelectedDetail({
+    const reason = confidenceReason(row?.reason)
+    const tileTone = active && Number.isFinite(delta) ? heatTone(delta, maxAbs) : 'control'
+    return <button type="button" className={`strategy-research-confidence-tile ${tileTone}`} key={`${row?.test_year || index}`} onClick={() => setSelectedDetail({
       kicker: 'CONFIDENCE CALIBRATION',
       title: `${tr('Test year')} ${row?.test_year || '—'}`,
-      description: tr('Shows the out-of-sample economic result obtained with the confidence threshold selected for this chronological test year.'),
+      description: active
+        ? tr('Shows the out-of-sample economic result obtained with the confidence threshold selected for this chronological test year.')
+        : tr('No confidence intervention was activated for this chronological test year. The Strategy Research reference decision was preserved.'),
       metrics: [
-        { label: tr('Capital delta'), value: Number.isFinite(delta) ? percent(delta, 2) : '—', tone: delta > 0 ? 'positive' : delta < 0 ? 'negative' : '' },
+        { label: tr('Mode'), value: active ? tr('Active') : tr('Control') },
+        { label: tr('Capital delta'), value: Number.isFinite(delta) ? percent(delta, 2) : active ? '—' : percent(0, 2), tone: Number(delta) > 0 ? 'positive' : Number(delta) < 0 ? 'negative' : '' },
         { label: tr('Margin threshold'), value: Number.isFinite(threshold) ? number(threshold, 3) : '—' },
-        { label: tr('Tail safety'), value: safe ? tr('Tail safe') : tr('Tail warning') },
-        { label: tr('Ending capital'), value: Number.isFinite(endingCapital) ? money(endingCapital) : '—' },
+        { label: tr('Tail safety'), value: active ? (safe ? tr('Tail safe') : tr('Tail warning')) : tr('Reference preserved') },
       ],
       notes: [
+        { label: tr('Selection reason'), text: reason },
         { label: tr('Interpretation'), text: tr('The calibration chooses how much confidence margin is required before a risk signal is allowed to change the reference decision.') },
         { label: tr('Validation'), text: tr('Each tile represents an out-of-sample chronological test year, not an in-sample fit result.') },
+        ...(Number.isFinite(endingCapital) ? [{ label: tr('Ending capital'), text: money(endingCapital) }] : []),
       ],
     })}>
       <span>{row?.test_year || '—'}</span>
-      <strong>{Number.isFinite(delta) ? percent(delta, 1) : '—'}</strong>
-      <small>{tr('Margin')} {Number.isFinite(threshold) ? number(threshold, 3) : '—'} · {safe ? tr('Tail safe') : tr('Tail warning')}</small>
+      <strong>{active ? (Number.isFinite(delta) ? percent(delta, 1) : '—') : tr('Control')}</strong>
+      <small>{active
+        ? `${tr('Margin')} ${Number.isFinite(threshold) ? number(threshold, 3) : '—'} · ${safe ? tr('Tail safe') : tr('Tail warning')}`
+        : tr('No calibrated intervention')}</small>
     </button>
   })}<ResearchDetailDialog detail={selectedDetail} onClose={() => setSelectedDetail(null)} /></div>
 }
