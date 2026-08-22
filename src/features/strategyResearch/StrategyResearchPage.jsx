@@ -89,6 +89,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
   const [intervention, setIntervention] = useState(null)
   const [confidence, setConfidence] = useState(null)
   const [stateful, setStateful] = useState(null)
+  const [leadershipRegime, setLeadershipRegime] = useState(null)
   const {
     result: milpResult,
     selectedCandidate,
@@ -202,6 +203,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     const interventionValue = snapshot?.intervention?.id ? snapshot.intervention : null
     const confidenceValue = snapshot?.confidence?.id ? snapshot.confidence : null
     const statefulValue = snapshot?.stateful?.id ? snapshot.stateful : null
+    const leadershipRegimeValue = snapshot?.leadership_regime || null
     const snapshotStart = monthValue(snapshot?.period_start, periodStart)
     const snapshotEnd = monthValue(snapshot?.period_end, periodEnd)
     let milpValue = null
@@ -216,6 +218,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     setIntervention(interventionValue)
     setConfidence(confidenceValue)
     setStateful(statefulValue)
+    setLeadershipRegime(leadershipRegimeValue)
 
     if (riskValue?.id && interventionValue?.id) nextState.risk = 'completed'
     else if (riskValue?.id || interventionValue?.id) nextState.risk = 'running'
@@ -578,6 +581,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       setIntervention(null)
       setConfidence(null)
       setStateful(null)
+      setLeadershipRegime(null)
       clearMilp()
       setPipelineControl(null)
       setStageState(defaultStageState())
@@ -667,6 +671,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       setIntervention(null)
       setConfidence(null)
       setStateful(null)
+      setLeadershipRegime(null)
       setPipelineControl(null)
       setRun(null)
       setBlockingRun(null)
@@ -795,7 +800,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
 
     <section className="strategy-research-stage-content data-panel">
       <div className="strategy-research-stage-content-heading"><div><span className="panel-kicker">{tr('SELECTED STAGE')}</span><h3>{tr(STRATEGY_RESEARCH_STAGES.find((stage) => stage.id === selectedStage)?.label || 'Research Pipeline')}</h3></div><span>{tr('Select a pipeline stage to inspect its visual result.')}</span></div>
-      {selectedStage !== 'milp' ? <StrategyResearchVisuals selectedStage={selectedStage} stageState={stageState} pipelineProgress={pipelineProgress} run={run} analytics={analytics} risk={risk} intervention={intervention} confidence={confidence} stateful={stateful} pipelineError={error} /> : null}
+      {selectedStage !== 'milp' ? <StrategyResearchVisuals selectedStage={selectedStage} stageState={stageState} pipelineProgress={pipelineProgress} run={run} analytics={analytics} risk={risk} intervention={intervention} confidence={confidence} stateful={stateful} leadershipRegime={leadershipRegime} pipelineError={error} /> : null}
       {selectedStage === 'milp' ? <DecisionCandidates stateful={stateful} milp={milpResult} selectedCandidate={selectedCandidate} onCandidateSelect={setSelectedCandidate} /> : null}
       {selectedStage === 'validation' ? <FinalValidation control={analytics} stateful={stateful} milp={milpResult} selectedCandidate={selectedCandidate} onCandidateSelect={setSelectedCandidate} /> : null}
     </section>

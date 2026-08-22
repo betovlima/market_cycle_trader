@@ -63,3 +63,9 @@
 .milp-parity-grid>div{display:grid;gap:3px;padding:9px 10px;border-radius:10px;background:var(--panel-raised)}
 .milp-parity-grid span,.milp-parity-grid small{font-size:.72rem;color:var(--text-muted)}
 @media(max-width:900px){.milp-parity-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.milp-decision-maps{display:grid;gap:20px}
+.milp-month-cell.milp-activity.active{font-weight:800;background:color-mix(in srgb,var(--accent) 24%,var(--panel-soft))}
+.milp-month-cell.milp-activity.zero{color:var(--text-muted)}
+.milp-month-cell.milp-difference.active{font-weight:800;background:color-mix(in srgb,var(--positive) 24%,var(--panel-soft))}
+.milp-month-cell.milp-difference.zero{font-weight:700;color:var(--text-muted)}

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 
 import { getIntlLocale, tr } from '../../i18n/runtime'
 import { money, number, percent } from '../../shared/formatters'
+import { LeadershipRegimePanel } from '../leadershipRegime'
 
 function MetricCard({ label, value, note, tone = '' }) {
   return <div className={`strategy-research-metric-card ${tone}`}><span>{label}</span><strong>{value}</strong>{note ? <small>{note}</small> : null}</div>
@@ -569,7 +570,7 @@ function FoldHeatmap({ run, stateful }) {
   </div>
 }
 
-export function StrategyResearchVisuals({ selectedStage, stageState = {}, pipelineProgress = 0, run, analytics, risk, intervention, confidence, stateful, pipelineError = '' }) {
+export function StrategyResearchVisuals({ selectedStage, stageState = {}, pipelineProgress = 0, run, analytics, risk, intervention, confidence, stateful, leadershipRegime, pipelineError = '' }) {
   const selectedStageRunning = stageState[selectedStage] === 'running'
   const temporalProgress = Number(run?.progress)
   const selectedProgress = selectedStage === 'temporal' && Number.isFinite(temporalProgress) ? temporalProgress : pipelineProgress
@@ -583,7 +584,7 @@ export function StrategyResearchVisuals({ selectedStage, stageState = {}, pipeli
         ? <EmptyVisual title={pipelineError} detail={tr('The pipeline stopped before Risk & Intervention produced a valid research dataset. Export Results includes the available partial processing data.')} />
         : empty('Risk and intervention bubbles will appear here.'),
     confidence: confidence?.outer_results?.length ? <ConfidenceTiles confidence={confidence} /> : empty('Confidence calibration tiles will appear here.'),
-    stateful: stateful?.candidate_a ? <SankeyVisual stateful={stateful} /> : empty('Decision policy flow will appear here.'),
+    stateful: stateful?.candidate_a ? <><SankeyVisual stateful={stateful} /><LeadershipRegimePanel analysis={leadershipRegime} /></> : empty('Decision policy flow will appear here.'),
     validation: stageState.validation === 'completed' || stateful?.candidate_a ? <FoldHeatmap run={run} stateful={stateful} /> : empty('Fold validation heatmap will appear here.'),
   }[selectedStage]
 
