@@ -6,6 +6,7 @@ const STAGES = [
   { id: 'risk', label: 'Risk & Intervention', icon: '◉' },
   { id: 'confidence', label: 'Confidence Calibration', icon: '◇' },
   { id: 'stateful', label: 'Decision Policy Replay', icon: '⇄' },
+  { id: 'milp', label: 'MILP Decision Optimization', icon: '◆' },
   { id: 'validation', label: 'Final Validation', icon: '✓' },
 ]
 

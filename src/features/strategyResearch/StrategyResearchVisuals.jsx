@@ -247,51 +247,140 @@ function TemporalHeatmap({ run }) {
 
 function BubbleQuadrant({ risk, intervention }) {
   const [selectedDetail, setSelectedDetail] = useState(null)
-  const highRiskRows = risk?.oos?.high_risk_transitions || []
-  const riskRows = highRiskRows.length ? highRiskRows : (risk?.oos?.scored_transitions || [])
-  const points = riskRows.slice(0, 80).map((row, index) => ({
-    id: `${row?.transition_key || index}`,
-    x: Number(row?.risk_score),
-    y: Number(row?.rotation_value_added),
-    severe: Boolean(row?.severe),
-    label: `${row?.from_asset || '—'} → ${row?.to_asset || '—'}`,
-    row,
-  })).filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y))
+  const rows = risk?.oos?.scored_transitions || []
+  const severeThreshold = Number(risk?.research_settings?.settings?.risk?.severe_threshold ?? -0.05)
+  const metrics = risk?.oos?.metrics || {}
+  const points = rows.map((row, index) => {
+    const riskScore = Number(row?.risk_score)
+    const riskThreshold = Number(row?.risk_threshold)
+    const valueAdded = Number(row?.rotation_value_added)
+    return {
+      id: `${row?.transition_key || index}`,
+      x: riskScore - riskThreshold,
+      riskScore,
+      riskThreshold,
+      y: valueAdded,
+      severe: Boolean(row?.severe),
+      highRisk: Boolean(row?.high_risk),
+      label: `${row?.from_asset || '—'} → ${row?.to_asset || '—'}`,
+      row,
+    }
+  }).filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y))
   if (!points.length) return <EmptyVisual title="Risk and intervention bubbles will appear here." />
-  const xValues = points.map((point) => point.x)
-  const yValues = points.map((point) => point.y)
-  const minX = Math.min(...xValues)
-  const maxX = Math.max(...xValues)
-  const minY = Math.min(...yValues, -0.01)
-  const maxY = Math.max(...yValues, 0.01)
-  const mapX = (value) => 38 + ((value - minX) / Math.max(1e-9, maxX - minX)) * 624
-  const mapY = (value) => 250 - ((value - minY) / Math.max(1e-9, maxY - minY)) * 210
+
+  const xAbs = Math.max(...points.map((point) => Math.abs(point.x)), 0.04) * 1.08
+  const yMinRaw = Math.min(...points.map((point) => point.y), severeThreshold, -0.01)
+  const yMaxRaw = Math.max(...points.map((point) => point.y), 0.01)
+  const yPadding = Math.max((yMaxRaw - yMinRaw) * 0.08, 0.01)
+  const minX = -xAbs
+  const maxX = xAbs
+  const minY = yMinRaw - yPadding
+  const maxY = yMaxRaw + yPadding
+  const plot = { left: 72, right: 734, top: 54, bottom: 304 }
+  const mapX = (value) => plot.left + ((value - minX) / Math.max(1e-9, maxX - minX)) * (plot.right - plot.left)
+  const mapY = (value) => plot.bottom - ((value - minY) / Math.max(1e-9, maxY - minY)) * (plot.bottom - plot.top)
+  const zeroX = mapX(0)
   const zeroY = mapY(0)
-  const metrics = intervention?.walk_forward_selected_shadow || risk?.shadow_replay || null
-  const openPoint = (point) => setSelectedDetail({
-    kicker: 'RISK & INTERVENTION',
-    title: point.label,
-    description: tr('This point combines the estimated transition risk with the realized value added for the same transition.'),
-    metrics: [
-      { label: tr('Risk score'), value: number(point.x, 3) },
-      { label: tr('Realized value added'), value: percent(point.y, 2), tone: point.y > 0 ? 'positive' : point.y < 0 ? 'negative' : '' },
-      { label: tr('Severity'), value: point.severe ? tr('Severe') : tr('Standard') },
-      { label: tr('Transition'), value: point.label },
-    ],
-    notes: [
-      { label: tr('Interpretation'), text: tr('Positive realized value added means the rotation outperformed the counterfactual hold. Negative value means the rotation destroyed value relative to holding.') },
-      { label: tr('Interaction'), text: tr('The farther right a point is, the higher the estimated risk. Vertical position shows the realized economic effect of the transition.') },
-    ],
-  })
-  return <div className="strategy-research-bubble-wrap">
-    <svg viewBox="0 0 700 285" role="img" aria-label={tr('Risk versus realized value added')}>
-      <line x1="38" y1={zeroY} x2="662" y2={zeroY} className="strategy-research-axis" />
-      <line x1="350" y1="30" x2="350" y2="250" className="strategy-research-axis faint" />
-      <text x="44" y="22" className="strategy-research-svg-label">{tr('Realized value added')}</text>
-      <text x="566" y="278" className="strategy-research-svg-label">{tr('Risk score')}</text>
-      {points.map((point) => <circle key={point.id} cx={mapX(point.x)} cy={mapY(point.y)} r={point.severe ? 8 : 5} className={`strategy-research-bubble ${point.severe ? 'severe' : ''}`} role="button" tabIndex="0" aria-label={`${point.label} · ${tr('Risk')} ${number(point.x, 3)} · ${tr('Value added')} ${percent(point.y, 2)}`} onClick={() => openPoint(point)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') openPoint(point) }} />)}
+  const xTicks = Array.from({ length: 5 }, (_, index) => minX + ((maxX - minX) * index) / 4)
+  const yTicks = Array.from({ length: 5 }, (_, index) => minY + ((maxY - minY) * index) / 4)
+  const interventionMetrics = intervention?.walk_forward_selected_shadow || risk?.shadow_replay || null
+  const total = Number(metrics?.count ?? points.length)
+  const flagged = Number(metrics?.flagged_count ?? points.filter((point) => point.highRisk).length)
+  const severe = Number(metrics?.severe_count ?? points.filter((point) => point.severe).length)
+  const captured = Number(metrics?.captured_severe_count ?? points.filter((point) => point.severe && point.highRisk).length)
+  const precision = Number(metrics?.precision)
+  const recall = Number(metrics?.recall)
+
+  const quadrantLabel = (point) => {
+    if (point.highRisk && point.y < 0) return tr('Harmful transition captured by the risk alert')
+    if (point.highRisk && point.y >= 0) return tr('Risk alert, but the rotation added value')
+    if (!point.highRisk && point.y < 0) return tr('Harmful transition not flagged by the risk model')
+    return tr('Beneficial transition left unchanged')
+  }
+
+  const openPoint = (point) => {
+    const targetReturn = Number(point.row?.one_interval_target_return)
+    const incumbentReturn = Number(point.row?.one_interval_incumbent_return)
+    const decisionDate = point.row?.decision_at || point.row?.execution_at || '—'
+    setSelectedDetail({
+      kicker: 'RISK & INTERVENTION',
+      title: point.label,
+      description: quadrantLabel(point),
+      metrics: [
+        { label: tr('Decision date'), value: String(decisionDate).replace('T', ' ').slice(0, 16) },
+        { label: tr('Risk score'), value: number(point.riskScore, 3) },
+        { label: tr('Risk threshold'), value: number(point.riskThreshold, 3) },
+        { label: tr('Risk margin'), value: `${point.x >= 0 ? '+' : ''}${number(point.x, 3)}`, tone: point.x >= 0 ? 'negative' : '' },
+        { label: tr('Risk alert'), value: point.highRisk ? tr('Yes') : tr('No'), tone: point.highRisk ? 'negative' : '' },
+        { label: tr('Realized value added'), value: percent(point.y, 2), tone: point.y > 0 ? 'positive' : point.y < 0 ? 'negative' : '' },
+        { label: tr('Severity'), value: point.severe ? tr('Severe') : tr('Standard'), tone: point.severe ? 'negative' : '' },
+        { label: tr('Transition'), value: point.label },
+        ...(Number.isFinite(targetReturn) ? [{ label: tr('Target interval return'), value: percent(targetReturn, 2), tone: targetReturn > 0 ? 'positive' : targetReturn < 0 ? 'negative' : '' }] : []),
+        ...(Number.isFinite(incumbentReturn) ? [{ label: tr('Incumbent interval return'), value: percent(incumbentReturn, 2), tone: incumbentReturn > 0 ? 'positive' : incumbentReturn < 0 ? 'negative' : '' }] : []),
+      ],
+      notes: [
+        { label: tr('Classification'), text: quadrantLabel(point) },
+        { label: tr('Risk margin'), text: tr('Risk margin is risk score minus the chronological threshold selected for that out-of-sample year. Values at or above zero generated a risk alert.') },
+        { label: tr('Realized value added'), text: tr('Positive realized value added means the rotation outperformed the counterfactual hold. Negative value means the rotation destroyed value relative to holding.') },
+        { label: tr('Severe transition'), text: `${tr('The configured severe-loss boundary for this research run is')} ${percent(severeThreshold, 1)}.` },
+      ],
+    })
+  }
+
+  return <div className="strategy-research-bubble-wrap strategy-research-risk-map">
+    <div className="strategy-research-risk-intro">
+      <div>
+        <strong>{tr('Risk detection map')}</strong>
+        <span>{tr('Each point is an out-of-sample rotation. Horizontal position is the risk margin relative to the threshold selected for that year; vertical position is the realized economic value added by the rotation.')}</span>
+      </div>
+      <div className="strategy-research-risk-legend" aria-label={tr('Chart legend')}>
+        <span><i className="standard" />{tr('Standard transition')}</span>
+        <span><i className="severe" />{tr('Severe loss')}</span>
+        <span><i className="alert" />{tr('Risk alert')}</span>
+      </div>
+    </div>
+
+    <div className="strategy-research-risk-kpis">
+      <MetricCard label={tr('OOS transitions')} value={number(total, 0)} />
+      <MetricCard label={tr('Risk alerts')} value={number(flagged, 0)} note={total > 0 ? percent(flagged / total, 1) : '—'} />
+      <MetricCard label={tr('Severe losses')} value={number(severe, 0)} />
+      <MetricCard label={tr('Captured severe')} value={number(captured, 0)} />
+      <MetricCard label={tr('Precision')} value={Number.isFinite(precision) ? percent(precision, 1) : '—'} />
+      <MetricCard label={tr('Recall')} value={Number.isFinite(recall) ? percent(recall, 1) : '—'} />
+    </div>
+
+    <svg viewBox="0 0 780 350" role="img" aria-label={tr('Risk margin versus realized value added')}>
+      <rect x={plot.left} y={plot.top} width={zeroX - plot.left} height={zeroY - plot.top} className="strategy-research-quadrant beneficial" />
+      <rect x={zeroX} y={plot.top} width={plot.right - zeroX} height={zeroY - plot.top} className="strategy-research-quadrant cautioned" />
+      <rect x={plot.left} y={zeroY} width={zeroX - plot.left} height={plot.bottom - zeroY} className="strategy-research-quadrant missed" />
+      <rect x={zeroX} y={zeroY} width={plot.right - zeroX} height={plot.bottom - zeroY} className="strategy-research-quadrant captured" />
+
+      {yTicks.map((tick) => <g key={`y-${tick}`}><line x1={plot.left} y1={mapY(tick)} x2={plot.right} y2={mapY(tick)} className="strategy-research-grid-line" /><text x={plot.left - 10} y={mapY(tick) + 4} textAnchor="end" className="strategy-research-axis-tick">{percent(tick, 0)}</text></g>)}
+      {xTicks.map((tick) => <g key={`x-${tick}`}><line x1={mapX(tick)} y1={plot.top} x2={mapX(tick)} y2={plot.bottom} className="strategy-research-grid-line" /><text x={mapX(tick)} y={plot.bottom + 18} textAnchor="middle" className="strategy-research-axis-tick">{`${tick >= 0 ? '+' : ''}${number(tick, 2)}`}</text></g>)}
+
+      <line x1={plot.left} y1={zeroY} x2={plot.right} y2={zeroY} className="strategy-research-axis zero" />
+      <line x1={zeroX} y1={plot.top} x2={zeroX} y2={plot.bottom} className="strategy-research-axis threshold" />
+      <line x1={plot.left} y1={mapY(severeThreshold)} x2={plot.right} y2={mapY(severeThreshold)} className="strategy-research-axis severe-boundary" />
+
+      <text x={plot.left} y="25" className="strategy-research-svg-label axis-title">{tr('Realized rotation value added (%)')}</text>
+      <text x={(plot.left + plot.right) / 2} y="342" textAnchor="middle" className="strategy-research-svg-label axis-title">{tr('Risk margin vs threshold (score − threshold)')}</text>
+      <text x={zeroX + 7} y={plot.top + 14} className="strategy-research-threshold-label">{tr('Alert threshold')}</text>
+      <text x={plot.right - 5} y={mapY(severeThreshold) - 6} textAnchor="end" className="strategy-research-severe-label">{`${tr('Severe')} ${percent(severeThreshold, 0)}`}</text>
+
+      <text x={plot.left + 12} y={plot.top + 24} className="strategy-research-quadrant-label positive">{tr('Beneficial · no alert')}</text>
+      <text x={plot.right - 12} y={plot.top + 24} textAnchor="end" className="strategy-research-quadrant-label warning">{tr('Alerted · rotation helped')}</text>
+      <text x={plot.left + 12} y={plot.bottom - 14} className="strategy-research-quadrant-label negative">{tr('Harmful · missed risk')}</text>
+      <text x={plot.right - 12} y={plot.bottom - 14} textAnchor="end" className="strategy-research-quadrant-label captured">{tr('Harmful · alert captured')}</text>
+
+      {points.map((point) => <circle key={point.id} cx={mapX(point.x)} cy={mapY(point.y)} r={point.severe ? 6.5 : 3.6} className={`strategy-research-bubble ${point.severe ? 'severe' : ''} ${point.highRisk ? 'high-risk' : ''}`} role="button" tabIndex="0" aria-label={`${point.label} · ${tr('Risk score')} ${number(point.riskScore, 3)} · ${tr('Risk margin')} ${number(point.x, 3)} · ${tr('Value added')} ${percent(point.y, 2)}`} onClick={() => openPoint(point)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') openPoint(point) }} />)}
     </svg>
-    {metrics?.shadow ? <div className="strategy-research-compact-metrics"><MetricCard label={tr('Intervention capital')} value={money(metrics.shadow.ending_capital)} tone={Number(metrics.shadow.ending_capital_delta_rate || 0) >= 0 ? 'positive' : 'negative'} /><MetricCard label={tr('Capital delta')} value={percent(metrics.shadow.ending_capital_delta_rate, 2)} /><MetricCard label={tr('Interventions')} value={number(metrics.interventions, 0)} /></div> : null}
+
+    <div className="strategy-research-risk-reading">
+      <strong>{tr('How to read')}</strong>
+      <span>{tr('Right of the vertical line means the detector issued a high-risk alert. Below the horizontal zero line means the realized rotation destroyed value versus holding. The lower-right quadrant is therefore where the detector correctly identified economically harmful transitions.')}</span>
+    </div>
+
+    {interventionMetrics?.shadow ? <div className="strategy-research-compact-metrics"><MetricCard label={tr('Intervention capital')} value={money(interventionMetrics.shadow.ending_capital)} tone={Number(interventionMetrics.shadow.ending_capital_delta_rate || 0) >= 0 ? 'positive' : 'negative'} /><MetricCard label={tr('Capital delta')} value={percent(interventionMetrics.shadow.ending_capital_delta_rate, 2)} /><MetricCard label={tr('Interventions')} value={number(interventionMetrics.interventions, 0)} /></div> : null}
     <ResearchDetailDialog detail={selectedDetail} onClose={() => setSelectedDetail(null)} />
   </div>
 }
