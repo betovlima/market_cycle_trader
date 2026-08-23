@@ -86,9 +86,15 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
   const [blockingRun, setBlockingRun] = useState(null)
   const [analytics, setAnalytics] = useState(null)
   const [risk, setRisk] = useState(null)
+  const [alternativeAction, setAlternativeAction] = useState(null)
+  const [operationalQualification, setOperationalQualification] = useState(null)
   const [intervention, setIntervention] = useState(null)
   const [confidence, setConfidence] = useState(null)
   const [stateful, setStateful] = useState(null)
+  const [leadershipRegime, setLeadershipRegime] = useState(null)
+  const [clustering, setClustering] = useState(null)
+  const [fragileIncumbent, setFragileIncumbent] = useState(null)
+  const [emergingTrend, setEmergingTrend] = useState(null)
   const {
     result: milpResult,
     selectedCandidate,
@@ -174,6 +180,54 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
   }, [applyPipelineControl])
 
 
+  const hydratePipelineStageResults = useCallback(async (loadedRun, periodStart, periodEnd, controlValue = null) => {
+    if (!loadedRun?.id) return null
+    let snapshot = null
+    try {
+      snapshot = await apiFetchTimed(`${API}/temporal-intelligence/${encodeURIComponent(loadedRun.id)}/strategy-research/pipeline/snapshot`)
+    } catch {
+      return null
+    }
+
+    if (!snapshot || typeof snapshot !== 'object') return null
+
+    const riskValue = snapshot?.risk?.id ? snapshot.risk : null
+    const alternativeActionValue = snapshot?.alternative_action?.id ? snapshot.alternative_action : null
+    const operationalQualificationValue = snapshot?.operational_policy_qualification?.id ? snapshot.operational_policy_qualification : null
+    const interventionValue = snapshot?.intervention?.id ? snapshot.intervention : null
+    const confidenceValue = snapshot?.confidence?.id ? snapshot.confidence : null
+    const statefulValue = snapshot?.stateful?.id ? snapshot.stateful : null
+    const leadershipRegimeValue = snapshot?.leadership_regime || null
+    const clusteringValue = snapshot?.clustering || null
+    const fragileIncumbentValue = snapshot?.fragile_incumbent || null
+    const emergingTrendValue = snapshot?.emerging_trend || null
+
+    if (riskValue) setRisk(riskValue)
+    if (alternativeActionValue) setAlternativeAction(alternativeActionValue)
+    if (operationalQualificationValue) setOperationalQualification(operationalQualificationValue)
+    if (interventionValue) setIntervention(interventionValue)
+    if (confidenceValue) setConfidence(confidenceValue)
+    if (statefulValue) setStateful(statefulValue)
+    if (leadershipRegimeValue) setLeadershipRegime(leadershipRegimeValue)
+    if (clusteringValue) setClustering(clusteringValue)
+    if (fragileIncumbentValue) setFragileIncumbent(fragileIncumbentValue)
+    if (emergingTrendValue) setEmergingTrend(emergingTrendValue)
+
+    const processingId = String(loadedRun?.research_processing_id || '').trim()
+    const snapshotStart = monthValue(snapshot?.period_start, periodStart)
+    const snapshotEnd = monthValue(snapshot?.period_end, periodEnd)
+    const states = controlValue?.stage_states || snapshot?.pipeline?.stage_states || {}
+    const milpReady = states?.milp === 'completed' || states?.validation === 'running' || states?.validation === 'completed'
+    if (processingId && snapshotStart && snapshotEnd && milpReady) {
+      try {
+        await loadLatestMilp(loadedRun.id, processingId, snapshotStart, snapshotEnd)
+      } catch {
+      }
+    }
+
+    return snapshot
+  }, [loadLatestMilp])
+
   const loadExistingPipelineData = useCallback(async (loadedRun, periodStart, periodEnd) => {
     if (!loadedRun?.id || String(loadedRun?.status || '').toLowerCase() !== 'completed') return
     const processingId = String(loadedRun?.research_processing_id || '').trim()
@@ -199,9 +253,15 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     }
 
     const riskValue = snapshot?.risk?.id ? snapshot.risk : null
+    const alternativeActionValue = snapshot?.alternative_action?.id ? snapshot.alternative_action : null
+    const operationalQualificationValue = snapshot?.operational_policy_qualification?.id ? snapshot.operational_policy_qualification : null
     const interventionValue = snapshot?.intervention?.id ? snapshot.intervention : null
     const confidenceValue = snapshot?.confidence?.id ? snapshot.confidence : null
     const statefulValue = snapshot?.stateful?.id ? snapshot.stateful : null
+    const leadershipRegimeValue = snapshot?.leadership_regime || null
+    const clusteringValue = snapshot?.clustering || null
+    const fragileIncumbentValue = snapshot?.fragile_incumbent || null
+    const emergingTrendValue = snapshot?.emerging_trend || null
     const snapshotStart = monthValue(snapshot?.period_start, periodStart)
     const snapshotEnd = monthValue(snapshot?.period_end, periodEnd)
     let milpValue = null
@@ -213,10 +273,19 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       }
     }
     setRisk(riskValue)
+    setAlternativeAction(alternativeActionValue)
+    setOperationalQualification(operationalQualificationValue)
     setIntervention(interventionValue)
     setConfidence(confidenceValue)
     setStateful(statefulValue)
+    setLeadershipRegime(leadershipRegimeValue)
+    setClustering(clusteringValue)
+    setFragileIncumbent(fragileIncumbentValue)
+    setEmergingTrend(emergingTrendValue)
 
+    if (String(clusteringValue?.status || '').toLowerCase() === 'completed') nextState.clustering = 'completed'
+    if (String(fragileIncumbentValue?.status || '').toLowerCase() === 'completed') nextState.fragile_incumbent = 'completed'
+    if (String(emergingTrendValue?.status || '').toLowerCase() === 'completed') nextState.emerging_trend = 'completed'
     if (riskValue?.id && interventionValue?.id) nextState.risk = 'completed'
     else if (riskValue?.id || interventionValue?.id) nextState.risk = 'running'
     if (confidenceValue?.id) nextState.confidence = 'completed'
@@ -232,6 +301,9 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     const resolvedState = persisted?.stage_states && persistedStatus && persistedStatus !== 'idle'
       ? { ...nextState, ...persisted.stage_states }
       : nextState
+    if (String(clusteringValue?.status || '').toLowerCase() === 'completed') resolvedState.clustering = 'completed'
+    if (String(fragileIncumbentValue?.status || '').toLowerCase() === 'completed') resolvedState.fragile_incumbent = 'completed'
+    if (String(emergingTrendValue?.status || '').toLowerCase() === 'completed') resolvedState.emerging_trend = 'completed'
     if (statefulValue?.id) resolvedState.stateful = 'completed'
     if (milpValue?.id) resolvedState.milp = 'completed'
     else resolvedState.milp = 'waiting'
@@ -447,6 +519,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
         const controlValue = await apiFetch(`${API}/temporal-intelligence/${encodeURIComponent(run.id)}/strategy-research/pipeline`)
         if (disposed) return
         if (controlValue) applyPipelineControl(controlValue)
+        await hydratePipelineStageResults(run, startMonth, endMonth, controlValue)
         const statusValue = String(controlValue?.status || '').toLowerCase()
         if (!ACTIVE_PIPELINE.has(statusValue)) {
           if (timer) window.clearInterval(timer)
@@ -472,7 +545,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       disposed = true
       if (timer) window.clearInterval(timer)
     }
-  }, [applyPipelineControl, endMonth, handleError, loadExistingPipelineData, persistedPipelineActive, run?.id, running, startMonth])
+  }, [applyPipelineControl, endMonth, handleError, hydratePipelineStageResults, loadExistingPipelineData, persistedPipelineActive, run, run?.id, running, startMonth])
 
   async function waitForBacktest(jobId) {
     while (true) {
@@ -536,6 +609,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       ])
       setRun(runValue)
       applyPipelineControl(controlValue)
+      await hydratePipelineStageResults(runValue, startMonth, endMonth, controlValue)
       const status = String(controlValue?.status || '').toLowerCase()
       if (status === 'completed') {
         await loadExistingPipelineData(runValue, startMonth, endMonth)
@@ -575,9 +649,15 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
 
       setAnalytics(null)
       setRisk(null)
+      setAlternativeAction(null)
+      setOperationalQualification(null)
       setIntervention(null)
       setConfidence(null)
       setStateful(null)
+      setLeadershipRegime(null)
+      setClustering(null)
+      setFragileIncumbent(null)
+      setEmergingTrend(null)
       clearMilp()
       setPipelineControl(null)
       setStageState(defaultStageState())
@@ -664,9 +744,15 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       }
       setAnalytics(null)
       setRisk(null)
+      setAlternativeAction(null)
+      setOperationalQualification(null)
       setIntervention(null)
       setConfidence(null)
       setStateful(null)
+      setLeadershipRegime(null)
+      setClustering(null)
+      setFragileIncumbent(null)
+      setEmergingTrend(null)
       setPipelineControl(null)
       setRun(null)
       setBlockingRun(null)
@@ -791,13 +877,15 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     {error ? <div className="global-inline-message error-inline">{error}</div> : null}
     {notice ? <div className="global-inline-message success-inline">{notice}</div> : null}
 
-    <StrategyResearchPipeline stageState={stageState} selectedStage={selectedStage} onSelect={handleStageSelect} runProgress={run?.progress} />
+    <div className="strategy-research-workspace">
+      <StrategyResearchPipeline stageState={stageState} selectedStage={selectedStage} onSelect={handleStageSelect} pipelineProgress={pipelineProgress} />
 
-    <section className="strategy-research-stage-content data-panel">
-      <div className="strategy-research-stage-content-heading"><div><span className="panel-kicker">{tr('SELECTED STAGE')}</span><h3>{tr(STRATEGY_RESEARCH_STAGES.find((stage) => stage.id === selectedStage)?.label || 'Research Pipeline')}</h3></div><span>{tr('Select a pipeline stage to inspect its visual result.')}</span></div>
-      {selectedStage !== 'milp' ? <StrategyResearchVisuals selectedStage={selectedStage} stageState={stageState} pipelineProgress={pipelineProgress} run={run} analytics={analytics} risk={risk} intervention={intervention} confidence={confidence} stateful={stateful} pipelineError={error} /> : null}
-      {selectedStage === 'milp' ? <DecisionCandidates stateful={stateful} milp={milpResult} selectedCandidate={selectedCandidate} onCandidateSelect={setSelectedCandidate} /> : null}
-      {selectedStage === 'validation' ? <FinalValidation control={analytics} stateful={stateful} milp={milpResult} selectedCandidate={selectedCandidate} onCandidateSelect={setSelectedCandidate} /> : null}
-    </section>
+      <section className="strategy-research-stage-content data-panel">
+        <div className="strategy-research-stage-content-heading"><div><span className="panel-kicker">{tr('SELECTED STAGE')}</span><h3>{tr(STRATEGY_RESEARCH_STAGES.find((stage) => stage.id === selectedStage)?.label || 'Research Pipeline')}</h3></div><span>{tr('Select a pipeline stage to inspect its visual result.')}</span></div>
+        {selectedStage !== 'milp' ? <StrategyResearchVisuals selectedStage={selectedStage} stageState={stageState} pipelineProgress={pipelineProgress} run={run} analytics={analytics} risk={risk} alternativeAction={alternativeAction} operationalQualification={operationalQualification} intervention={intervention} confidence={confidence} stateful={stateful} leadershipRegime={leadershipRegime} clustering={clustering} fragileIncumbent={fragileIncumbent} emergingTrend={emergingTrend} pipelineError={error} /> : null}
+        {selectedStage === 'milp' ? <DecisionCandidates stateful={stateful} milp={milpResult} selectedCandidate={selectedCandidate} onCandidateSelect={setSelectedCandidate} /> : null}
+        {selectedStage === 'validation' ? <FinalValidation control={analytics} stateful={stateful} milp={milpResult} selectedCandidate={selectedCandidate} onCandidateSelect={setSelectedCandidate} /> : null}
+      </section>
+    </div>
   </section>
 }

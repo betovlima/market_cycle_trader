@@ -8,7 +8,7 @@ export function MilpDialog({ detail, onClose }) {
       {detail.description ? <p>{detail.description}</p> : null}
       {detail.metrics?.length ? <div className="milp-dialog-metrics">{detail.metrics.map((item) => <div key={`${item.label}-${item.value}`}><span>{item.label}</span><strong className={item.tone || ''}>{item.value}</strong></div>)}</div> : null}
       {detail.components?.length ? <div className="milp-objective-list">{detail.components.map((item) => <div key={item.label}><span>{item.label}</span><strong>{item.value}</strong></div>)}</div> : null}
-      {detail.alternatives?.length ? <div className="milp-alternatives"><strong>{tr('Alternatives evaluated')}</strong>{detail.alternatives.map((item) => <div key={item.symbol}><span>{item.symbol}</span><strong>{item.objective}</strong></div>)}</div> : null}
+      {detail.alternatives?.length ? <div className="milp-alternatives"><strong>{detail.itemsTitle || tr('Alternatives evaluated')}</strong>{detail.alternatives.map((item) => <div key={`${item.symbol}-${item.objective}`}><span>{item.symbol}</span><strong>{item.objective}</strong></div>)}</div> : null}
     </section>
   </div>
 }

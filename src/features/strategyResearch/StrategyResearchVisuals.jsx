@@ -2,21 +2,22 @@ import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { getIntlLocale, tr } from '../../i18n/runtime'
+import { CoffeeProgress } from '../../shared/CoffeeProgress'
 import { money, number, percent } from '../../shared/formatters'
+import { LeadershipRegimePanel } from '../leadershipRegime'
+import { FragileIncumbentPanel } from '../fragileIncumbent/FragileIncumbentPanel'
+import { RegimeClusteringPanel } from '../regimeClustering/RegimeClusteringPanel'
+import { EmergingTrendPanel } from '../emergingTrend/EmergingTrendPanel'
+import { AlternativeActionPanel } from '../alternativeAction/AlternativeActionPanel'
+import { OperationalPolicyQualificationPanel } from '../operationalPolicyQualification/OperationalPolicyQualificationPanel'
 
 function MetricCard({ label, value, note, tone = '' }) {
   return <div className={`strategy-research-metric-card ${tone}`}><span>{label}</span><strong>{value}</strong>{note ? <small>{note}</small> : null}</div>
 }
 
-function CoffeeSpinner({ progress }) {
-  return <span className="strategy-research-coffee-loader" aria-hidden="true">
-    {Number.isFinite(progress) ? <span className="strategy-research-coffee-percent">{Math.max(0, Math.min(100, Math.round(progress)))}%</span> : null}
-  </span>
-}
-
 function EmptyVisual({ title, detail, loading = false, progress = null }) {
   return <div className={`strategy-research-empty-visual ${loading ? 'loading' : ''}`}>
-    {loading ? <CoffeeSpinner progress={progress} /> : <span className="strategy-research-empty-icon" aria-hidden="true">◇</span>}
+    {loading ? <CoffeeProgress progress={progress} label={tr('Processing')} /> : <span className="strategy-research-empty-icon" aria-hidden="true">◇</span>}
     <strong>{tr(loading ? 'Processing' : title)}</strong>
     {loading ? <small>{tr(title)}</small> : detail ? <small>{tr(detail)}</small> : null}
   </div>
@@ -245,7 +246,7 @@ function TemporalHeatmap({ run }) {
   </div>
 }
 
-function BubbleQuadrant({ risk, intervention }) {
+function BubbleQuadrant({ risk, alternativeAction, intervention }) {
   const [selectedDetail, setSelectedDetail] = useState(null)
   const rows = risk?.oos?.scored_transitions || []
   const severeThreshold = Number(risk?.research_settings?.settings?.risk?.severe_threshold ?? -0.05)
@@ -302,6 +303,7 @@ function BubbleQuadrant({ risk, intervention }) {
     const targetReturn = Number(point.row?.one_interval_target_return)
     const incumbentReturn = Number(point.row?.one_interval_incumbent_return)
     const decisionDate = point.row?.decision_at || point.row?.execution_at || '—'
+    const alternative = (alternativeAction?.alerts || []).find((row) => row?.transition_key === point.row?.transition_key)
     setSelectedDetail({
       kicker: 'RISK & INTERVENTION',
       title: point.label,
@@ -315,6 +317,13 @@ function BubbleQuadrant({ risk, intervention }) {
         { label: tr('Realized value added'), value: percent(point.y, 2), tone: point.y > 0 ? 'positive' : point.y < 0 ? 'negative' : '' },
         { label: tr('Severity'), value: point.severe ? tr('Severe') : tr('Standard'), tone: point.severe ? 'negative' : '' },
         { label: tr('Transition'), value: point.label },
+        ...(alternative ? [
+          { label: tr('Best action · 5d'), value: tr(alternative.best_action_5d || 'Unavailable') },
+          { label: tr('ROTATE · 5d'), value: percent(alternative.rotate_return_5d, 2) },
+          { label: tr('HOLD · 5d'), value: percent(alternative.hold_return_5d, 2) },
+          { label: tr('CASH · 5d'), value: percent(alternative.cash_return_5d, 2) },
+          { label: tr('Best edge vs ROTATE'), value: percent(alternative.best_edge_vs_rotate_5d, 2), tone: Number(alternative.best_edge_vs_rotate_5d) > 0 ? 'positive' : '' },
+        ] : []),
         ...(Number.isFinite(targetReturn) ? [{ label: tr('Target interval return'), value: percent(targetReturn, 2), tone: targetReturn > 0 ? 'positive' : targetReturn < 0 ? 'negative' : '' }] : []),
         ...(Number.isFinite(incumbentReturn) ? [{ label: tr('Incumbent interval return'), value: percent(incumbentReturn, 2), tone: incumbentReturn > 0 ? 'positive' : incumbentReturn < 0 ? 'negative' : '' }] : []),
       ],
@@ -323,6 +332,7 @@ function BubbleQuadrant({ risk, intervention }) {
         { label: tr('Risk margin'), text: tr('Risk margin is risk score minus the chronological threshold selected for that out-of-sample year. Values at or above zero generated a risk alert.') },
         { label: tr('Realized value added'), text: tr('Positive realized value added means the rotation outperformed the counterfactual hold. Negative value means the rotation destroyed value relative to holding.') },
         { label: tr('Severe transition'), text: `${tr('The configured severe-loss boundary for this research run is')} ${percent(severeThreshold, 1)}.` },
+        ...(alternative ? [{ label: tr('Alternative action'), text: tr('ROTATE, HOLD and CASH values are post-hoc counterfactual labels for this alerted transition and are not yet an executable policy.') }] : []),
       ],
     })
   }
@@ -381,6 +391,7 @@ function BubbleQuadrant({ risk, intervention }) {
     </div>
 
     {interventionMetrics?.shadow ? <div className="strategy-research-compact-metrics"><MetricCard label={tr('Intervention capital')} value={money(interventionMetrics.shadow.ending_capital)} tone={Number(interventionMetrics.shadow.ending_capital_delta_rate || 0) >= 0 ? 'positive' : 'negative'} /><MetricCard label={tr('Capital delta')} value={percent(interventionMetrics.shadow.ending_capital_delta_rate, 2)} /><MetricCard label={tr('Interventions')} value={number(interventionMetrics.interventions, 0)} /></div> : null}
+    <AlternativeActionPanel analysis={alternativeAction} />
     <ResearchDetailDialog detail={selectedDetail} onClose={() => setSelectedDetail(null)} />
   </div>
 }
@@ -569,7 +580,7 @@ function FoldHeatmap({ run, stateful }) {
   </div>
 }
 
-export function StrategyResearchVisuals({ selectedStage, stageState = {}, pipelineProgress = 0, run, analytics, risk, intervention, confidence, stateful, pipelineError = '' }) {
+export function StrategyResearchVisuals({ selectedStage, stageState = {}, pipelineProgress = 0, run, analytics, risk, alternativeAction, operationalQualification, intervention, confidence, stateful, leadershipRegime, clustering, fragileIncumbent, emergingTrend, pipelineError = '' }) {
   const selectedStageRunning = stageState[selectedStage] === 'running'
   const temporalProgress = Number(run?.progress)
   const selectedProgress = selectedStage === 'temporal' && Number.isFinite(temporalProgress) ? temporalProgress : pipelineProgress
@@ -577,14 +588,17 @@ export function StrategyResearchVisuals({ selectedStage, stageState = {}, pipeli
   const content = {
     reference: analytics?.equity?.length ? <MonthlyHeatmap analytics={analytics} /> : empty('Strategy replay visualization will appear here.'),
     temporal: run?.result?.horizon_metrics?.length ? <TemporalHeatmap run={run} /> : empty('Temporal horizon analysis will appear here.'),
+    clustering: clustering?.id ? <RegimeClusteringPanel analysis={clustering} /> : empty('Regime Clustering will appear here.'),
+    fragile_incumbent: fragileIncumbent?.id ? <FragileIncumbentPanel analysis={fragileIncumbent} /> : empty('Fragile Incumbent Research will appear here.'),
+    emerging_trend: emergingTrend?.id ? <EmergingTrendPanel analysis={emergingTrend} /> : empty('Emerging Trend Research will appear here.'),
     risk: (risk?.oos?.high_risk_transitions || risk?.oos?.scored_transitions || []).length
-      ? <BubbleQuadrant risk={risk} intervention={intervention} />
+      ? <BubbleQuadrant risk={risk} alternativeAction={alternativeAction} intervention={intervention} />
       : stageState.risk === 'failed' && pipelineError
         ? <EmptyVisual title={pipelineError} detail={tr('The pipeline stopped before Risk & Intervention produced a valid research dataset. Export Results includes the available partial processing data.')} />
         : empty('Risk and intervention bubbles will appear here.'),
     confidence: confidence?.outer_results?.length ? <ConfidenceTiles confidence={confidence} /> : empty('Confidence calibration tiles will appear here.'),
-    stateful: stateful?.candidate_a ? <SankeyVisual stateful={stateful} /> : empty('Decision policy flow will appear here.'),
-    validation: stageState.validation === 'completed' || stateful?.candidate_a ? <FoldHeatmap run={run} stateful={stateful} /> : empty('Fold validation heatmap will appear here.'),
+    stateful: stateful?.candidate_a ? <><SankeyVisual stateful={stateful} /><LeadershipRegimePanel analysis={leadershipRegime} /></> : empty('Decision policy flow will appear here.'),
+    validation: stageState.validation === 'completed' || stateful?.candidate_a ? <><FoldHeatmap run={run} stateful={stateful} /><OperationalPolicyQualificationPanel analysis={operationalQualification} /></> : empty('Fold validation heatmap will appear here.'),
   }[selectedStage]
 
   return <section className="strategy-research-visual-panel">{content}</section>

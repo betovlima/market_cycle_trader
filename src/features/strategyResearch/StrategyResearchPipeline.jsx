@@ -3,6 +3,9 @@ import { tr } from '../../i18n/runtime'
 const STAGES = [
   { id: 'reference', label: 'Strategy Replay', icon: '↻' },
   { id: 'temporal', label: 'Temporal Intelligence', icon: '⚙' },
+  { id: 'clustering', label: 'Regime Clustering', icon: '◍' },
+  { id: 'fragile_incumbent', label: 'Fragile Incumbent', icon: '◌' },
+  { id: 'emerging_trend', label: 'Emerging Trend', icon: '↗' },
   { id: 'risk', label: 'Risk & Intervention', icon: '◉' },
   { id: 'confidence', label: 'Confidence Calibration', icon: '◇' },
   { id: 'stateful', label: 'Decision Policy Replay', icon: '⇄' },
@@ -23,34 +26,38 @@ function stageStateLabel(value) {
   return tr('Waiting')
 }
 
-export function StrategyResearchPipeline({ stageState = {}, selectedStage = 'reference', onSelect, runProgress = null }) {
+export function StrategyResearchPipeline({ stageState = {}, selectedStage = 'reference', onSelect, pipelineProgress = null }) {
+  const completed = STAGES.filter((stage) => stageState[stage.id] === 'completed').length
   return (
-    <section className="strategy-research-pipeline-shell" aria-label={tr('Research Pipeline')}>
-      <div className="strategy-research-pipeline-track">
+    <aside className="strategy-research-pipeline-shell" aria-label={tr('Research Pipeline')}>
+      <div className="strategy-research-pipeline-rail-head">
+        <span>{tr('Research Pipeline')}</span>
+        <strong>{completed}/{STAGES.length}</strong>
+      </div>
+      <div className="strategy-research-pipeline-track" role="list">
         {STAGES.map((stage, index) => {
           const state = stageState[stage.id] || 'waiting'
           return (
-            <div className="strategy-research-stage-wrap" key={stage.id}>
-              <button
-                type="button"
-                className={`strategy-research-stage ${state} ${selectedStage === stage.id ? 'selected' : ''}`}
-                onClick={() => onSelect?.(stage.id)}
-                aria-current={selectedStage === stage.id ? 'step' : undefined}
-              >
-                <span className="strategy-research-stage-head">
-                  <span className="strategy-research-stage-index">{String(index + 1).padStart(2, '0')}</span>
-                  <span className={`strategy-research-stage-status-icon ${state}`} aria-hidden="true">
-                    {state === 'running' ? '⚙' : state === 'completed' ? '' : stage.icon}
-                  </span>
-                </span>
+            <button
+              type="button"
+              className={`strategy-research-stage ${state} ${selectedStage === stage.id ? 'selected' : ''}`}
+              onClick={() => onSelect?.(stage.id)}
+              aria-current={selectedStage === stage.id ? 'step' : undefined}
+              key={stage.id}
+              role="listitem"
+            >
+              <span className="strategy-research-stage-index">{String(index + 1).padStart(2, '0')}</span>
+              <span className="strategy-research-stage-copy">
                 <strong>{tr(stage.label)}</strong>
-                <small>{state === 'running' && stage.id === 'temporal' && Number.isFinite(Number(runProgress)) ? `${stageStateLabel(state)} · ${Math.round(Math.max(0, Math.min(100, Number(runProgress))))}%` : stageStateLabel(state)}</small>
-              </button>
-              {index < STAGES.length - 1 ? <span className={`strategy-research-stage-connector ${state === 'completed' ? 'completed' : ''}`} aria-hidden="true" /> : null}
-            </div>
+                <small>{state === 'running' && Number.isFinite(Number(pipelineProgress)) ? `${stageStateLabel(state)} · ${Math.round(Math.max(0, Math.min(100, Number(pipelineProgress))))}%` : stageStateLabel(state)}</small>
+              </span>
+              <span className={`strategy-research-stage-status-icon ${state}`} aria-hidden="true">
+                {state === 'running' ? <span className="strategy-research-running-gear">⚙</span> : state === 'completed' ? '' : stage.icon}
+              </span>
+            </button>
           )
         })}
       </div>
-    </section>
+    </aside>
   )
 }
