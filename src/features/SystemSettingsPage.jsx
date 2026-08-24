@@ -112,6 +112,7 @@ export function SystemSettingsPage({ onSessionExpired }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [traderBusy, setTraderBusy] = useState(false)
+  const [manualRecoveryBusy, setManualRecoveryBusy] = useState('')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const initialLoadStartedRef = useRef(false)
@@ -243,6 +244,56 @@ export function SystemSettingsPage({ onSessionExpired }) {
     }
   }
 
+  async function prepareManualRecovery() {
+    setManualRecoveryBusy('prepare')
+    setError('')
+    setNotice('')
+    try {
+      const response = await apiFetch(`${API}/admin/trader-control/manual-recovery/prepare`, {
+        method: 'POST',
+      })
+      const plan = response?.plan || {}
+      setNotice(tr("Today's Paper analysis was recalculated. Prepared action: {current} → {target} ({action}).", {
+        current: plan.current_asset || '—',
+        target: plan.target_asset || '—',
+        action: modeLabel(plan.action || 'prepared'),
+      }))
+      await refreshTraderControl()
+    } catch (requestError) {
+      handleError(requestError)
+    } finally {
+      setManualRecoveryBusy('')
+    }
+  }
+
+  async function executeManualRecovery() {
+    const recovery = traderControl?.manual_recovery || {}
+    if (!window.confirm(tr("Execute today's prepared Paper plan now? This can submit Alpaca Paper orders immediately."))) return
+    setManualRecoveryBusy('execute')
+    setError('')
+    setNotice('')
+    try {
+      const response = await apiFetch(`${API}/admin/trader-control/manual-recovery/execute`, {
+        method: 'POST',
+        body: {
+          confirm: 'EXECUTE_TODAY',
+          plan_id: recovery.plan_id || null,
+        },
+      })
+      const result = response?.result || {}
+      setNotice(tr("Today's Paper plan was executed manually. Action: {action}. Target: {target}.", {
+        action: modeLabel(result.action || 'executed'),
+        target: result.target_asset || '—',
+      }))
+      await refreshTraderControl()
+    } catch (requestError) {
+      handleError(requestError)
+      await refreshTraderControl()
+    } finally {
+      setManualRecoveryBusy('')
+    }
+  }
+
   const timeoutHours = useMemo(() => Number(form.timeout_minutes || 0) / 60, [form.timeout_minutes])
 
   if (loading) {
@@ -352,6 +403,42 @@ export function SystemSettingsPage({ onSessionExpired }) {
               <button type="button" title={tr("Pause new Trader actions while preserving the current operational state.")} onClick={() => changeTraderMode('paused')} disabled={traderBusy || traderControl?.control_mode === 'paused'}>{tr("Pause")}</button>
               <button type="button" title={tr("Allow exits from existing positions but do not open new positions.")} onClick={() => changeTraderMode('exit_only')} disabled={traderBusy || traderControl?.control_mode === 'exit_only'}>{tr("Exit only")}</button>
               <button type="button" className="danger" title={tr("Stop Trader operation and cancel a pending non-executing run after confirmation.")} onClick={() => changeTraderMode('stopped')} disabled={traderBusy || traderControl?.control_mode === 'stopped'}>{tr("Stop")}</button>
+            </div>
+          </div>
+
+          <div className="trader-manual-recovery">
+            <div className="trader-manual-recovery-copy">
+              <span className="panel-kicker">{tr("MANUAL RECOVERY")}</span>
+              <strong>{tr("Current-session contingency")}</strong>
+              <small>
+                {traderControl?.manual_recovery?.plan_id
+                  ? tr("Plan {plan} · {current} → {target} · {status}", {
+                      plan: traderControl.manual_recovery.plan_id,
+                      current: traderControl.manual_recovery.current_asset || '—',
+                      target: traderControl.manual_recovery.target_asset || '—',
+                      status: modeLabel(traderControl.manual_recovery.plan_status || 'unknown'),
+                    })
+                  : tr("Recalculate from the latest completed daily session, then explicitly execute the prepared Paper plan.")}
+              </small>
+            </div>
+            <div className="trader-manual-recovery-actions">
+              <button
+                type="button"
+                onClick={prepareManualRecovery}
+                disabled={Boolean(manualRecoveryBusy) || !traderControl?.manual_recovery?.can_prepare}
+                title={tr(traderControl?.manual_recovery?.prepare_reason || "Recalculate today's decision using only completed daily data and prepare a new current-session Paper plan.")}
+              >
+                {tr(manualRecoveryBusy === 'prepare' ? 'Recalculating…' : "Re-run today's analysis")}
+              </button>
+              <button
+                type="button"
+                className="manual-execute"
+                onClick={executeManualRecovery}
+                disabled={Boolean(manualRecoveryBusy) || !traderControl?.manual_recovery?.can_execute}
+                title={tr(traderControl?.manual_recovery?.execute_reason || "Execute the prepared current-session plan now through Alpaca Paper.")}
+              >
+                {tr(manualRecoveryBusy === 'execute' ? 'Executing…' : "Execute today's plan")}
+              </button>
             </div>
           </div>
 
