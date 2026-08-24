@@ -3072,4 +3072,10 @@ export const PT_TRANSLATIONS = {
   'drawdown safety': 'segurança de drawdown',
   'worst month safety': 'segurança do pior mês',
   'positive intervention utility': 'utility positiva das intervenções',
+  'Backtest workspace is still restoring.': 'O workspace de Backtest ainda está sendo restaurado.',
+  'A Backtest start request is already in progress.': 'Uma solicitação de início de Backtest já está em andamento.',
+  'A compatible completed reference Backtest is required for this Strategy.': 'É necessário um Backtest de referência concluído e compatível para esta Strategy.',
+  'The recovered reference Backtest does not match the selected Strategy snapshot.': 'O Backtest de referência recuperado não corresponde ao snapshot da Strategy selecionada.',
+  'The completed reference Backtest does not match the selected Strategy snapshot.': 'O Backtest de referência concluído não corresponde ao snapshot da Strategy selecionada.',
+  'Unable to start the reference Backtest.': 'Não foi possível iniciar o Backtest de referência.',
 }

@@ -59,10 +59,10 @@ function strategyNeedsReferenceBacktest(strategy) {
 function runMatchesStrategy(run, strategy) {
   if (!run?.id || !strategy?.id) return false
   if (String(run.strategy_profile_id || '') !== String(strategy.id)) return false
-  if (run.strategy_profile_revision != null && strategy.revision != null && Number(run.strategy_profile_revision) !== Number(strategy.revision)) return false
-  const runHash = String(run.strategy_configuration_hash || '').trim()
+  if (strategy.revision != null && Number(run.strategy_profile_revision) !== Number(strategy.revision)) return false
   const strategyHash = String(strategy.configuration_hash || '').trim()
-  return !runHash || !strategyHash || runHash === strategyHash
+  if (strategyHash && String(run.strategy_configuration_hash || '').trim() !== strategyHash) return false
+  return true
 }
 
 function strategyTypeLabel(strategy, run) {
@@ -574,11 +574,20 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
   }
 
   async function runReferenceReplay(selectedStrategy) {
-    if (!strategyNeedsReferenceBacktest(selectedStrategy)) return
-    if (!canStartBacktest) throw new Error('A reference Backtest is required for this Strategy, but this profile cannot start Backtests.')
-    const created = await workspace.runBacktest()
-    if (!created?.id) throw new Error(workspace.error || 'Unable to start the reference Backtest.')
-    if (ACTIVE_JOB.has(String(created.status || '').toLowerCase())) await waitForBacktest(created.id)
+    if (!strategyNeedsReferenceBacktest(selectedStrategy)) return null
+    const referenceJob = await workspace.runBacktest({
+      strategy: selectedStrategy,
+      reuseCompleted: true,
+      allowCreate: canStartBacktest,
+      throwOnError: true,
+    })
+    if (!referenceJob?.id) throw new Error(workspace.error || 'Unable to start the reference Backtest.')
+    if (!runMatchesStrategy(referenceJob, selectedStrategy)) throw new Error('The recovered reference Backtest does not match the selected Strategy snapshot.')
+    const resolved = ACTIVE_JOB.has(String(referenceJob.status || '').toLowerCase())
+      ? await waitForBacktest(referenceJob.id)
+      : referenceJob
+    if (!runMatchesStrategy(resolved, selectedStrategy)) throw new Error('The completed reference Backtest does not match the selected Strategy snapshot.')
+    return resolved
   }
 
   async function hydrateReferenceReplay(createdRun) {
@@ -633,7 +642,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
   }
 
   async function runPipeline({ forceNew = false } = {}) {
-    if (!canRun || running || temporalActive || blockingTemporalActive || !validPeriod(startMonth, endMonth)) return
+    if (!canRun || running || temporalActive || blockingTemporalActive || workspace.restoringExecution || workspace.startingBacktest || !validPeriod(startMonth, endMonth)) return
     if (!forceNew && persistedPipelineActive) return
     stopRequestedRef.current = false
     stageSelectionPinnedRef.current = false
@@ -733,7 +742,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
   }
 
   async function restartPipeline() {
-    if (!canRun || restarting || running || temporalActive || blockingTemporalActive || !validPeriod(startMonth, endMonth)) return
+    if (!canRun || restarting || running || temporalActive || blockingTemporalActive || workspace.restoringExecution || workspace.startingBacktest || !validPeriod(startMonth, endMonth)) return
     if (!window.confirm(tr('Restart the Research Pipeline? Current derived research results will be cleared and processing will start again from the beginning.'))) return
     setRestarting(true)
     setError('')
@@ -836,6 +845,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
           : persistedPipelineActive
             ? 'Research Pipeline Running'
             : 'Run Research Pipeline'
+  const referenceWorkspaceBusy = workspace.restoringExecution || workspace.startingBacktest
   const effectivePipelineBusy = running || temporalActive || persistedPipelineActive
   const canStopPipeline = canStop && (effectivePipelineBusy || blockingTemporalActive)
   const stopControlPending = stopping || pipelineStatus === 'stop_requested' || (blockingTemporalActive && blockingPipelineStatus === 'stop_requested')
@@ -859,10 +869,10 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       </div>
       <div className="strategy-research-actions">
         {canStopPipeline ? <button type="button" className="secondary-action compact" onClick={stopPipeline} disabled={stopControlPending}>{tr(stopControlPending ? 'Stopping…' : 'Stop Pipeline')}</button> : null}
-        {!effectivePipelineBusy && !temporalActive && pipelineStatus !== 'stopped' && run?.id && canRun ? <button type="button" className="secondary-action compact" onClick={restartPipeline} disabled={restarting || blockingTemporalActive}>{tr(restarting ? 'Restarting…' : 'Restart Pipeline')}</button> : null}
+        {!effectivePipelineBusy && !temporalActive && pipelineStatus !== 'stopped' && run?.id && canRun ? <button type="button" className="secondary-action compact" onClick={restartPipeline} disabled={restarting || referenceWorkspaceBusy || blockingTemporalActive}>{tr(restarting ? 'Restarting…' : 'Restart Pipeline')}</button> : null}
         {canExport && run?.result ? <button type="button" className="secondary-action compact" onClick={exportPipeline} disabled={exporting}>{tr(exporting ? 'Exporting…' : 'Export Results')}</button> : null}
         {!effectivePipelineBusy && !temporalActive && showCreateCatalogStrategy ? <button type="button" className="secondary-action compact" onClick={materializeStrategy} disabled={materializing || !canCreateCatalogStrategy} title={!selectedCandidate ? tr('Select a candidate in Final Validation before creating a Strategy.') : undefined}>{tr(materializing ? 'Creating Strategy…' : 'Create Strategy')}</button> : null}
-        {canRun ? <button type="button" className="primary-action compact" onClick={pipelineStatus === 'stopped' ? restartPipeline : () => runPipeline()} disabled={restarting || effectivePipelineBusy || temporalActive || blockingTemporalActive || !validPeriod(startMonth, endMonth)}><PlayIcon />{tr(runButtonLabel)}</button> : null}
+        {canRun ? <button type="button" className="primary-action compact" onClick={pipelineStatus === 'stopped' ? restartPipeline : () => runPipeline()} disabled={restarting || referenceWorkspaceBusy || effectivePipelineBusy || temporalActive || blockingTemporalActive || !validPeriod(startMonth, endMonth)}><PlayIcon />{tr(runButtonLabel)}</button> : null}
       </div>
     </section>
 
