@@ -6,9 +6,7 @@ import { BOUNDARY_HINTS } from '../strategySettingsConfig'
 
 export function StrategyBoundaryGrid({ catalog }) {
   const winner = catalog.control.trader_winner
-  const research = catalog.control.research_strategy_id !== catalog.control.trader_winner_strategy_id
-    ? catalog.control.research_strategy
-    : null
+  const research = catalog.control.research_strategy
   return (
     <div className="strategy-boundary-grid">
       <article className="winner-boundary-card">
@@ -31,8 +29,8 @@ export function StrategyBoundaryGrid({ catalog }) {
         <ShieldIcon size={20} />
         <div>
           <span className="strategy-boundary-label">{tr("Catalog rule")}{' '}<ParameterHint id="hint-boundary-lifecycle" title={tr("Catalog rule")} align="right" {...BOUNDARY_HINTS.lifecycle} /></span>
-          <strong>{tr("One RESEARCH · one WINNER")}</strong>
-          <small>{tr("Promotion changes the role, never the Strategy identity.")}</small>
+          <strong>{tr("RESEARCH and WINNER are independent roles")}</strong>
+          <small>{tr("The same Strategy may hold both roles.")}</small>
         </div>
       </article>
     </div>

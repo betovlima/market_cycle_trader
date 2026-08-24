@@ -41,7 +41,7 @@ export const BOUNDARY_HINTS = {
     relationship: 'Marking another Strategy as RESEARCH automatically removes the role from the previous Research Strategy.',
   },
   lifecycle: {
-    description: 'The Catalog allows at most one RESEARCH role and one WINNER role.',
-    relationship: 'Every other Strategy remains SAVED. The newest saved Strategy is shown immediately below the Winner.',
+    description: 'The Catalog allows one RESEARCH role and one WINNER role, and both roles may point to the same Strategy.',
+    relationship: 'Selecting RESEARCH never changes the active WINNER. Promotion never forces RESEARCH onto another Strategy.',
   },
 }

@@ -2990,4 +2990,9 @@ export const ES_TRANSLATIONS = {
   'The recovered reference Backtest does not match the selected Strategy snapshot.': 'El Backtest de referencia recuperado no coincide con el snapshot de la Strategy seleccionada.',
   'The completed reference Backtest does not match the selected Strategy snapshot.': 'El Backtest de referencia completado no coincide con el snapshot de la Strategy seleccionada.',
   'Unable to start the reference Backtest.': 'No fue posible iniciar el Backtest de referencia.',
+  'RESEARCH and WINNER are independent roles': 'RESEARCH y WINNER son roles independientes',
+  'The same Strategy may hold both roles.': 'La misma Strategy puede tener ambos roles.',
+  'The Strategy keeps its RESEARCH role while also becoming WINNER. The current Winner becomes a saved historical Strategy. Current position, cash and scheduled pipeline are preserved.': 'La Strategy mantiene el rol RESEARCH y también pasa a ser WINNER. La Winner actual pasa a ser una Strategy histórica guardada. Se preservan la posición actual, el efectivo y la pipeline programada.',
+  'The Catalog allows one RESEARCH role and one WINNER role, and both roles may point to the same Strategy.': 'El Catálogo permite un rol RESEARCH y un rol WINNER, y ambos pueden apuntar a la misma Strategy.',
+  'Selecting RESEARCH never changes the active WINNER. Promotion never forces RESEARCH onto another Strategy.': 'Seleccionar RESEARCH nunca cambia la WINNER activa. La promoción nunca fuerza el rol RESEARCH sobre otra Strategy.',
 }

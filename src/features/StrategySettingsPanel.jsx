@@ -272,7 +272,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
     const confirmation = window.confirm(
       tr('Promote {name} to WINNER?', { name: `"${strategy.name}"` }) + '\n\n'
       + tr(promotingResearch
-        ? 'The Strategy keeps the same sequential name and technical identity. Because it is RESEARCH, the current Winner becomes the new RESEARCH Strategy. Current position, cash and scheduled pipeline are preserved.'
+        ? 'The Strategy keeps its RESEARCH role while also becoming WINNER. The current Winner becomes a saved historical Strategy. Current position, cash and scheduled pipeline are preserved.'
         : 'The Strategy keeps the same sequential name and technical identity. The current Winner becomes a saved historical Strategy. Current position, cash and scheduled pipeline are preserved.'),
     )
     if (!confirmation) return
@@ -444,7 +444,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
             </div>
             <div className="strategy-editor-actions">
               <button type="button" onClick={() => cloneStrategy(selected)} disabled={Boolean(busy)}>{tr("Clone Strategy")}</button>
-              {selected.id === winnerId ? null : selected.id !== researchId ? <button type="button" onClick={() => useForStrategyResearch(selected)} disabled={Boolean(busy) || hasActiveBacktest}>{tr("Mark as RESEARCH")}</button> : <button type="button" disabled>{tr("RESEARCH")}</button>}
+              {selected.id !== researchId ? <button type="button" onClick={() => useForStrategyResearch(selected)} disabled={Boolean(busy) || hasActiveBacktest}>{tr("Mark as RESEARCH")}</button> : <button type="button" disabled>{tr("RESEARCH")}</button>}
               {selected.id !== winnerId ? <button type="button" className="promote-action" title={temporalSeriesUpdateInProgress ? tr('Winner promotion is temporarily unavailable while temporal market-series synchronization is running.') : (!traderRuntimeReady ? traderRuntimeBlockReason : '')} onClick={() => promoteToTrader(selected)} disabled={Boolean(busy) || !canPromote}>{tr("Promote to WINNER")}</button> : <button type="button" className="promote-action" disabled>{tr("WINNER")}</button>}
               {selected.id !== winnerId && selected.id !== researchId ? <button type="button" className="danger" onClick={() => deleteStrategy(selected)} disabled={Boolean(busy)}>{tr("Delete strategy")}</button> : null}
             </div>

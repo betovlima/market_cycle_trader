@@ -21,7 +21,7 @@ export function StrategyCatalog({
       </div>
       <div className="strategy-list">
         {orderedStrategies.map((item) => {
-          const isResearch = item.id === researchId && item.id !== winnerId
+          const isResearch = item.id === researchId
           const isWinner = item.id === winnerId
           const isLatestSaved = item.id === latestSavedId
           const visibleStatus = isWinner ? 'winner' : isResearch ? 'research' : 'saved'
