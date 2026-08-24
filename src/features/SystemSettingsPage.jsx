@@ -426,18 +426,18 @@ export function SystemSettingsPage({ onSessionExpired }) {
                 type="button"
                 onClick={prepareManualRecovery}
                 disabled={Boolean(manualRecoveryBusy) || !traderControl?.manual_recovery?.can_prepare}
-                title={tr(traderControl?.manual_recovery?.prepare_reason || "Recalculate today's decision using only completed daily data and prepare a new current-session Paper plan.")}
+                title={tr(traderControl?.manual_recovery?.prepare_reason || "Recalculate today's Winner decision using only completed daily data and prepare a new current-session Paper plan.")}
               >
-                {tr(manualRecoveryBusy === 'prepare' ? 'Recalculating…' : "Re-run today's analysis")}
+                {tr(manualRecoveryBusy === 'prepare' ? 'Reanalyzing…' : 'Reanalyze Winner for today')}
               </button>
               <button
                 type="button"
                 className="manual-execute"
                 onClick={executeManualRecovery}
                 disabled={Boolean(manualRecoveryBusy) || !traderControl?.manual_recovery?.can_execute}
-                title={tr(traderControl?.manual_recovery?.execute_reason || "Execute the prepared current-session plan now through Alpaca Paper.")}
+                title={tr(traderControl?.manual_recovery?.execute_reason || "Retry the prepared current-session plan through Alpaca Paper.")}
               >
-                {tr(manualRecoveryBusy === 'execute' ? 'Executing…' : "Execute today's plan")}
+                {tr(manualRecoveryBusy === 'execute' ? 'Executing…' : 'Retry plan on Alpaca')}
               </button>
             </div>
           </div>
