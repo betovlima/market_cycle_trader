@@ -8,47 +8,36 @@ const ACTIVE_STATUSES = new Set(['queued', 'running', 'stopping'])
 
 export function useAssetDiscovery({ onSessionExpired }) {
   const [status, setStatus] = useState(null)
-  const [candidates, setCandidates] = useState([])
-  const [runs, setRuns] = useState([])
+  const [catalog, setCatalog] = useState({ count: 0, assets: [] })
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [createError, setCreateError] = useState('')
+  const [createdStrategy, setCreatedStrategy] = useState(null)
   const mountedRef = useRef(true)
-  const previousActiveRef = useRef(false)
 
   const handleError = useCallback((requestError) => {
     if (requestError instanceof ApiError && requestError.status === 401) {
       onSessionExpired?.()
       return
     }
-    setError(tr(requestError?.message || 'Unable to load Asset Discovery.'))
+    if (mountedRef.current) setError(tr(requestError?.message || 'Unable to load Asset Discovery.'))
   }, [onSessionExpired])
-
-  const loadStatus = useCallback(async () => {
-    try {
-      const response = await apiFetch(`${API}/admin/asset-discovery/status`)
-      if (mountedRef.current) setStatus(response)
-    } catch (requestError) {
-      if (mountedRef.current) handleError(requestError)
-    }
-  }, [handleError])
 
   const load = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoading(true)
     try {
-      const [statusResponse, candidateResponse, runResponse] = await Promise.all([
-        apiFetch(`${API}/admin/asset-discovery/status`),
-        apiFetch(`${API}/admin/asset-discovery/candidates?limit=500`),
-        apiFetch(`${API}/admin/asset-discovery/runs?limit=30`),
+      const [statusResponse, catalogResponse] = await Promise.all([
+        apiFetch(`${API}/asset-discovery/status`),
+        apiFetch(`${API}/asset-discovery/catalog`),
       ])
       if (!mountedRef.current) return
       setStatus(statusResponse)
-      setCandidates(candidateResponse?.items || [])
-      setRuns(runResponse?.items || [])
+      setCatalog(catalogResponse || { count: 0, assets: [] })
       setError('')
     } catch (requestError) {
-      if (mountedRef.current) handleError(requestError)
+      handleError(requestError)
     } finally {
       if (mountedRef.current && !silent) setLoading(false)
     }
@@ -60,100 +49,128 @@ export function useAssetDiscovery({ onSessionExpired }) {
     return () => { mountedRef.current = false }
   }, [load])
 
-  const active = ACTIVE_STATUSES.has(String(status?.run?.status || '').toLowerCase())
+  const campaign = status?.campaign || null
+  const active = ACTIVE_STATUSES.has(String(campaign?.status || '').toLowerCase())
 
   useEffect(() => {
-    const refresh = () => {
-      if (active) {
-        load({ silent: true })
-      } else {
-        loadStatus()
-      }
-    }
-    const interval = window.setInterval(refresh, active ? 2_500 : 30_000)
+    const interval = window.setInterval(() => load({ silent: true }), active ? 2500 : 30000)
     return () => window.clearInterval(interval)
-  }, [active, load, loadStatus])
-
-  useEffect(() => {
-    if (previousActiveRef.current && !active) load({ silent: true })
-    previousActiveRef.current = active
   }, [active, load])
 
-  const runAction = useCallback(async (action) => {
-    setBusy(action)
+  const start = useCallback(async (researchSize) => {
+    setBusy('start')
     setError('')
     setNotice('')
     try {
-      await apiFetch(`${API}/admin/asset-discovery/${action}`, { method: 'POST' })
-      setNotice(tr(action === 'start' ? 'Asset Discovery started.' : 'Stop requested.'))
+      await apiFetch(`${API}/asset-discovery/start`, {
+        method: 'POST',
+        body: { research_size: Number(researchSize) },
+      })
+      setNotice(tr('Asset Discovery research started.'))
       await load({ silent: true })
     } catch (requestError) {
       handleError(requestError)
     } finally {
-      setBusy('')
+      if (mountedRef.current) setBusy('')
     }
   }, [handleError, load])
 
+  const runMarginalReplay = useCallback(async () => {
+    setBusy('marginal-replay')
+    setError('')
+    setNotice('')
+    try {
+      await apiFetch(`${API}/asset-discovery/marginal-replay`, { method: 'POST' })
+      setNotice(tr('Marginal Capital Replay started for the current shortlist.'))
+      await load({ silent: true })
+    } catch (requestError) {
+      handleError(requestError)
+    } finally {
+      if (mountedRef.current) setBusy('')
+    }
+  }, [handleError, load])
+
+  const stop = useCallback(async () => {
+    setBusy('stop')
+    setError('')
+    setNotice('')
+    try {
+      await apiFetch(`${API}/asset-discovery/stop`, { method: 'POST' })
+      setNotice(tr('Stop requested. The current batch will finish safely.'))
+      await load({ silent: true })
+    } catch (requestError) {
+      handleError(requestError)
+    } finally {
+      if (mountedRef.current) setBusy('')
+    }
+  }, [handleError, load])
 
   const exportAnalysis = useCallback(async () => {
     setBusy('export')
     setError('')
     setNotice('')
     try {
-      const fallback = `asset_discovery_analysis_${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z.json`
-      await downloadFile(
-        `${API}/admin/asset-discovery/export?front_version=${encodeURIComponent(FRONT_VERSION)}`,
-        fallback,
-      )
+      const fallback = `asset_discovery_ranker_${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z.json`
+      await downloadFile(`${API}/asset-discovery/export?front_version=${encodeURIComponent(FRONT_VERSION)}`, fallback)
       setNotice(tr('Asset Discovery analysis exported.'))
     } catch (requestError) {
       handleError(requestError)
     } finally {
-      setBusy('')
+      if (mountedRef.current) setBusy('')
     }
   }, [handleError])
 
-  const saveSettings = useCallback(async (form) => {
-    if (!status?.settings?.revision) return
-    setBusy('settings')
+  const createStrategy = useCallback(async (runId, symbols) => {
+    if (!Array.isArray(symbols) || !symbols.length) return null
+    setBusy('create-strategy')
     setError('')
     setNotice('')
+    setCreateError('')
+    setCreatedStrategy(null)
     try {
-      await apiFetch(`${API}/admin/asset-discovery/settings`, {
-        method: 'PATCH',
-        body: {
-          expected_revision: status.settings.revision,
-          reason: form.reason || 'Asset Discovery schedule updated.',
-          settings: {
-            automatic_enabled: form.automatic_enabled,
-            batch_size: Number(form.batch_size),
-            schedule_hours_et: form.schedule_hours_et,
-            recheck_days: Number(form.recheck_days),
-          },
-        },
+      const response = await apiFetch(`${API}/asset-discovery/create-strategy`, {
+        method: 'POST',
+        body: { run_id: runId || null, symbols },
       })
-      setNotice(tr('Asset Discovery settings saved.'))
+      const sequence = response?.strategy?.strategy_sequence
+      const count = response?.selected_assets?.length || 0
+      const discarded = Array.isArray(response?.discarded_assets)
+        ? response.discarded_assets.map((item) => item?.symbol).filter(Boolean)
+        : []
+      setNotice(sequence
+        ? (discarded.length
+          ? tr('Strategy #{sequence} created with {count} selected assets. Discarded: {discarded}.', { sequence, count, discarded: discarded.join(', ') })
+          : tr('Strategy #{sequence} created with {count} selected assets.', { sequence, count }))
+        : tr('Research Strategy created.'))
+      setCreatedStrategy(response)
       await load({ silent: true })
+      return response
     } catch (requestError) {
+      const message = tr(requestError?.message || 'Unable to create Research Strategy.')
+      setCreateError(message)
       handleError(requestError)
+      return null
     } finally {
-      setBusy('')
+      if (mountedRef.current) setBusy('')
     }
-  }, [handleError, load, status?.settings?.revision])
+  }, [handleError, load])
 
   return {
     status,
-    candidates,
-    runs,
+    catalog,
+    campaign,
+    active,
     loading,
     busy,
-    active,
     error,
     notice,
+    createError,
+    createdStrategy,
     load,
-    start: () => runAction('start'),
-    stop: () => runAction('stop'),
+    start,
+    runMarginalReplay,
+    stop,
     exportAnalysis,
-    saveSettings,
+    createStrategy,
   }
 }

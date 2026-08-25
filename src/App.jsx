@@ -15,12 +15,14 @@ import { DashboardPage } from './features/dashboard/DashboardPage'
 import { DecisionSciencePage } from './features/decisionScience/DecisionSciencePage'
 import { LoginPage } from './features/LoginPage'
 import { PaperPortfolioDashboard } from './features/paperPortfolio/PaperPortfolioDashboard'
+import { AssetDiscoveryPage } from './features/assetDiscovery/AssetDiscoveryPage'
 
 const TAB_CAPABILITIES = {
   dashboard: 'dashboard.view',
   research: 'backtest.view',
   'decision-science': 'backtest.view',
   backtest: 'backtest.view',
+  'asset-discovery': 'asset_discovery.view',
   portfolio: 'portfolio.view',
   administration: 'administration.view',
   'system-settings': 'settings.view',
@@ -92,6 +94,7 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
       {activeTab === 'research' && hasCapability(capabilities, 'backtest.view') ? <StrategyResearchPage workspace={workspace} capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'decision-science' && hasCapability(capabilities, 'backtest.view') ? <DecisionSciencePage capabilities={capabilities} /> : null}
       {activeTab === 'backtest' && hasCapability(capabilities, 'backtest.view') ? <BacktestPage workspace={workspace} capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
+      {activeTab === 'asset-discovery' && hasCapability(capabilities, 'asset_discovery.view') ? <AssetDiscoveryPage capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'portfolio' && hasCapability(capabilities, 'portfolio.view') ? <PaperPortfolioDashboard /> : null}
       {activeTab === 'administration' && hasCapability(capabilities, 'administration.view') ? <AdministrationPage onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'system-settings' && hasCapability(capabilities, 'settings.view') ? <SystemSettingsPage onSessionExpired={onSessionExpired} /> : null}

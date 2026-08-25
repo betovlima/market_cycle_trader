@@ -1,6 +1,6 @@
 import { tr } from '../../../i18n/runtime'
 import { LanguageSelector } from '../../../i18n/LanguageSelector'
-import { AnalyticsIcon, BacktestIcon, DashboardIcon, PortfolioIcon, SettingsIcon } from '../../../shared/components/Icons'
+import { AnalyticsIcon, BacktestIcon, DashboardIcon, PortfolioIcon, SearchIcon, SettingsIcon } from '../../../shared/components/Icons'
 import appLogoUrl from '../../../assets/market-cycle-trader-logo.png'
 
 const NAV_ITEMS = [
@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { id: 'research', label: 'Strategy Research', Icon: AnalyticsIcon, capability: 'backtest.view' },
   { id: 'decision-science', label: 'Decision Science', Icon: AnalyticsIcon, capability: 'backtest.view' },
   { id: 'backtest', label: 'Backtest', Icon: BacktestIcon, capability: 'backtest.view' },
+  { id: 'asset-discovery', label: 'Asset Discovery', Icon: SearchIcon, capability: 'asset_discovery.view' },
   { id: 'portfolio', label: 'Portfolio', Icon: PortfolioIcon, capability: 'portfolio.view' },
   { id: 'administration', label: 'Administration', Icon: DashboardIcon, capability: 'administration.view' },
   { id: 'system-settings', label: 'Settings', Icon: SettingsIcon, capability: 'settings.view' },

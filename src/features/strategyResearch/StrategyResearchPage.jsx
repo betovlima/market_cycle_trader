@@ -859,6 +859,9 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
         : running || persistedPipelineActive
           ? tr('Preparing pipeline…')
           : tr('Changing inputs only prepares the pipeline. Processing starts with Run Research Pipeline.')
+  const selectedStageFailure = stageState[selectedStage] === 'failed'
+    ? String(pipelineControl?.failure_message || error || tr('Strategy Research stage failed.'))
+    : ''
 
 
   return <section className="strategy-research-page page-stack">
@@ -892,6 +895,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
 
       <section className="strategy-research-stage-content data-panel">
         <div className="strategy-research-stage-content-heading"><div><span className="panel-kicker">{tr('SELECTED STAGE')}</span><h3>{tr(STRATEGY_RESEARCH_STAGES.find((stage) => stage.id === selectedStage)?.label || 'Research Pipeline')}</h3></div><span>{tr('Select a pipeline stage to inspect its visual result.')}</span></div>
+        {selectedStageFailure ? <div className="strategy-research-stage-failure"><strong>{tr('Stage failure')}</strong><span>{selectedStageFailure}</span></div> : null}
         {selectedStage !== 'milp' ? <StrategyResearchVisuals selectedStage={selectedStage} stageState={stageState} pipelineProgress={pipelineProgress} run={run} analytics={analytics} risk={risk} alternativeAction={alternativeAction} operationalQualification={operationalQualification} intervention={intervention} confidence={confidence} stateful={stateful} leadershipRegime={leadershipRegime} clustering={clustering} fragileIncumbent={fragileIncumbent} emergingTrend={emergingTrend} pipelineError={error} /> : null}
         {selectedStage === 'milp' ? <DecisionCandidates stateful={stateful} milp={milpResult} selectedCandidate={selectedCandidate} onCandidateSelect={setSelectedCandidate} /> : null}
         {selectedStage === 'validation' ? <FinalValidation control={analytics} stateful={stateful} milp={milpResult} selectedCandidate={selectedCandidate} onCandidateSelect={setSelectedCandidate} /> : null}

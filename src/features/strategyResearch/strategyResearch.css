@@ -83,3 +83,7 @@
 @media(max-width:440px){
   .strategy-research-workspace .strategy-research-pipeline-track{grid-template-columns:1fr}
 }
+
+.strategy-research-stage-failure{display:grid;gap:6px;margin:0 0 14px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--negative) 52%,var(--border));border-radius:10px;background:color-mix(in srgb,var(--negative) 7%,var(--panel-raised));color:var(--text)}
+.strategy-research-stage-failure strong{color:var(--negative);font-size:.8rem}
+.strategy-research-stage-failure span{font-size:.82rem;line-height:1.45;overflow-wrap:anywhere}

@@ -463,7 +463,6 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
             </div>
           ) : null}
 
-          {!isTemporalStrategy ? (<>
           <div className="strategy-parameter-tools strategy-parameter-tools-global">
             <label className="strategy-parameter-search">
               <StrategyFieldLabel id="hint-parameter-search" label={tr("Find a parameter")} hint={STRATEGY_FIELD_HINTS.search} />
@@ -480,7 +479,6 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
             </label>
             <small>{parameterSearch ? tr(globalVisibleParameterCount === 1 ? '{count} matching parameter' : '{count} matching parameters', { count: globalVisibleParameterCount }) : tr(globalVisibleParameterCount === 1 ? '{count} parameter available' : '{count} parameters available', { count: globalVisibleParameterCount })}</small>
           </div>
-          </>) : null}
 
 
           {!legacyConfigurationIncomplete ? (
@@ -491,13 +489,12 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
               readOnly={isTemporalStrategy}
               onStrategyModelSaved={isTemporalStrategy ? null : handleStrategyModelSaved}
               onDirtyChange={isTemporalStrategy ? null : setModelHasUnsavedChanges}
-              parameterSearch={isTemporalStrategy ? '' : parameterSearch}
-              onSearchMatchCount={isTemporalStrategy ? null : setModelParameterMatchCount}
+              parameterSearch={parameterSearch}
+              onSearchMatchCount={setModelParameterMatchCount}
             />
           ) : null}
 
 
-          {!isTemporalStrategy ? (
           <form className="strategy-parameter-form" onSubmit={saveStrategy}>
             <div className="strategy-metadata-grid">
               <label>
@@ -523,7 +520,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
                         reference={selected.configuration[field]}
                         schema={parameterSchemas[field]}
                         hintAlign={fieldIndex % 2 === 1 ? 'right' : 'left'}
-                        disabled={selected.locked || legacyConfigurationIncomplete}
+                        disabled={selected.locked || legacyConfigurationIncomplete || isTemporalStrategy}
                         onChange={updateEditorValue}
                       />
                     ))}
@@ -535,7 +532,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
               ) : null}
             </div>
 
-            {!selected.locked && !legacyConfigurationIncomplete ? (
+            {!isTemporalStrategy && !selected.locked && !legacyConfigurationIncomplete ? (
               <div className="strategy-save-row">
                 <label>
                   <StrategyFieldLabel id="hint-strategy-change-reason" label={tr("Change reason (optional)")} hint={STRATEGY_FIELD_HINTS.changeReason} />
@@ -548,7 +545,6 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
               </div>
             ) : null}
           </form>
-          ) : null}
 
           <div className="strategy-last-test">
             <span>{tr(isTemporalStrategy ? 'Source validation' : 'Latest backtest')}</span>
