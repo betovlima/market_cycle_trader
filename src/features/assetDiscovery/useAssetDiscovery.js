@@ -14,6 +14,7 @@ export function useAssetDiscovery({ onSessionExpired }) {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [createError, setCreateError] = useState('')
+  const [validationError, setValidationError] = useState('')
   const [createdStrategy, setCreatedStrategy] = useState(null)
   const mountedRef = useRef(true)
 
@@ -50,7 +51,8 @@ export function useAssetDiscovery({ onSessionExpired }) {
   }, [load])
 
   const campaign = status?.campaign || null
-  const active = ACTIVE_STATUSES.has(String(campaign?.status || '').toLowerCase())
+  const validationStatus = String(campaign?.full_strategy_validation?.status || '').toLowerCase()
+  const active = ACTIVE_STATUSES.has(String(campaign?.status || '').toLowerCase()) || ['queued', 'running'].includes(validationStatus)
 
   useEffect(() => {
     const interval = window.setInterval(() => load({ silent: true }), active ? 2500 : 30000)
@@ -120,6 +122,31 @@ export function useAssetDiscovery({ onSessionExpired }) {
     }
   }, [handleError])
 
+  const validateSelection = useCallback(async (runId, symbols) => {
+    if (!Array.isArray(symbols) || !symbols.length) return null
+    setBusy('full-strategy-validation')
+    setError('')
+    setNotice('')
+    setValidationError('')
+    setCreatedStrategy(null)
+    try {
+      const response = await apiFetch(`${API}/asset-discovery/full-strategy-validation`, {
+        method: 'POST',
+        body: { run_id: runId || null, symbols },
+      })
+      setNotice(tr('Full Strategy validation started for the selected assets.'))
+      await load({ silent: true })
+      return response
+    } catch (requestError) {
+      const message = tr(requestError?.message || 'Unable to start Full Strategy validation.')
+      setValidationError(message)
+      handleError(requestError)
+      return null
+    } finally {
+      if (mountedRef.current) setBusy('')
+    }
+  }, [handleError, load])
+
   const createStrategy = useCallback(async (runId, symbols) => {
     if (!Array.isArray(symbols) || !symbols.length) return null
     setBusy('create-strategy')
@@ -165,10 +192,12 @@ export function useAssetDiscovery({ onSessionExpired }) {
     error,
     notice,
     createError,
+    validationError,
     createdStrategy,
     load,
     start,
     runMarginalReplay,
+    validateSelection,
     stop,
     exportAnalysis,
     createStrategy,

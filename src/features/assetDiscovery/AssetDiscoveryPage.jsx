@@ -12,6 +12,7 @@ const PHASES = [
   ['training_ranker', 'Learning-to-Rank'],
   ['scanning', 'External scan'],
   ['marginal_replay', 'Marginal Capital Replay'],
+  ['full_strategy_validation', 'Full Strategy validation'],
   ['completed', 'Discovery results'],
 ]
 
@@ -34,6 +35,24 @@ function marginalTone(replay) {
 function marginalRankValue(item) {
   const rank = Number(item?.marginal_replay?.marginal_rank ?? item?.marginal_rank)
   return Number.isFinite(rank) && rank > 0 ? rank : null
+}
+
+function marginalSelectable(replay) {
+  if (!replay || String(replay.status || '').toLowerCase() !== 'completed') return false
+  if (typeof replay.persistence_eligible === 'boolean') return replay.persistence_eligible
+  if (replay.research_context_compatible === false) return false
+  const delta = Number(replay.ending_capital_delta_rate)
+  return Number.isFinite(delta) && delta > 0
+}
+
+function normalizedSelection(values) {
+  return [...new Set((values || []).map((value) => String(value || '').trim().toUpperCase()).filter(Boolean))].sort()
+}
+
+function validationMatchesSelection(validation, selectedSymbols) {
+  const left = normalizedSelection(validation?.selected_assets)
+  const right = normalizedSelection(selectedSymbols)
+  return left.length > 0 && left.length === right.length && left.every((value, index) => value === right[index])
 }
 
 function Pipeline({ campaign }) {
@@ -86,8 +105,22 @@ function ValidationPanel({ model }) {
   </section>
 }
 
-function MarginalReplayPanel({ campaign, selectedSymbols, toggleSymbol, canStart, canCreateStrategy, busy, onRunReplay, onCreate, createError, createdStrategy }) {
+function MarginalReplayPanel({
+  campaign,
+  selectedSymbols,
+  toggleSymbol,
+  canStart,
+  canCreateStrategy,
+  busy,
+  onRunReplay,
+  onValidate,
+  onCreate,
+  validationError,
+  createError,
+  createdStrategy,
+}) {
   const replay = campaign?.marginal_replay || {}
+  const validation = campaign?.full_strategy_validation || {}
   const rows = [...(replay.results || [])].sort((left, right) => {
     const leftRank = Number(left?.marginal_rank || 999)
     const rightRank = Number(right?.marginal_rank || 999)
@@ -111,14 +144,23 @@ function MarginalReplayPanel({ campaign, selectedSymbols, toggleSymbol, canStart
   const replayActive = ['queued', 'running'].includes(replayStatus)
   const replayComplete = total > 0 && completed >= total && replayStatus === 'completed'
   const needsManualReplay = Boolean((campaign?.results || []).length) && !replayActive && !replayComplete
-  if (!total && campaign?.phase !== 'marginal_replay' && campaign?.status !== 'completed') return null
+  const validationStatus = String(validation.status || '').toLowerCase()
+  const validationActive = ['queued', 'running'].includes(validationStatus)
+  const validationMatches = validationMatchesSelection(validation, selectedSymbols)
+  const validationPassed = validationStatus === 'completed' && String(validation.decision || '').toUpperCase() === 'PASS' && validationMatches
+  const validationFailed = validationStatus === 'completed' && String(validation.decision || '').toUpperCase() === 'FAIL' && validationMatches
+  const validationProgress = Math.max(0, Math.min(100, Number(validation.progress_percent || 0)))
+  const validationDeltas = validation.deltas || {}
+  const validationBaseline = validation.baseline || {}
+  const validationCandidate = validation.candidate || {}
+  if (!total && campaign?.phase !== 'marginal_replay' && campaign?.phase !== 'full_strategy_validation' && campaign?.status !== 'completed') return null
 
   return <section className="asset-discovery-marginal">
     <div className="asset-discovery-section-heading asset-discovery-result-heading">
       <div>
         <span className="eyebrow">{tr('MARGINAL CAPITAL REPLAY')}</span>
         <h3>{tr('Economic contribution by asset')}</h3>
-        <small>{tr('Every shortlisted asset is replayed automatically against the same baseline. Select assets only when you want to create a Research Strategy.')}</small>
+        <small>{tr('Every shortlisted asset is replayed automatically against the same baseline. Only positive marginal candidates can be persisted; Strategy creation requires Full Strategy validation.')}</small>
       </div>
       <div className="asset-discovery-result-actions">
         <span>{completed} / {total || '—'} {tr('replayed')}</span>
@@ -132,13 +174,22 @@ function MarginalReplayPanel({ campaign, selectedSymbols, toggleSymbol, canStart
         </button> : null}
         <button
           type="button"
+          className="secondary-action"
+          disabled={!canCreateStrategy || !selectedSymbols.length || validationActive || busy === 'full-strategy-validation'}
+          onClick={onValidate}
+        >
+          {validationActive || busy === 'full-strategy-validation' ? tr('Validating selection…') : tr('Validate selection')}
+        </button>
+        <button
+          type="button"
           className="primary-action"
-          disabled={!canCreateStrategy || !selectedSymbols.length || busy === 'create-strategy'}
+          disabled={!canCreateStrategy || !selectedSymbols.length || !validationPassed || busy === 'create-strategy'}
           onClick={onCreate}
         >
           {busy === 'create-strategy' ? tr('Creating Strategy…') : tr('Create Research Strategy')}
         </button>
         <small>{tr('{count} selected', { count: selectedSymbols.length })}</small>
+        {validationError ? <small className="asset-discovery-create-feedback error">{validationError}</small> : null}
         {createError ? <small className="asset-discovery-create-feedback error">{createError}</small> : null}
         {createdStrategy?.strategy?.strategy_sequence ? <small className="asset-discovery-create-feedback success">{tr('Strategy #{sequence} created · {count} assets', { sequence: createdStrategy.strategy.strategy_sequence, count: createdStrategy.asset_count || '—' })}</small> : null}
       </div>
@@ -161,7 +212,8 @@ function MarginalReplayPanel({ campaign, selectedSymbols, toggleSymbol, canStart
     {rows.length ? <div className="asset-discovery-marginal-grid">
       {rows.map((row) => {
         const result = (campaign?.results || []).find((item) => item.symbol === row.symbol) || {}
-        const checked = selectedSymbols.includes(row.symbol)
+        const selectable = marginalSelectable(row)
+        const checked = selectable && selectedSymbols.includes(row.symbol)
         const candidate = row.candidate || {}
         const tone = marginalTone(row)
         return <article className={`asset-discovery-marginal-card quality-${tone} ${checked ? 'selected' : ''}`} key={row.symbol}>
@@ -173,10 +225,10 @@ function MarginalReplayPanel({ campaign, selectedSymbols, toggleSymbol, canStart
               </div>
               <small>{tr('ML rank')} #{result.rank || '—'}</small>
             </div>
-            <label className="asset-discovery-select-asset">
+            {selectable ? <label className="asset-discovery-select-asset">
               <input type="checkbox" checked={checked} onChange={() => toggleSymbol(row.symbol)} />
               <span>{tr('Select')}</span>
-            </label>
+            </label> : <span className="asset-discovery-adherence-label">{tr('Low adherence')}</span>}
           </div>
           {row.status === 'failed' ? <div className="inline-error asset-discovery-marginal-error">{row.error || tr('Marginal replay failed for this asset.')}</div> : <>
             <div className="asset-discovery-marginal-primary">
@@ -194,6 +246,32 @@ function MarginalReplayPanel({ campaign, selectedSymbols, toggleSymbol, canStart
         </article>
       })}
     </div> : <div className="asset-discovery-empty">{tr('Marginal results will appear after the ranked shortlist is ready.')}</div>}
+
+    {(validationActive || validationMatches) ? <div className={`asset-discovery-full-validation ${validationPassed ? 'pass' : ''} ${validationFailed ? 'fail' : ''}`}>
+      <div className="asset-discovery-full-validation-head">
+        <div>
+          <span className="eyebrow">{tr('FULL STRATEGY VALIDATION')}</span>
+          <strong>{(validation.selected_assets || []).join(', ') || '—'}</strong>
+          {validation.source_strategy_sequence ? <small>{tr('Strategy Research source')} · Strategy #{validation.source_strategy_sequence}</small> : null}
+        </div>
+        <span className={`asset-discovery-validation-decision ${validationPassed ? 'pass' : validationFailed ? 'fail' : ''}`}>
+          {validationActive ? tr('RUNNING') : tr(String(validation.decision || validation.status || '').toUpperCase())}
+        </span>
+      </div>
+      {validationActive ? <>
+        <div className="asset-discovery-progress-copy"><span>{tr(validation.current_stage || 'Validating selection')}</span><strong>{number(validationProgress, 1)}%</strong></div>
+        <div className="asset-discovery-progress"><span style={{ width: `${validationProgress}%` }} /></div>
+      </> : null}
+      {validationMatches && validationStatus === 'completed' ? <div className="asset-discovery-full-validation-grid">
+        <div><span>{tr('Capital')}</span><strong>{validationDeltas.ending_capital_delta_rate == null ? '—' : percent(validationDeltas.ending_capital_delta_rate, 2)}</strong><small>{validationBaseline.ending_capital == null || validationCandidate.ending_capital == null ? '—' : `${money(validationBaseline.ending_capital)} → ${money(validationCandidate.ending_capital)}`}</small></div>
+        <div><span>{tr('CAGR Δ')}</span><strong>{validationDeltas.cagr_delta == null ? '—' : percent(validationDeltas.cagr_delta, 2)}</strong></div>
+        <div><span>{tr('Sharpe Δ')}</span><strong>{validationDeltas.sharpe_delta == null ? '—' : number(validationDeltas.sharpe_delta, 3)}</strong></div>
+        <div><span>{tr('MaxDD Δ')}</span><strong>{validationDeltas.maximum_drawdown_delta == null ? '—' : percent(validationDeltas.maximum_drawdown_delta, 2)}</strong></div>
+        <div><span>{tr('Worst fold Δ')}</span><strong>{validationDeltas.worst_fold_return_delta == null ? '—' : percent(validationDeltas.worst_fold_return_delta, 2)}</strong></div>
+        <div><span>{tr('Severe months Δ')}</span><strong>{validationDeltas.severe_negative_months_delta == null ? '—' : number(validationDeltas.severe_negative_months_delta, 0)}</strong></div>
+      </div> : null}
+      {validationFailed ? <small className="asset-discovery-full-validation-note">{tr('Selection rejected. The Research Strategy cannot be created from this validation.')}</small> : null}
+    </div> : null}
   </section>
 }
 
@@ -264,6 +342,10 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
     setSelectedSymbols((current) => current.includes(symbol) ? current.filter((item) => item !== symbol) : [...current, symbol])
   }
 
+  const validateStrategySelection = async () => {
+    await discovery.validateSelection(campaign?.run_id, selectedSymbols)
+  }
+
   const createStrategy = async () => {
     const created = await discovery.createStrategy(campaign?.run_id, selectedSymbols)
     if (created) setSelectedSymbols([])
@@ -273,8 +355,12 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
     setCatalogSelectedSymbols((current) => current.includes(symbol) ? current.filter((item) => item !== symbol) : [...current, symbol])
   }
 
+  const validateCatalogSelection = async () => {
+    await discovery.validateSelection(campaign?.run_id, catalogSelectedSymbols)
+  }
+
   const createCatalogStrategy = async () => {
-    const created = await discovery.createStrategy(null, catalogSelectedSymbols)
+    const created = await discovery.createStrategy(campaign?.run_id, catalogSelectedSymbols)
     if (created) setCatalogSelectedSymbols([])
   }
 
@@ -290,6 +376,12 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
     + Number(rejectionSummary.discontinuous_history || 0)
     + Number(rejectionSummary.ticker_identity_discontinuity || 0)
     + Number(rejectionSummary.research_context_incomplete || 0)
+  const fullValidation = campaign?.full_strategy_validation || {}
+  const persistentCandidateCount = campaign?.marginal_replay?.persistent_candidate_count
+    ?? results.filter((item) => marginalSelectable(item?.marginal_replay)).length
+  const fullValidationPassed = String(fullValidation.status || '').toLowerCase() === 'completed' && String(fullValidation.decision || '').toUpperCase() === 'PASS'
+  const catalogValidationPassed = fullValidationPassed && validationMatchesSelection(fullValidation, catalogSelectedSymbols)
+  const fullValidationActive = ['queued', 'running'].includes(String(fullValidation.status || '').toLowerCase())
 
   return <section className="asset-discovery-page">
     <div className="asset-discovery-workspace">
@@ -350,7 +442,7 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
           <div><span>{tr('Evaluated')}</span><strong>{campaign.evaluated_count || 0}</strong></div>
           <div><span>{tr('Rejected')}</span><strong>{campaign.rejected_count || 0}</strong></div>
           <div><span>{tr('Technical failures')}</span><strong>{campaign.technical_failure_count || 0}</strong></div>
-          <div><span>{tr('Stored results')}</span><strong>{campaign.shortlisted_count || results.length}</strong></div>
+          <div><span>{tr('Stored results')}</span><strong>{persistentCandidateCount}</strong></div>
           <div><span>{tr('Median NDCG@5')}</span><strong>{model.ndcg_at_5 == null ? '—' : number(model.ndcg_at_5, 3)}</strong></div>
         </section>
 
@@ -364,7 +456,9 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
           canCreateStrategy={canCreateStrategy}
           busy={discovery.busy}
           onRunReplay={discovery.runMarginalReplay}
+          onValidate={validateStrategySelection}
           onCreate={createStrategy}
+          validationError={discovery.validationError}
           createError={discovery.createError}
           createdStrategy={discovery.createdStrategy}
         />
@@ -423,19 +517,28 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
           <div>
             <span className="eyebrow">{tr('DISCOVERY CATALOG')}</span>
             <h3>{tr('Discovered assets')}</h3>
-            <small>{tr('Shortlisted assets remain available across new research campaigns.')}</small>
+            <small>{tr('Only assets with positive marginal contribution are persisted in this catalog.')}</small>
           </div>
           <div className="asset-discovery-result-actions">
             <span>{tr('{count} catalog assets', { count: catalogAssets.length })}</span>
             <button
               type="button"
+              className="secondary-action"
+              disabled={!canCreateStrategy || !catalogSelectedSymbols.length || fullValidationActive || discovery.busy === 'full-strategy-validation'}
+              onClick={validateCatalogSelection}
+            >
+              {fullValidationActive && validationMatchesSelection(fullValidation, catalogSelectedSymbols) ? tr('Validating selection…') : tr('Validate selection')}
+            </button>
+            <button
+              type="button"
               className="primary-action"
-              disabled={!canCreateStrategy || !catalogSelectedSymbols.length || discovery.busy === 'create-strategy'}
+              disabled={!canCreateStrategy || !catalogSelectedSymbols.length || !catalogValidationPassed || discovery.busy === 'create-strategy'}
               onClick={createCatalogStrategy}
             >
               {discovery.busy === 'create-strategy' ? tr('Creating Strategy…') : tr('Create Research Strategy')}
             </button>
             <small>{tr('{count} selected', { count: catalogSelectedSymbols.length })}</small>
+            {discovery.validationError ? <small className="asset-discovery-create-feedback error">{discovery.validationError}</small> : null}
             {discovery.createError ? <small className="asset-discovery-create-feedback error">{discovery.createError}</small> : null}
             {discovery.createdStrategy?.strategy?.strategy_sequence ? <small className="asset-discovery-create-feedback success">{tr('Strategy #{sequence} created · {count} assets', { sequence: discovery.createdStrategy.strategy.strategy_sequence, count: discovery.createdStrategy.asset_count || '—' })}</small> : null}
               {discovery.createdStrategy?.discarded_assets?.length ? <small className="asset-discovery-create-feedback warning">{tr('Discarded because of incomplete history')}: {discovery.createdStrategy.discarded_assets.map((item) => item.symbol).join(', ')}</small> : null}
