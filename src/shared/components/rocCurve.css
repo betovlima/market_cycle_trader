@@ -175,3 +175,98 @@
   .roc-dialog-selector select { width: 100%; min-width: 0; }
   .roc-curve-chart { min-height: 290px; }
 }
+
+
+.roc-dialog-metrics > div.diagnostic {
+  border-style: dashed;
+}
+
+.roc-diagnostic-point-hit {
+  fill: transparent;
+  stroke: var(--accent);
+  stroke-width: 1;
+  opacity: 0.28;
+}
+
+.roc-diagnostic-point {
+  fill: var(--accent);
+  stroke: var(--panel, #111821);
+  stroke-width: 2;
+}
+
+.roc-point-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.roc-point-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.roc-point-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.roc-point-legend i.selected {
+  border: 2px solid var(--text);
+  background: var(--panel, #111821);
+}
+
+.roc-point-legend i.diagnostic {
+  background: var(--accent);
+}
+
+.roc-stability {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.roc-stability-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+
+.roc-stability-title span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.roc-stability-table-wrap {
+  overflow-x: auto;
+}
+
+.roc-stability table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.roc-stability th,
+.roc-stability td {
+  padding: 8px 9px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.roc-stability th:first-child,
+.roc-stability td:first-child {
+  text-align: left;
+}
+
+.roc-stability tbody tr.selected {
+  background: rgba(255, 255, 255, 0.035);
+}

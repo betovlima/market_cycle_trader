@@ -3232,4 +3232,28 @@ export const PT_TRANSLATIONS = {
 
   'Opportunity Drought ROC': 'ROC do Opportunity Drought',
 
+  'High-confidence cutoff': 'Corte de alta confiança',
+  'Threshold mode': 'Modo do threshold',
+  'Threshold origin': 'Origem do threshold',
+  'Selected on validation': 'Selecionado na validação',
+  'Fixed high-confidence definition': 'Definição fixa de alta confiança',
+  'Chronological validation by fold': 'Validação cronológica por fold',
+  'Chronological validation for test year': 'Validação cronológica para o ano de teste',
+  'Validation balanced accuracy': 'Balanced Accuracy na validação',
+  'Recall at selected point': 'Recall no ponto selecionado',
+  'OOS diagnostic best threshold': 'Melhor threshold OOS diagnóstico',
+  'OOS diagnostic best BA': 'Melhor Balanced Accuracy OOS diagnóstico',
+  'Threshold delta vs diagnostic': 'Diferença do threshold vs diagnóstico',
+  'Selected threshold': 'Threshold selecionado',
+  'OOS diagnostic best · not used for calibration': 'Melhor ponto OOS diagnóstico · não usado para calibração',
+  'Threshold stability': 'Estabilidade do threshold',
+  'Validation-selected thresholds compared across chronological folds or periods.': 'Thresholds selecionados na validação comparados entre folds ou períodos cronológicos.',
+  'Fold / period': 'Fold / período',
+  'Threshold': 'Threshold',
+  'Validation BA': 'BA validação',
+  'The marked selected point is the fixed high-confidence cutoff, not the Temporal decision threshold.': 'O ponto selecionado marcado é o corte fixo de alta confiança, não o threshold de decisão do Temporal.',
+  'The marked selected point combines the chronological thresholds selected independently inside each out-of-sample fold.': 'O ponto selecionado marcado combina os thresholds cronológicos selecionados de forma independente dentro de cada fold fora da amostra.',
+  'The selected threshold was fixed before this OOS evaluation according to its recorded threshold origin.': 'O threshold selecionado foi fixado antes desta avaliação OOS conforme a origem registrada do threshold.',
+  'The diagnostic point maximizes balanced accuracy on this OOS sample. It is displayed only to generate a future hypothesis and is never applied back to the same OOS test.': 'O ponto diagnóstico maximiza a Balanced Accuracy nesta amostra OOS. Ele é exibido apenas para gerar uma hipótese futura e nunca é reaplicado ao mesmo teste OOS.',
+
 }

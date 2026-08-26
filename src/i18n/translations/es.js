@@ -3145,4 +3145,28 @@ export const ES_TRANSLATIONS = {
 
   'Opportunity Drought ROC': 'ROC de Opportunity Drought',
 
+  'High-confidence cutoff': 'Corte de alta confianza',
+  'Threshold mode': 'Modo del umbral',
+  'Threshold origin': 'Origen del umbral',
+  'Selected on validation': 'Seleccionado en validación',
+  'Fixed high-confidence definition': 'Definición fija de alta confianza',
+  'Chronological validation by fold': 'Validación cronológica por fold',
+  'Chronological validation for test year': 'Validación cronológica para el año de prueba',
+  'Validation balanced accuracy': 'Balanced Accuracy en validación',
+  'Recall at selected point': 'Recall en el punto seleccionado',
+  'OOS diagnostic best threshold': 'Mejor umbral OOS diagnóstico',
+  'OOS diagnostic best BA': 'Mejor Balanced Accuracy OOS diagnóstico',
+  'Threshold delta vs diagnostic': 'Diferencia del umbral vs diagnóstico',
+  'Selected threshold': 'Umbral seleccionado',
+  'OOS diagnostic best · not used for calibration': 'Mejor punto OOS diagnóstico · no usado para calibración',
+  'Threshold stability': 'Estabilidad del umbral',
+  'Validation-selected thresholds compared across chronological folds or periods.': 'Umbrales seleccionados en validación comparados entre folds o períodos cronológicos.',
+  'Fold / period': 'Fold / período',
+  'Threshold': 'Umbral',
+  'Validation BA': 'BA validación',
+  'The marked selected point is the fixed high-confidence cutoff, not the Temporal decision threshold.': 'El punto seleccionado marcado es el corte fijo de alta confianza, no el umbral de decisión Temporal.',
+  'The marked selected point combines the chronological thresholds selected independently inside each out-of-sample fold.': 'El punto seleccionado marcado combina los umbrales cronológicos seleccionados de forma independiente dentro de cada fold fuera de muestra.',
+  'The selected threshold was fixed before this OOS evaluation according to its recorded threshold origin.': 'El umbral seleccionado fue fijado antes de esta evaluación OOS según el origen registrado del umbral.',
+  'The diagnostic point maximizes balanced accuracy on this OOS sample. It is displayed only to generate a future hypothesis and is never applied back to the same OOS test.': 'El punto diagnóstico maximiza la Balanced Accuracy en esta muestra OOS. Se muestra solo para generar una hipótesis futura y nunca se reaplica al mismo test OOS.',
+
 }

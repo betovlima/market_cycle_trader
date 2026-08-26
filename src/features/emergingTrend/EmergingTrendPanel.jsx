@@ -107,6 +107,8 @@ export function EmergingTrendPanel({ analysis }) {
     id: `fold-${fold.fold_id}`,
     label: `${tr('Fold')} ${fold.fold_id} · ${tr('Session OOS')}`,
     roc: fold?.roc,
+    stabilityGroup: 'session',
+    periodLabel: `${tr('Fold')} ${fold.fold_id}`,
   }))
   const focus = analysis.focus_months || []
 

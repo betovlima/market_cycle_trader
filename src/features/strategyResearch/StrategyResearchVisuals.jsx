@@ -312,7 +312,7 @@ function BubbleQuadrant({ risk, alternativeAction, intervention }) {
   const riskRocCurves = [
     { id: 'overall', label: tr('Overall OOS'), roc: metrics?.roc },
     ...(risk?.family_comparison || []).map((row) => ({ id: `family-${row.family}`, label: `${tr('Risk family')} · ${String(row.family || '').replaceAll('_', ' ')}`, roc: row?.metrics?.roc })),
-    ...(risk?.outer_results || []).map((row) => ({ id: `year-${row.test_year}`, label: `${tr('Test year')} ${row.test_year} · ${String(row.selected_family || '').replaceAll('_', ' ')}`, roc: row?.metrics?.roc })),
+    ...(risk?.outer_results || []).map((row) => ({ id: `year-${row.test_year}`, label: `${tr('Test year')} ${row.test_year} · ${String(row.selected_family || '').replaceAll('_', ' ')}`, roc: row?.metrics?.roc, stabilityGroup: 'risk-year', periodLabel: String(row.test_year) })),
   ]
 
   const quadrantLabel = (point) => {
