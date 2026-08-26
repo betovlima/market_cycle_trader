@@ -117,8 +117,8 @@ export function FragileIncumbentPanel({ analysis }) {
   const readiness = analysis.readiness || {}
   const folds = analysis.folds || []
   const rocCurves = folds.flatMap((fold) => [
-    { id: `fold-${fold.fold_id}-monthly`, label: `${tr('Fold')} ${fold.fold_id} · ${tr('Monthly OOS')}`, roc: fold?.monthly_metrics?.roc },
-    { id: `fold-${fold.fold_id}-session`, label: `${tr('Fold')} ${fold.fold_id} · ${tr('Session OOS')}`, roc: fold?.session_metrics?.roc },
+    { id: `fold-${fold.fold_id}-monthly`, label: `${tr('Fold')} ${fold.fold_id} · ${tr('Monthly OOS')}`, roc: fold?.monthly_metrics?.roc, stabilityGroup: 'monthly', periodLabel: `${tr('Fold')} ${fold.fold_id}` },
+    { id: `fold-${fold.fold_id}-session`, label: `${tr('Fold')} ${fold.fold_id} · ${tr('Session OOS')}`, roc: fold?.session_metrics?.roc, stabilityGroup: 'session', periodLabel: `${tr('Fold')} ${fold.fold_id}` },
   ])
   const focus = new Map((analysis.focus_months || []).map((row) => [row.month, row]))
   const december = focus.get('2022-12') || {}
