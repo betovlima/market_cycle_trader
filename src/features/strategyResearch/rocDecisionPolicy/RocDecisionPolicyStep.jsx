@@ -54,6 +54,7 @@ export function RocDecisionPolicyStep({ analysis }) {
   const delta = analysis.comparison?.delta || {}
   const settings = analysis.settings_snapshot?.settings || {}
   const settingsRevision = analysis.settings_snapshot?.revision
+  const parityStatus = String(analysis.control_parity?.status || '').toLowerCase()
   const rows = [...(analysis.fold_horizons || [])].sort((left, right) => (
     Number(left?.fold_id || 0) - Number(right?.fold_id || 0)
     || Number(left?.horizon || 0) - Number(right?.horizon || 0)
@@ -78,7 +79,9 @@ export function RocDecisionPolicyStep({ analysis }) {
       <Metric label="CAGR delta" value={signedPercent(delta.cagr, 2)} tone={metricTone(delta.cagr)} />
       <Metric label="Sharpe delta" value={signedNumber(delta.sharpe, 3)} tone={metricTone(delta.sharpe)} />
       <Metric label="MaxDD delta" value={signedPercent(delta.max_drawdown, 2)} tone={metricTone(delta.max_drawdown)} />
-      <Metric label="ROC overrides" value={number(challenger.timing_override_count, 0)} />
+      <Metric label="Control parity" value={parityStatus === 'pass' ? 'PASS' : '—'} tone={parityStatus === 'pass' ? 'positive' : ''} />
+      <Metric label="ROC overrides" value={number(challenger.roc_override_count, 0)} />
+      <Metric label="Temporal overrides" value={number(challenger.temporal_timing_override_count, 0)} />
       <Metric label="Switches" value={number(challenger.switch_count, 0)} />
     </div>
 
