@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 
 import { getIntlLocale, tr } from '../../i18n/runtime'
 import { number, percent } from '../../shared/formatters'
+import { RocCurveControl } from '../../shared/components/RocCurveControl'
 import './opportunityDrought.css'
 
 const FEATURE_LABELS = {
@@ -105,6 +106,11 @@ export function OpportunityDroughtPanel({ analysis }) {
   const summary = analysis.summary || {}
   const readiness = analysis.readiness || {}
   const aggregate = summary.aggregate_oos_month_metrics || {}
+  const folds = analysis.folds || []
+  const rocCurves = folds.flatMap((fold) => [
+    { id: `fold-${fold.fold_id}-monthly`, label: `${tr('Fold')} ${fold.fold_id} · ${tr('Monthly OOS')}`, roc: fold?.monthly_metrics?.roc },
+    { id: `fold-${fold.fold_id}-session`, label: `${tr('Fold')} ${fold.fold_id} · ${tr('Session OOS')}`, roc: fold?.session_metrics?.roc },
+  ])
   const focus = analysis.focus_month || {}
   const shadow = analysis.shadow_evidence || {}
   const flagged = shadow.flagged || {}
@@ -113,7 +119,10 @@ export function OpportunityDroughtPanel({ analysis }) {
   return <section className="opportunity-drought-panel">
     <div className="opportunity-drought-heading">
       <div><span className="panel-kicker">{tr('FAILURE FAMILY 01')}</span><h4>{tr('Opportunity Drought')}</h4><p>{tr('LightGBM tests whether weak universe-level opportunity conditions consistently distinguish negative Strategy months. This study is diagnostic only and does not change the Strategy.')}</p></div>
-      <span className={`opportunity-drought-readiness ${readiness.status || 'insufficient'}`}>{readinessLabel(readiness.status)}</span>
+      <div className="opportunity-drought-heading-actions">
+        <RocCurveControl curves={rocCurves} title="Opportunity Drought ROC" />
+        <span className={`opportunity-drought-readiness ${readiness.status || 'insufficient'}`}>{readinessLabel(readiness.status)}</span>
+      </div>
     </div>
 
     <div className="opportunity-drought-summary-grid">
@@ -145,7 +154,7 @@ export function OpportunityDroughtPanel({ analysis }) {
     </div>
 
     <div className="opportunity-drought-section-heading"><strong>{tr('Walk-forward evidence')}</strong><span>{tr('Fold 1 is training history; the cards below are the scored OOS folds.')}</span></div>
-    <div className="opportunity-drought-folds">{(analysis.folds || []).map((fold) => <article key={fold.fold_id}>
+    <div className="opportunity-drought-folds">{folds.map((fold) => <article key={fold.fold_id}>
       <header><span>{tr('Fold')} {fold.fold_id}</span><strong>{number(fold?.monthly_metrics?.auc, 3)}</strong></header>
       <div><Metric label="Test months" value={String(fold.test_months ?? '—')} /><Metric label="Negative test months" value={String(fold.negative_test_months ?? '—')} /><Metric label="Threshold" value={number(fold.threshold, 2)} /><Metric label="Best iteration" value={String(fold.best_iteration ?? '—')} /></div>
     </article>)}</div>

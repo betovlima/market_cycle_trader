@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { getIntlLocale, tr } from '../../i18n/runtime'
 import { CoffeeProgress } from '../../shared/CoffeeProgress'
 import { money, number, percent } from '../../shared/formatters'
+import { RocCurveControl } from '../../shared/components/RocCurveControl'
 import { LeadershipRegimePanel } from '../leadershipRegime'
 import { FragileIncumbentPanel } from '../fragileIncumbent/FragileIncumbentPanel'
 import { RegimeClusteringPanel } from '../regimeClustering/RegimeClusteringPanel'
@@ -210,6 +211,17 @@ function TemporalHeatmap({ run }) {
   const [selectedDetail, setSelectedDetail] = useState(null)
   const rows = run?.result?.horizon_metrics || []
   if (!rows.length) return <EmptyVisual title="Temporal horizon analysis will appear here." />
+  const signalLabels = {
+    profit_before_loss: tr('Profit before loss'),
+    bottom: tr('Bottom'),
+    top: tr('Top'),
+    trend_persistence: tr('Trend persistence'),
+  }
+  const rocCurves = rows.flatMap((row) => (row?.signal_metrics || []).map((signal) => ({
+    id: `${row.horizon}-${signal.signal}`,
+    label: `${row.horizon}d · ${signalLabels[signal.signal] || signal.signal}`,
+    roc: signal?.roc,
+  })))
   const metrics = [
     { key: 'auc', label: 'AUC', description: 'Measures how well the profit-before-loss model separates positive from negative outcomes for this horizon.', relationship: '0.50 ≈ random · higher is better · 1.00 = perfect ranking', example: 'AUC 0.628 at 5d means the 5-session model has useful, but not strong, discrimination.' },
     { key: 'brier_skill', label: 'Brier Skill', description: 'Measures probability accuracy relative to the baseline probability model. Positive values improve on the baseline; negative values are worse.', relationship: '> 0 = better than baseline · 0 = same as baseline · < 0 = worse', example: '4.3% means the calibrated probability error improved by about 4.3% versus the baseline.' },
@@ -217,7 +229,12 @@ function TemporalHeatmap({ run }) {
     { key: 'lift', label: 'High Confidence Lift', description: 'Shows how much the high-confidence hit rate exceeds the overall positive-outcome rate for the same horizon.', relationship: 'High-confidence hit rate − overall positive rate', example: '20.1% means high-confidence signals beat the horizon base positive rate by 20.1 percentage points.' },
     { key: 'drawdown', label: 'Drawdown MAE Skill', description: 'Measures improvement in predicted drawdown error versus the baseline drawdown predictor.', relationship: '> 0 = lower MAE than baseline · higher is better', example: '12.8% means the model reduced drawdown MAE by about 12.8% versus the baseline.' },
   ]
-  return <div className="strategy-research-matrix">
+  return <div className="strategy-research-temporal-wrap">
+    <div className="strategy-research-heatmap-heading">
+      <div><strong>{tr('Temporal model evaluation')}</strong></div>
+      <div className="strategy-research-heatmap-actions"><span>{tr('Profit-before-loss and auxiliary classification signals')}</span><RocCurveControl curves={rocCurves} title="Temporal Intelligence ROC" /></div>
+    </div>
+    <div className="strategy-research-matrix">
     <div className="strategy-research-matrix-head"><span />{rows.map((row) => <strong key={row.horizon}>{row.horizon}d</strong>)}</div>
     {metrics.map(({ key, label, description, relationship, example }) => {
       const values = rows.map((row) => horizonCellValue(row, key)).filter(Number.isFinite)
@@ -243,6 +260,7 @@ function TemporalHeatmap({ run }) {
       })}</div>
     })}
     <ResearchDetailDialog detail={selectedDetail} onClose={() => setSelectedDetail(null)} />
+    </div>
   </div>
 }
 
@@ -291,6 +309,11 @@ function BubbleQuadrant({ risk, alternativeAction, intervention }) {
   const captured = Number(metrics?.captured_severe_count ?? points.filter((point) => point.severe && point.highRisk).length)
   const precision = Number(metrics?.precision)
   const recall = Number(metrics?.recall)
+  const riskRocCurves = [
+    { id: 'overall', label: tr('Overall OOS'), roc: metrics?.roc },
+    ...(risk?.family_comparison || []).map((row) => ({ id: `family-${row.family}`, label: `${tr('Risk family')} · ${String(row.family || '').replaceAll('_', ' ')}`, roc: row?.metrics?.roc })),
+    ...(risk?.outer_results || []).map((row) => ({ id: `year-${row.test_year}`, label: `${tr('Test year')} ${row.test_year} · ${String(row.selected_family || '').replaceAll('_', ' ')}`, roc: row?.metrics?.roc })),
+  ]
 
   const quadrantLabel = (point) => {
     if (point.highRisk && point.y < 0) return tr('Harmful transition captured by the risk alert')
@@ -343,10 +366,13 @@ function BubbleQuadrant({ risk, alternativeAction, intervention }) {
         <strong>{tr('Risk detection map')}</strong>
         <span>{tr('Each point is an out-of-sample rotation. Horizontal position is the risk margin relative to the threshold selected for that year; vertical position is the realized economic value added by the rotation.')}</span>
       </div>
-      <div className="strategy-research-risk-legend" aria-label={tr('Chart legend')}>
-        <span><i className="standard" />{tr('Standard transition')}</span>
-        <span><i className="severe" />{tr('Severe loss')}</span>
-        <span><i className="alert" />{tr('Risk alert')}</span>
+      <div className="strategy-research-risk-actions">
+        <RocCurveControl curves={riskRocCurves} title="Winner Transition Risk ROC" />
+        <div className="strategy-research-risk-legend" aria-label={tr('Chart legend')}>
+          <span><i className="standard" />{tr('Standard transition')}</span>
+          <span><i className="severe" />{tr('Severe loss')}</span>
+          <span><i className="alert" />{tr('Risk alert')}</span>
+        </div>
       </div>
     </div>
 

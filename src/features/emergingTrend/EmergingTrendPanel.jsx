@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 
 import { getIntlLocale, tr } from '../../i18n/runtime'
 import { number, percent } from '../../shared/formatters'
+import { RocCurveControl } from '../../shared/components/RocCurveControl'
 import './emergingTrend.css'
 
 const FEATURE_LABELS = {
@@ -102,12 +103,20 @@ export function EmergingTrendPanel({ analysis }) {
   const summary = analysis.summary || {}
   const readiness = analysis.readiness || {}
   const folds = analysis.folds || []
+  const rocCurves = folds.map((fold) => ({
+    id: `fold-${fold.fold_id}`,
+    label: `${tr('Fold')} ${fold.fold_id} · ${tr('Session OOS')}`,
+    roc: fold?.roc,
+  }))
   const focus = analysis.focus_months || []
 
   return <section className="emerging-trend-panel">
     <div className="emerging-trend-heading">
       <div><span className="panel-kicker">{tr('FAILURE FAMILY — TREND CAPTURE')}</span><h4>{tr('Emerging Trend / Delayed Confirmation')}</h4></div>
-      <span className={`emerging-trend-readiness ${readiness.status || 'insufficient'}`}>{readinessLabel(readiness.status)}</span>
+      <div className="emerging-trend-heading-actions">
+        <RocCurveControl curves={rocCurves} title="Emerging Trend ROC" />
+        <span className={`emerging-trend-readiness ${readiness.status || 'insufficient'}`}>{readinessLabel(readiness.status)}</span>
+      </div>
     </div>
 
     <div className="emerging-trend-summary-grid">

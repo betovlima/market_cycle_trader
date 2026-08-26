@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 
 import { getIntlLocale, tr } from '../../i18n/runtime'
 import { number, percent } from '../../shared/formatters'
+import { RocCurveControl } from '../../shared/components/RocCurveControl'
 import './fragileIncumbent.css'
 
 const FEATURE_LABELS = {
@@ -115,6 +116,10 @@ export function FragileIncumbentPanel({ analysis }) {
   const summary = analysis.summary || {}
   const readiness = analysis.readiness || {}
   const folds = analysis.folds || []
+  const rocCurves = folds.flatMap((fold) => [
+    { id: `fold-${fold.fold_id}-monthly`, label: `${tr('Fold')} ${fold.fold_id} · ${tr('Monthly OOS')}`, roc: fold?.monthly_metrics?.roc },
+    { id: `fold-${fold.fold_id}-session`, label: `${tr('Fold')} ${fold.fold_id} · ${tr('Session OOS')}`, roc: fold?.session_metrics?.roc },
+  ])
   const focus = new Map((analysis.focus_months || []).map((row) => [row.month, row]))
   const december = focus.get('2022-12') || {}
   const behavior = analysis.behavior_attribution || {}
@@ -124,7 +129,10 @@ export function FragileIncumbentPanel({ analysis }) {
   return <section className="fragile-incumbent-panel">
     <div className="fragile-incumbent-heading">
       <div><span className="panel-kicker">{tr('FAILURE FAMILY 02')}</span><h4>{tr('Fragile Incumbent / Weak Leader')}</h4></div>
-      <span className={`fragile-incumbent-readiness ${readiness.status || 'insufficient'}`}>{readinessLabel(readiness.status)}</span>
+      <div className="fragile-incumbent-heading-actions">
+        <RocCurveControl curves={rocCurves} title="Fragile Incumbent ROC" />
+        <span className={`fragile-incumbent-readiness ${readiness.status || 'insufficient'}`}>{readinessLabel(readiness.status)}</span>
+      </div>
     </div>
 
     <div className="fragile-incumbent-summary-grid">
