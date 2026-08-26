@@ -11,6 +11,7 @@ import { RegimeClusteringPanel } from '../regimeClustering/RegimeClusteringPanel
 import { EmergingTrendPanel } from '../emergingTrend/EmergingTrendPanel'
 import { AlternativeActionPanel } from '../alternativeAction/AlternativeActionPanel'
 import { OperationalPolicyQualificationPanel } from '../operationalPolicyQualification/OperationalPolicyQualificationPanel'
+import { RocDecisionPolicyStep } from './rocDecisionPolicy'
 
 function MetricCard({ label, value, note, tone = '' }) {
   return <div className={`strategy-research-metric-card ${tone}`}><span>{label}</span><strong>{value}</strong>{note ? <small>{note}</small> : null}</div>
@@ -606,7 +607,7 @@ function FoldHeatmap({ run, stateful }) {
   </div>
 }
 
-export function StrategyResearchVisuals({ selectedStage, stageState = {}, pipelineProgress = 0, run, analytics, risk, alternativeAction, operationalQualification, intervention, confidence, stateful, leadershipRegime, clustering, fragileIncumbent, emergingTrend, pipelineError = '' }) {
+export function StrategyResearchVisuals({ selectedStage, stageState = {}, pipelineProgress = 0, run, analytics, rocDecisionPolicy, risk, alternativeAction, operationalQualification, intervention, confidence, stateful, leadershipRegime, clustering, fragileIncumbent, emergingTrend, pipelineError = '' }) {
   const selectedStageRunning = stageState[selectedStage] === 'running'
   const temporalProgress = Number(run?.progress)
   const selectedProgress = selectedStage === 'temporal' && Number.isFinite(temporalProgress) ? temporalProgress : pipelineProgress
@@ -614,6 +615,7 @@ export function StrategyResearchVisuals({ selectedStage, stageState = {}, pipeli
   const content = {
     reference: analytics?.equity?.length ? <MonthlyHeatmap analytics={analytics} /> : empty('Strategy replay visualization will appear here.'),
     temporal: run?.result?.horizon_metrics?.length ? <TemporalHeatmap run={run} /> : empty('Temporal horizon analysis will appear here.'),
+    roc_policy: rocDecisionPolicy?.id ? <RocDecisionPolicyStep analysis={rocDecisionPolicy} /> : empty('ROC Decision Policy will appear here.'),
     clustering: clustering?.id ? <RegimeClusteringPanel analysis={clustering} /> : empty('Regime Clustering will appear here.'),
     fragile_incumbent: fragileIncumbent?.id ? <FragileIncumbentPanel analysis={fragileIncumbent} /> : empty('Fragile Incumbent Research will appear here.'),
     emerging_trend: emergingTrend?.id ? <EmergingTrendPanel analysis={emergingTrend} /> : empty('Emerging Trend Research will appear here.'),

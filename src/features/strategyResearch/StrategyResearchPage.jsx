@@ -85,6 +85,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
   const [run, setRun] = useState(null)
   const [blockingRun, setBlockingRun] = useState(null)
   const [analytics, setAnalytics] = useState(null)
+  const [rocDecisionPolicy, setRocDecisionPolicy] = useState(null)
   const [risk, setRisk] = useState(null)
   const [alternativeAction, setAlternativeAction] = useState(null)
   const [operationalQualification, setOperationalQualification] = useState(null)
@@ -191,6 +192,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
 
     if (!snapshot || typeof snapshot !== 'object') return null
 
+    const rocDecisionPolicyValue = snapshot?.roc_decision_policy?.id ? snapshot.roc_decision_policy : null
     const riskValue = snapshot?.risk?.id ? snapshot.risk : null
     const alternativeActionValue = snapshot?.alternative_action?.id ? snapshot.alternative_action : null
     const operationalQualificationValue = snapshot?.operational_policy_qualification?.id ? snapshot.operational_policy_qualification : null
@@ -202,6 +204,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     const fragileIncumbentValue = snapshot?.fragile_incumbent || null
     const emergingTrendValue = snapshot?.emerging_trend || null
 
+    if (rocDecisionPolicyValue) setRocDecisionPolicy(rocDecisionPolicyValue)
     if (riskValue) setRisk(riskValue)
     if (alternativeActionValue) setAlternativeAction(alternativeActionValue)
     if (operationalQualificationValue) setOperationalQualification(operationalQualificationValue)
@@ -252,6 +255,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       snapshot = null
     }
 
+    const rocDecisionPolicyValue = snapshot?.roc_decision_policy?.id ? snapshot.roc_decision_policy : null
     const riskValue = snapshot?.risk?.id ? snapshot.risk : null
     const alternativeActionValue = snapshot?.alternative_action?.id ? snapshot.alternative_action : null
     const operationalQualificationValue = snapshot?.operational_policy_qualification?.id ? snapshot.operational_policy_qualification : null
@@ -272,6 +276,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
         milpValue = null
       }
     }
+    setRocDecisionPolicy(rocDecisionPolicyValue)
     setRisk(riskValue)
     setAlternativeAction(alternativeActionValue)
     setOperationalQualification(operationalQualificationValue)
@@ -283,6 +288,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     setFragileIncumbent(fragileIncumbentValue)
     setEmergingTrend(emergingTrendValue)
 
+    if (String(rocDecisionPolicyValue?.status || '').toLowerCase() === 'completed') nextState.roc_policy = 'completed'
     if (String(clusteringValue?.status || '').toLowerCase() === 'completed') nextState.clustering = 'completed'
     if (String(fragileIncumbentValue?.status || '').toLowerCase() === 'completed') nextState.fragile_incumbent = 'completed'
     if (String(emergingTrendValue?.status || '').toLowerCase() === 'completed') nextState.emerging_trend = 'completed'
@@ -301,6 +307,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     const resolvedState = persisted?.stage_states && persistedStatus && persistedStatus !== 'idle'
       ? { ...nextState, ...persisted.stage_states }
       : nextState
+    if (String(rocDecisionPolicyValue?.status || '').toLowerCase() === 'completed') resolvedState.roc_policy = 'completed'
     if (String(clusteringValue?.status || '').toLowerCase() === 'completed') resolvedState.clustering = 'completed'
     if (String(fragileIncumbentValue?.status || '').toLowerCase() === 'completed') resolvedState.fragile_incumbent = 'completed'
     if (String(emergingTrendValue?.status || '').toLowerCase() === 'completed') resolvedState.emerging_trend = 'completed'
@@ -657,6 +664,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       const selectedStrategy = latestControl?.strategy_research_strategy || latestControl?.research_strategy || strategy
 
       setAnalytics(null)
+      setRocDecisionPolicy(null)
       setRisk(null)
       setAlternativeAction(null)
       setOperationalQualification(null)
@@ -752,6 +760,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
         await apiFetch(`${API}/temporal-intelligence/${encodeURIComponent(run.id)}/strategy-research/reset`, { method: 'POST' })
       }
       setAnalytics(null)
+      setRocDecisionPolicy(null)
       setRisk(null)
       setAlternativeAction(null)
       setOperationalQualification(null)
@@ -896,7 +905,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       <section className="strategy-research-stage-content data-panel">
         <div className="strategy-research-stage-content-heading"><div><span className="panel-kicker">{tr('SELECTED STAGE')}</span><h3>{tr(STRATEGY_RESEARCH_STAGES.find((stage) => stage.id === selectedStage)?.label || 'Research Pipeline')}</h3></div><span>{tr('Select a pipeline stage to inspect its visual result.')}</span></div>
         {selectedStageFailure ? <div className="strategy-research-stage-failure"><strong>{tr('Stage failure')}</strong><span>{selectedStageFailure}</span></div> : null}
-        {selectedStage !== 'milp' ? <StrategyResearchVisuals selectedStage={selectedStage} stageState={stageState} pipelineProgress={pipelineProgress} run={run} analytics={analytics} risk={risk} alternativeAction={alternativeAction} operationalQualification={operationalQualification} intervention={intervention} confidence={confidence} stateful={stateful} leadershipRegime={leadershipRegime} clustering={clustering} fragileIncumbent={fragileIncumbent} emergingTrend={emergingTrend} pipelineError={error} /> : null}
+        {selectedStage !== 'milp' ? <StrategyResearchVisuals selectedStage={selectedStage} stageState={stageState} pipelineProgress={pipelineProgress} run={run} analytics={analytics} rocDecisionPolicy={rocDecisionPolicy} risk={risk} alternativeAction={alternativeAction} operationalQualification={operationalQualification} intervention={intervention} confidence={confidence} stateful={stateful} leadershipRegime={leadershipRegime} clustering={clustering} fragileIncumbent={fragileIncumbent} emergingTrend={emergingTrend} pipelineError={error} /> : null}
         {selectedStage === 'milp' ? <DecisionCandidates stateful={stateful} milp={milpResult} selectedCandidate={selectedCandidate} onCandidateSelect={setSelectedCandidate} /> : null}
         {selectedStage === 'validation' ? <FinalValidation control={analytics} stateful={stateful} milp={milpResult} selectedCandidate={selectedCandidate} onCandidateSelect={setSelectedCandidate} /> : null}
       </section>

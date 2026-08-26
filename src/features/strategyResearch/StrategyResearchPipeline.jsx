@@ -3,6 +3,7 @@ import { tr } from '../../i18n/runtime'
 const STAGES = [
   { id: 'reference', label: 'Strategy Replay', icon: '↻' },
   { id: 'temporal', label: 'Temporal Intelligence', icon: '⚙' },
+  { id: 'roc_policy', label: 'ROC Decision Policy', icon: '⌁' },
   { id: 'clustering', label: 'Regime Clustering', icon: '◍' },
   { id: 'fragile_incumbent', label: 'Fragile Incumbent', icon: '◌' },
   { id: 'emerging_trend', label: 'Emerging Trend', icon: '↗' },

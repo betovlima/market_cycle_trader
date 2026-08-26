@@ -23,6 +23,7 @@ function thresholdOriginLabel(origin) {
   if (value === 'fixed_high_confidence_definition') return tr('Fixed high-confidence definition')
   if (value === 'chronological_validation_per_fold') return tr('Chronological validation by fold')
   if (value === 'chronological_validation_for_test_year') return tr('Chronological validation for test year')
+  if (value === 'chronological_calibration_fold') return tr('Selected on chronological calibration')
   return value ? value.replaceAll('_', ' ') : '—'
 }
 

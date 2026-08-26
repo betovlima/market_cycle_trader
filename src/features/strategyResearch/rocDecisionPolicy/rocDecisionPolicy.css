@@ -1,0 +1,116 @@
+.roc-policy-step {
+  display: grid;
+  gap: 14px;
+}
+
+.roc-policy-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.roc-policy-head h3 {
+  margin: 3px 0 0;
+}
+
+.roc-policy-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.roc-policy-dynamic-badge {
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.roc-policy-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.roc-policy-metric {
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.022);
+}
+
+.roc-policy-metric span,
+.roc-policy-metric strong,
+.roc-policy-metric small {
+  display: block;
+}
+
+.roc-policy-metric span,
+.roc-policy-metric small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.roc-policy-metric strong {
+  margin-top: 5px;
+  font-size: 16px;
+}
+
+.roc-policy-metric.positive strong { color: var(--success, #39c98d); }
+.roc-policy-metric.negative strong { color: var(--danger, #ef6670); }
+
+.roc-policy-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.roc-policy-context strong { color: var(--text); }
+
+.roc-policy-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.roc-policy-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.roc-policy-table th,
+.roc-policy-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.roc-policy-table th:first-child,
+.roc-policy-table td:first-child { text-align: left; }
+.roc-policy-table tbody tr:last-child td { border-bottom: 0; }
+
+.roc-policy-footer-note {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+  .roc-policy-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .roc-policy-head { flex-direction: column; }
+  .roc-policy-head-actions { justify-content: flex-start; }
+}
