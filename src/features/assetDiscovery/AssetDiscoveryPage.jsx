@@ -289,6 +289,7 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
   const historicalIntegrityRejects = Number(rejectionSummary.insufficient_history || 0)
     + Number(rejectionSummary.discontinuous_history || 0)
     + Number(rejectionSummary.ticker_identity_discontinuity || 0)
+    + Number(rejectionSummary.research_context_incomplete || 0)
 
   return <section className="asset-discovery-page">
     <div className="asset-discovery-workspace">
