@@ -4,6 +4,8 @@ import { hasCapability } from '../../auth/capabilities'
 import { tr } from '../../i18n/runtime'
 import { money, number, percent, shortDateTime } from '../../shared/formatters'
 import { SearchIcon } from '../../shared/components/Icons'
+import { MarginalMetricHelpButton, MarginalMetricLabel } from './MarginalMetricHelp'
+import { AssetSymbolTooltip } from './AssetSymbolTooltip'
 import { useAssetDiscovery } from './useAssetDiscovery'
 import './assetDiscovery.css'
 
@@ -203,11 +205,11 @@ function MarginalReplayPanel({
       {replay.current_stage ? <div className="asset-discovery-progress-stage">{replay.current_stage}</div> : null}
     </> : null}
     {baseline.ending_capital != null ? <div className="asset-discovery-marginal-baseline">
-      <div><span>{tr('Baseline capital')}</span><strong>{money(baseline.ending_capital)}</strong></div>
-      <div><span>{tr('Baseline CAGR')}</span><strong>{baseline.cagr == null ? '—' : percent(baseline.cagr, 2)}</strong></div>
-      <div><span>{tr('Baseline Sharpe')}</span><strong>{baseline.sharpe == null ? '—' : number(baseline.sharpe, 3)}</strong></div>
-      <div><span>{tr('Baseline MaxDD')}</span><strong>{baseline.maximum_drawdown == null ? '—' : percent(baseline.maximum_drawdown, 2)}</strong></div>
-      <div><span>{tr('Baseline worst fold')}</span><strong>{baseline.worst_fold_return == null ? '—' : percent(baseline.worst_fold_return, 2)}</strong></div>
+      <div><MarginalMetricLabel label="Baseline capital" metric="baselineCapital" /><strong>{money(baseline.ending_capital)}</strong></div>
+      <div><MarginalMetricLabel label="Baseline CAGR" metric="baselineCagr" /><strong>{baseline.cagr == null ? '—' : percent(baseline.cagr, 2)}</strong></div>
+      <div><MarginalMetricLabel label="Baseline Sharpe" metric="baselineSharpe" /><strong>{baseline.sharpe == null ? '—' : number(baseline.sharpe, 3)}</strong></div>
+      <div><MarginalMetricLabel label="Baseline MaxDD" metric="baselineMaxDd" /><strong>{baseline.maximum_drawdown == null ? '—' : percent(baseline.maximum_drawdown, 2)}</strong></div>
+      <div><MarginalMetricLabel label="Baseline worst fold" metric="baselineWorstFold" /><strong>{baseline.worst_fold_return == null ? '—' : percent(baseline.worst_fold_return, 2)}</strong></div>
     </div> : null}
     {rows.length ? <div className="asset-discovery-marginal-grid">
       {rows.map((row) => {
@@ -221,9 +223,10 @@ function MarginalReplayPanel({
             <div>
               <div className="asset-discovery-quality-title">
                 <span className={`asset-discovery-quality-dot ${tone}`} aria-hidden="true" />
-                <strong>{row.marginal_rank ? `#${row.marginal_rank} · ` : ''}{row.symbol}</strong>
+                <strong><AssetSymbolTooltip symbol={row.symbol} companyName={result.company_name}>{row.marginal_rank ? `#${row.marginal_rank} · ${row.symbol}` : row.symbol}</AssetSymbolTooltip></strong>
+                {row.marginal_rank ? <MarginalMetricHelpButton metric="marginalRank" label="Marginal contribution rank" /> : null}
               </div>
-              <small>{tr('ML rank')} #{result.rank || '—'}</small>
+              <small className="asset-discovery-rank-line"><span>{tr('ML rank')}</span><MarginalMetricHelpButton metric="mlRank" label="ML rank" /><strong>#{result.rank || '—'}</strong></small>
             </div>
             {selectable ? <label className="asset-discovery-select-asset">
               <input type="checkbox" checked={checked} onChange={() => toggleSymbol(row.symbol)} />
@@ -232,15 +235,15 @@ function MarginalReplayPanel({
           </div>
           {row.status === 'failed' ? <div className="inline-error asset-discovery-marginal-error">{row.error || tr('Marginal replay failed for this asset.')}</div> : <>
             <div className="asset-discovery-marginal-primary">
-              <span>{tr('Marginal capital')}</span>
+              <MarginalMetricLabel label="Marginal capital" metric="marginalCapital" />
               <strong>{row.ending_capital_delta_rate == null ? '—' : percent(row.ending_capital_delta_rate, 2)}</strong>
               <small>{candidate.ending_capital == null ? '—' : money(candidate.ending_capital)}</small>
             </div>
             <div className="asset-discovery-result-values asset-discovery-marginal-values">
-              <div><span>{tr('CAGR Δ')}</span><strong>{row.cagr_delta == null ? '—' : percent(row.cagr_delta, 2)}</strong></div>
-              <div><span>{tr('Sharpe Δ')}</span><strong>{row.sharpe_delta == null ? '—' : number(row.sharpe_delta, 3)}</strong></div>
-              <div><span>{tr('MaxDD Δ')}</span><strong>{row.maximum_drawdown_delta == null ? '—' : percent(row.maximum_drawdown_delta, 2)}</strong></div>
-              <div><span>{tr('Worst fold Δ')}</span><strong>{row.worst_fold_return_delta == null ? '—' : percent(row.worst_fold_return_delta, 2)}</strong></div>
+              <div><MarginalMetricLabel label="CAGR Δ" metric="cagrDelta" /><strong>{row.cagr_delta == null ? '—' : percent(row.cagr_delta, 2)}</strong></div>
+              <div><MarginalMetricLabel label="Sharpe Δ" metric="sharpeDelta" /><strong>{row.sharpe_delta == null ? '—' : number(row.sharpe_delta, 3)}</strong></div>
+              <div><MarginalMetricLabel label="MaxDD Δ" metric="maxDdDelta" /><strong>{row.maximum_drawdown_delta == null ? '—' : percent(row.maximum_drawdown_delta, 2)}</strong></div>
+              <div><MarginalMetricLabel label="Worst fold Δ" metric="worstFoldDelta" /><strong>{row.worst_fold_return_delta == null ? '—' : percent(row.worst_fold_return_delta, 2)}</strong></div>
             </div>
           </>}
         </article>
@@ -282,7 +285,7 @@ function DetailModal({ item, evaluatedCount, onClose }) {
       <div className="asset-discovery-modal-header">
         <div>
           <span className="eyebrow">{tr('LEARNING-TO-RANK')}</span>
-          <h3>{item.symbol}</h3>
+          <h3><AssetSymbolTooltip symbol={item.symbol} companyName={item.company_name}>{item.symbol}</AssetSymbolTooltip></h3>
         </div>
         <button type="button" className="icon-button" onClick={onClose} aria-label={tr('Close')}>×</button>
       </div>
@@ -483,7 +486,7 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
                 <div className="asset-discovery-result-head">
                   <div className="asset-discovery-quality-title">
                     <span className={`asset-discovery-quality-dot ${tone}`} aria-hidden="true" />
-                    <strong>#{marginalRank || item.rank} · {item.symbol}</strong>
+                    <strong><AssetSymbolTooltip symbol={item.symbol} companyName={item.company_name}>#{marginalRank || item.rank} · {item.symbol}</AssetSymbolTooltip></strong>
                   </div>
                   <span>{marginalRank ? `${tr('Marginal')} #${marginalRank}` : tr('ML screening')}</span>
                 </div>
@@ -552,12 +555,14 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
               symbol: item.symbol,
               rank: item.latest_rank,
               raw_score: item.latest_model_score,
+              company_name: item.company_name,
+              exchange: item.exchange,
               evaluated_count: item.latest_evaluated_count,
               ...metrics,
             }
             return <article className={`asset-discovery-catalog-card ${checked ? 'selected' : ''}`} key={item.symbol}>
               <div className="asset-discovery-result-head">
-                <strong>{item.symbol}</strong>
+                <strong><AssetSymbolTooltip symbol={item.symbol} companyName={item.company_name}>{item.symbol}</AssetSymbolTooltip></strong>
                 <label className="asset-discovery-select-asset">
                   <input type="checkbox" checked={checked} onChange={() => toggleCatalogSymbol(item.symbol)} />
                   <span>{tr('Select')}</span>
