@@ -381,7 +381,6 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
   const statefulControlParityPassed = String(statefulValidation?.control_parity?.status || '').toLowerCase() === 'passed'
   const traderRuntimeReady = Boolean(selected.trader_compatibility?.eligible)
   const traderRuntimeBlockReason = tr(selected.trader_compatibility?.reason || 'This Strategy is not compatible with the installed Trader runtime.')
-  const canPromote = traderRuntimeReady
     && !legacyConfigurationIncomplete
     && selected.id !== winnerId
     && !hasActiveBacktest
@@ -445,7 +444,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
             <div className="strategy-editor-actions">
               <button type="button" onClick={() => cloneStrategy(selected)} disabled={Boolean(busy)}>{tr("Clone Strategy")}</button>
               {selected.id !== researchId ? <button type="button" onClick={() => useForStrategyResearch(selected)} disabled={Boolean(busy) || hasActiveBacktest}>{tr("Mark as RESEARCH")}</button> : <button type="button" disabled>{tr("RESEARCH")}</button>}
-              {selected.id !== winnerId ? <button type="button" className="promote-action" title={temporalSeriesUpdateInProgress ? tr('Winner promotion is temporarily unavailable while temporal market-series synchronization is running.') : (!traderRuntimeReady ? traderRuntimeBlockReason : '')} onClick={() => promoteToTrader(selected)} disabled={Boolean(busy) || !canPromote}>{tr("Promote to WINNER")}</button> : <button type="button" className="promote-action" disabled>{tr("WINNER")}</button>}
+              {selected.id !== winnerId ? <button type="button" className="promote-action" title={temporalSeriesUpdateInProgress ? tr('Winner promotion is temporarily unavailable while temporal market-series synchronization is running.') : (!traderRuntimeReady ? traderRuntimeBlockReason : '')} onClick={() => promoteToTrader(selected)} disabled={Boolean(busy) || temporalSeriesUpdateInProgress}>{tr("Promote to WINNER")}</button> : <button type="button" className="promote-action" disabled>{tr("WINNER")}</button>}
               {selected.id !== winnerId && selected.id !== researchId ? <button type="button" className="danger" onClick={() => deleteStrategy(selected)} disabled={Boolean(busy)}>{tr("Delete strategy")}</button> : null}
             </div>
           </div>
@@ -486,9 +485,9 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
               onSessionExpired={onSessionExpired}
               embedded
               strategy={selected}
-              readOnly={isTemporalStrategy}
-              onStrategyModelSaved={isTemporalStrategy ? null : handleStrategyModelSaved}
-              onDirtyChange={isTemporalStrategy ? null : setModelHasUnsavedChanges}
+              readOnly={Boolean(selected.locked)}
+              onStrategyModelSaved={handleStrategyModelSaved}
+              onDirtyChange={setModelHasUnsavedChanges}
               parameterSearch={parameterSearch}
               onSearchMatchCount={setModelParameterMatchCount}
             />
@@ -520,7 +519,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
                         reference={selected.configuration[field]}
                         schema={parameterSchemas[field]}
                         hintAlign={fieldIndex % 2 === 1 ? 'right' : 'left'}
-                        disabled={selected.locked || legacyConfigurationIncomplete || isTemporalStrategy}
+                        disabled={selected.locked || legacyConfigurationIncomplete}
                         onChange={updateEditorValue}
                       />
                     ))}
@@ -532,7 +531,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
               ) : null}
             </div>
 
-            {!isTemporalStrategy && !selected.locked && !legacyConfigurationIncomplete ? (
+            {!selected.locked && !legacyConfigurationIncomplete ? (
               <div className="strategy-save-row">
                 <label>
                   <StrategyFieldLabel id="hint-strategy-change-reason" label={tr("Change reason (optional)")} hint={STRATEGY_FIELD_HINTS.changeReason} />

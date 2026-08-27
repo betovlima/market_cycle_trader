@@ -44,7 +44,6 @@ export function DecisionCandidates({ stateful, milp, selectedCandidate, onCandid
       </div>
       <DecisionMap result={milp} />
       <details className="milp-config"><summary>{tr('MILP configuration')}</summary><div>{Object.entries(milp.configuration || {}).map(([key, value]) => <div key={key}><span>{key.replaceAll('_', ' ')}</span><strong>{typeof value === 'number' ? number(value, 4) : String(value)}</strong></div>)}</div></details>
-      <div className="milp-research-only"><strong>{tr('Research only')}</strong><span>{tr('MILP strategies cannot be promoted to Winner until live runtime parity is implemented.')}</span></div>
     </> : <div className="milp-empty">{tr('MILP Decision Optimization results will appear here after this stage runs.')}</div>}
   </section>
 }

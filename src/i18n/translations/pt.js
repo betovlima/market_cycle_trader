@@ -2789,7 +2789,6 @@ export const PT_TRANSLATIONS = {
   'Dominant MILP action by month': 'Ação MILP dominante por mês',
   'MILP configuration': 'Configuração MILP',
   'Research only': 'Somente pesquisa',
-  'MILP strategies cannot be promoted to Winner until live runtime parity is implemented.': 'Strategies MILP não podem ser promovidas a Winner até existir paridade com o runtime live.',
   'MILP Decision Optimization will appear here after the current Decision Candidates stage runs.': 'A Otimização de Decisão MILP aparecerá aqui após a execução da etapa Candidatos de Decisão.',
   'Candidate selected': 'Candidato selecionado',
   'Select a candidate': 'Selecione um candidato',
