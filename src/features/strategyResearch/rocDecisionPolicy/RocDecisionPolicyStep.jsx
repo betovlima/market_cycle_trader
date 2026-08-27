@@ -67,7 +67,7 @@ export function RocDecisionPolicyStep({ analysis }) {
         <h3>{tr('ROC Decision Policy')}</h3>
       </div>
       <div className="roc-policy-head-actions">
-        <span className="roc-policy-dynamic-badge">{tr('Dynamic thresholds · calibration only')}</span>
+        <span className="roc-policy-dynamic-badge">{tr('Relative outperformance · dynamic thresholds')}</span>
         <RocCurveControl curves={curves} title="ROC Decision Policy" kicker="ROC DECISION POLICY" buttonLabel="ROC curves" />
       </div>
     </div>
@@ -86,9 +86,12 @@ export function RocDecisionPolicyStep({ analysis }) {
     </div>
 
     <div className="roc-policy-context">
+      <span><strong>{tr('Policy target')}:</strong> {tr('Challenger outperforms Temporal control net of rotation cost')}</span>
       <span><strong>{tr('Selection metric')}:</strong> {String(settings.selection_metric || '—').replaceAll('_', ' ')}</span>
       <span><strong>{tr('Settings revision')}:</strong> {settingsRevision ?? '—'}</span>
-      <span><strong>{tr('Threshold source')}:</strong> {tr('Chronological calibration by fold')}</span>
+      <span><strong>{tr('Pair samples per session')}:</strong> {number(settings.max_pairs_per_timestamp, 0)}</span>
+      <span><strong>{tr('Rotation cost hurdle')}:</strong> {percent(analysis.round_trip_cost_rate, 3)}</span>
+      <span><strong>{tr('Threshold source')}:</strong> {tr('Chronological relative-pair calibration by fold')}</span>
       <span><strong>{tr('OOS threshold selection')}:</strong> {analysis.oos_used_for_threshold_selection ? tr('Yes') : tr('No')}</span>
     </div>
 
@@ -118,7 +121,7 @@ export function RocDecisionPolicyStep({ analysis }) {
     </div>
 
     <div className="roc-policy-footer-note">
-      {tr('Each threshold is learned from the chronological calibration split, frozen for that fold and then evaluated out of sample. OOS data never selects the threshold.')}
+      {tr('Each threshold is learned from relative challenger-versus-control pairs in chronological calibration, frozen for that fold and then evaluated out of sample. OOS data never selects the threshold.')}
     </div>
   </div>
 }

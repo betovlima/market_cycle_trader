@@ -3188,6 +3188,13 @@ export const ES_TRANSLATIONS = {
   'The selected threshold was fixed before this OOS evaluation according to its recorded threshold origin.': 'El umbral seleccionado fue fijado antes de esta evaluación OOS según el origen registrado del umbral.',
   'The diagnostic point maximizes balanced accuracy on this OOS sample. It is displayed only to generate a future hypothesis and is never applied back to the same OOS test.': 'El punto diagnóstico maximiza la Balanced Accuracy en esta muestra OOS. Se muestra solo para generar una hipótesis futura y nunca se reaplica al mismo test OOS.',
 
+  'Relative outperformance · dynamic thresholds': 'Outperformance relativo · umbrales dinámicos',
+  'Policy target': 'Objetivo de la política',
+  'Challenger outperforms Temporal control net of rotation cost': 'El challenger supera al control Temporal neto del costo de rotación',
+  'Pair samples per session': 'Pares muestreados por sesión',
+  'Rotation cost hurdle': 'Costo de rotación',
+  'Chronological relative-pair calibration by fold': 'Calibración cronológica de pares relativos por fold',
+  'Each threshold is learned from relative challenger-versus-control pairs in chronological calibration, frozen for that fold and then evaluated out of sample. OOS data never selects the threshold.': 'Cada umbral se aprende con pares relativos challenger-versus-control en la calibración cronológica, se congela para ese fold y luego se evalúa fuera de muestra. Los datos OOS nunca seleccionan el umbral.',
   'ROC Decision Policy': 'Política de Decisión ROC',
   'ROC DECISION POLICY': 'POLÍTICA DE DECISIÓN ROC',
   'ROC Decision Policy will appear here.': 'La Política de Decisión ROC aparecerá aquí.',
