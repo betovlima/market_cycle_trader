@@ -26,10 +26,12 @@ export function TradingSessionStrip({ connection, marketClock, robot, now, refre
   const phaseRaw = String(robot?.active_run?.phase || robot?.phase || 'stopped')
   const phase = phaseRaw.replaceAll('_', ' ')
   const phaseLower = phaseRaw.toLowerCase()
-  const analysisRunning = phaseLower.includes('training') || phaseLower.includes('refreshing_market_data') || phaseLower.includes('preparing_premarket_plan')
+  const analysisRunning = phaseLower.includes('training') || phaseLower.includes('refreshing_market_data') || phaseLower.includes('calibrat')
   const executionRunning = phaseLower.includes('submitting_alpaca_paper_orders') || phaseLower === 'executing'
-  const analysisAt = robot?.next_premarket_analysis_at || robot?.active_run?.premarket_analysis_at
+  const postCloseAt = robot?.next_post_close_calibration_at || robot?.active_run?.post_close_calibration_at || marketClock?.next_close
+  const openCalibrationAt = robot?.next_market_open_recalibration_at || robot?.active_run?.market_open_recalibration_at || robot?.next_market_open
   const nextOpenAt = robot?.next_market_open || robot?.active_run?.expected_market_open
+  const nextExecutionAt = robot?.next_execution_at || nextOpenAt
   const nextCloseAt = marketClock?.next_close
   const session = robot?.next_execution_session || tr('No session scheduled')
   const checkedLabel = connection.checkedAt
@@ -37,8 +39,9 @@ export function TradingSessionStrip({ connection, marketClock, robot, now, refre
     : tr('Broker check pending')
 
   const schedule = [
-    { label: 'Analysis', value: scheduleValue(analysisAt, now, analysisRunning), tone: analysisRunning ? 'green' : 'blue' },
-    { label: 'Execution', value: scheduleValue(nextOpenAt, now, executionRunning), tone: executionRunning ? 'green' : 'purple' },
+    { label: 'Post-close calibration', value: scheduleValue(postCloseAt, now, analysisRunning && phaseLower.includes('post_close')), tone: analysisRunning && phaseLower.includes('post_close') ? 'green' : 'blue' },
+    { label: 'Open recalibration', value: scheduleValue(openCalibrationAt, now, analysisRunning && phaseLower.includes('market_open')), tone: analysisRunning && phaseLower.includes('market_open') ? 'green' : 'cyan' },
+    { label: 'Execution', value: scheduleValue(nextExecutionAt, now, executionRunning), tone: executionRunning ? 'green' : 'purple' },
     { label: 'Daily close', value: scheduleValue(nextCloseAt, now), tone: 'gold' },
     { label: 'Portfolio update', value: refreshing ? tr('Running now') : scheduleValue(nextRefreshAt, now), tone: refreshing ? 'green' : 'cyan' },
   ]

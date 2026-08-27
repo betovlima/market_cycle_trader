@@ -23,9 +23,9 @@ const PARAMETER_HINTS = {
     example: 'With training disabled and 3 requested jobs, jobs_started = 0.',
   },
   automaticTraining: {
-    description: 'Allows the scheduler to start the authorized pre-market training cycle automatically when an eligible market session is approaching.',
-    relationship: 'Runs only for eligible pre-market sessions and only while training is enabled.',
-    example: 'With 5 eligible market sessions in a week, at most 5 scheduled pre-market runs can be started.',
+    description: 'Allows the scheduler to run the authorized post-close and market-open calibration cycle automatically for each eligible market session.',
+    relationship: 'Runs after the completed market session and again at the next regular-market open while training is enabled.',
+    example: 'With 5 eligible market sessions in a week, each session can have one post-close calibration and one market-open recalibration.',
   },
   timeoutMinutes: {
     description: 'Maximum wall-clock duration allowed for one backtest before the API stops it.',
@@ -350,7 +350,7 @@ export function SystemSettingsPage({ onSessionExpired }) {
               />
               <ToggleField
                 id="automatic-training-enabled"
-                label={tr("Automatic pre-market training")}
+                label={tr("Automatic trading calibration")}
                 hint={PARAMETER_HINTS.automaticTraining}
                 checked={form.automatic_training_enabled}
                 disabled={!form.enabled}
@@ -411,14 +411,16 @@ export function SystemSettingsPage({ onSessionExpired }) {
               <span className="panel-kicker">{tr("MANUAL RECOVERY")}</span>
               <strong>{tr("Current-session contingency")}</strong>
               <small>
-                {traderControl?.manual_recovery?.plan_id
-                  ? tr("Plan {plan} · {current} → {target} · {status}", {
-                      plan: traderControl.manual_recovery.plan_id,
-                      current: traderControl.manual_recovery.current_asset || '—',
-                      target: traderControl.manual_recovery.target_asset || '—',
-                      status: modeLabel(traderControl.manual_recovery.plan_status || 'unknown'),
-                    })
-                  : tr("Recalculate from the latest completed daily session, then explicitly execute the prepared Paper plan.")}
+                {traderControl?.manual_recovery?.failure_code === 'SELL_FILLED_BUY_FAILED'
+                  ? tr("The sell completed but the target buy did not. Execute contingency to reconcile Alpaca and complete only the missing buy leg.")
+                  : traderControl?.manual_recovery?.plan_id
+                    ? tr("Plan {plan} · {current} → {target} · {status}", {
+                        plan: traderControl.manual_recovery.plan_id,
+                        current: traderControl.manual_recovery.current_asset || '—',
+                        target: traderControl.manual_recovery.target_asset || '—',
+                        status: modeLabel(traderControl.manual_recovery.plan_status || 'unknown'),
+                      })
+                    : tr("Recalculate from the latest completed daily session, then explicitly execute the prepared Paper plan.")}
               </small>
             </div>
             <div className="trader-manual-recovery-actions">
@@ -437,7 +439,7 @@ export function SystemSettingsPage({ onSessionExpired }) {
                 disabled={Boolean(manualRecoveryBusy) || !traderControl?.manual_recovery?.can_execute}
                 title={tr(traderControl?.manual_recovery?.execute_reason || "Retry the prepared current-session plan through Alpaca Paper.")}
               >
-                {tr(manualRecoveryBusy === 'execute' ? 'Executing…' : 'Retry plan on Alpaca')}
+                {tr(manualRecoveryBusy === 'execute' ? 'Executing…' : traderControl?.manual_recovery?.recoverable_contingency ? 'Execute contingency' : 'Retry plan on Alpaca')}
               </button>
             </div>
           </div>
