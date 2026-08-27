@@ -67,7 +67,7 @@ export function RocDecisionPolicyStep({ analysis }) {
         <h3>{tr('ROC Decision Policy')}</h3>
       </div>
       <div className="roc-policy-head-actions">
-        <span className="roc-policy-dynamic-badge">{tr('Relative outperformance · dynamic thresholds')}</span>
+        <span className="roc-policy-dynamic-badge">{tr('Relative outperformance · qualified dynamic thresholds')}</span>
         <RocCurveControl curves={curves} title="ROC Decision Policy" kicker="ROC DECISION POLICY" buttonLabel="ROC curves" />
       </div>
     </div>
@@ -81,6 +81,8 @@ export function RocDecisionPolicyStep({ analysis }) {
       <Metric label="MaxDD delta" value={signedPercent(delta.max_drawdown, 2)} tone={metricTone(delta.max_drawdown)} />
       <Metric label="Control parity" value={parityStatus === 'pass' ? 'PASS' : '—'} tone={parityStatus === 'pass' ? 'positive' : ''} />
       <Metric label="ROC overrides" value={number(challenger.roc_override_count, 0)} />
+      <Metric label="Qualified opportunities" value={number(challenger.roc_signal_qualified_count, 0)} />
+      <Metric label="ROC abstentions" value={number(challenger.roc_abstention_count, 0)} />
       <Metric label="Temporal overrides" value={number(challenger.temporal_timing_override_count, 0)} />
       <Metric label="Switches" value={number(challenger.switch_count, 0)} />
     </div>
@@ -90,6 +92,8 @@ export function RocDecisionPolicyStep({ analysis }) {
       <span><strong>{tr('Selection metric')}:</strong> {String(settings.selection_metric || '—').replaceAll('_', ' ')}</span>
       <span><strong>{tr('Settings revision')}:</strong> {settingsRevision ?? '—'}</span>
       <span><strong>{tr('Pair samples per session')}:</strong> {number(settings.max_pairs_per_timestamp, 0)}</span>
+      <span><strong>{tr('Signal qualification')}:</strong> {String(settings.qualification_method || '—').replaceAll('_', ' ')}</span>
+      <span><strong>{tr('Qualification confidence')}:</strong> {percent(settings.qualification_confidence_level, 0)}</span>
       <span><strong>{tr('Rotation cost hurdle')}:</strong> {percent(analysis.round_trip_cost_rate, 3)}</span>
       <span><strong>{tr('Threshold source')}:</strong> {tr('Chronological relative-pair calibration by fold')}</span>
       <span><strong>{tr('OOS threshold selection')}:</strong> {analysis.oos_used_for_threshold_selection ? tr('Yes') : tr('No')}</span>
@@ -100,28 +104,34 @@ export function RocDecisionPolicyStep({ analysis }) {
         <thead><tr>
           <th>{tr('Fold')}</th>
           <th>{tr('Horizon')}</th>
+          <th>{tr('Signal')}</th>
           <th>{tr('Selected threshold')}</th>
           <th>{tr('Calibration AUC')}</th>
+          <th>{tr('AUC lower bound')}</th>
+          <th>{tr('Net edge lower bound')}</th>
           <th>{tr('OOS AUC')}</th>
           <th>{tr('Calibration score')}</th>
-          <th>{tr('Calibration samples')}</th>
+          <th>{tr('Action samples')}</th>
           <th>{tr('OOS samples')}</th>
         </tr></thead>
         <tbody>{rows.map((row) => <tr key={`${row.fold_id}-${row.horizon}`}>
           <td>{row.fold_id}</td>
           <td>{row.horizon}d</td>
+          <td><span className={`roc-policy-signal ${row.signal_qualified ? 'qualified' : 'abstain'}`}>{tr(row.signal_qualified ? 'QUALIFIED' : 'ABSTAIN')}</span></td>
           <td><strong>{number(row.selected_threshold, 3)}</strong></td>
           <td>{number(row.calibration_auc, 3)}</td>
+          <td>{number(row.calibration_auc_ci_lower, 3)}</td>
+          <td>{signedPercent(row.qualification_net_edge_ci_lower, 3)}</td>
           <td>{number(row.oos_auc, 3)}</td>
           <td>{number(row.selection_score, 3)}</td>
-          <td>{number(row.calibration_samples, 0)}</td>
+          <td>{number(row.qualification_action_samples, 0)}</td>
           <td>{number(row.oos_samples, 0)}</td>
         </tr>)}</tbody>
       </table>
     </div>
 
     <div className="roc-policy-footer-note">
-      {tr('Each threshold is learned from relative challenger-versus-control pairs in chronological calibration, frozen for that fold and then evaluated out of sample. OOS data never selects the threshold.')}
+      {tr('Each threshold is learned from relative challenger-versus-control pairs in chronological calibration. The same calibration must also qualify the ROC signal statistically and economically; otherwise the policy abstains and preserves the Temporal decision. OOS data never qualifies the signal or selects the threshold.')}
     </div>
   </div>
 }

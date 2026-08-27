@@ -103,6 +103,27 @@
 .roc-policy-table td:first-child { text-align: left; }
 .roc-policy-table tbody tr:last-child td { border-bottom: 0; }
 
+.roc-policy-signal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .03em;
+}
+
+.roc-policy-signal.qualified {
+  color: var(--success, #39c98d);
+}
+
+.roc-policy-signal.abstain {
+  color: var(--muted);
+}
+
 .roc-policy-footer-note {
   color: var(--muted);
   font-size: 11px;
