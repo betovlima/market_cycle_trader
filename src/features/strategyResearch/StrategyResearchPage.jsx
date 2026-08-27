@@ -94,6 +94,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
   const [stateful, setStateful] = useState(null)
   const [leadershipRegime, setLeadershipRegime] = useState(null)
   const [clustering, setClustering] = useState(null)
+  const [opportunityDrought, setOpportunityDrought] = useState(null)
   const [fragileIncumbent, setFragileIncumbent] = useState(null)
   const [emergingTrend, setEmergingTrend] = useState(null)
   const {
@@ -201,6 +202,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     const statefulValue = snapshot?.stateful?.id ? snapshot.stateful : null
     const leadershipRegimeValue = snapshot?.leadership_regime || null
     const clusteringValue = snapshot?.clustering || null
+    const opportunityDroughtValue = snapshot?.opportunity_drought || null
     const fragileIncumbentValue = snapshot?.fragile_incumbent || null
     const emergingTrendValue = snapshot?.emerging_trend || null
 
@@ -213,6 +215,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     if (statefulValue) setStateful(statefulValue)
     if (leadershipRegimeValue) setLeadershipRegime(leadershipRegimeValue)
     if (clusteringValue) setClustering(clusteringValue)
+    if (opportunityDroughtValue) setOpportunityDrought(opportunityDroughtValue)
     if (fragileIncumbentValue) setFragileIncumbent(fragileIncumbentValue)
     if (emergingTrendValue) setEmergingTrend(emergingTrendValue)
 
@@ -264,6 +267,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     const statefulValue = snapshot?.stateful?.id ? snapshot.stateful : null
     const leadershipRegimeValue = snapshot?.leadership_regime || null
     const clusteringValue = snapshot?.clustering || null
+    const opportunityDroughtValue = snapshot?.opportunity_drought || null
     const fragileIncumbentValue = snapshot?.fragile_incumbent || null
     const emergingTrendValue = snapshot?.emerging_trend || null
     const snapshotStart = monthValue(snapshot?.period_start, periodStart)
@@ -285,11 +289,13 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     setStateful(statefulValue)
     setLeadershipRegime(leadershipRegimeValue)
     setClustering(clusteringValue)
+    setOpportunityDrought(opportunityDroughtValue)
     setFragileIncumbent(fragileIncumbentValue)
     setEmergingTrend(emergingTrendValue)
 
     if (String(rocDecisionPolicyValue?.status || '').toLowerCase() === 'completed') nextState.roc_policy = 'completed'
     if (String(clusteringValue?.status || '').toLowerCase() === 'completed') nextState.clustering = 'completed'
+    if (String(opportunityDroughtValue?.status || '').toLowerCase() === 'completed') nextState.opportunity_drought = 'completed'
     if (String(fragileIncumbentValue?.status || '').toLowerCase() === 'completed') nextState.fragile_incumbent = 'completed'
     if (String(emergingTrendValue?.status || '').toLowerCase() === 'completed') nextState.emerging_trend = 'completed'
     if (riskValue?.id && interventionValue?.id) nextState.risk = 'completed'
@@ -309,6 +315,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       : nextState
     if (String(rocDecisionPolicyValue?.status || '').toLowerCase() === 'completed') resolvedState.roc_policy = 'completed'
     if (String(clusteringValue?.status || '').toLowerCase() === 'completed') resolvedState.clustering = 'completed'
+    if (String(opportunityDroughtValue?.status || '').toLowerCase() === 'completed') resolvedState.opportunity_drought = 'completed'
     if (String(fragileIncumbentValue?.status || '').toLowerCase() === 'completed') resolvedState.fragile_incumbent = 'completed'
     if (String(emergingTrendValue?.status || '').toLowerCase() === 'completed') resolvedState.emerging_trend = 'completed'
     if (statefulValue?.id) resolvedState.stateful = 'completed'
@@ -673,6 +680,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       setStateful(null)
       setLeadershipRegime(null)
       setClustering(null)
+      setOpportunityDrought(null)
       setFragileIncumbent(null)
       setEmergingTrend(null)
       clearMilp()
@@ -769,6 +777,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       setStateful(null)
       setLeadershipRegime(null)
       setClustering(null)
+      setOpportunityDrought(null)
       setFragileIncumbent(null)
       setEmergingTrend(null)
       setPipelineControl(null)
@@ -905,7 +914,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       <section className="strategy-research-stage-content data-panel">
         <div className="strategy-research-stage-content-heading"><div><span className="panel-kicker">{tr('SELECTED STAGE')}</span><h3>{tr(STRATEGY_RESEARCH_STAGES.find((stage) => stage.id === selectedStage)?.label || 'Research Pipeline')}</h3></div><span>{tr('Select a pipeline stage to inspect its visual result.')}</span></div>
         {selectedStageFailure ? <div className="strategy-research-stage-failure"><strong>{tr('Stage failure')}</strong><span>{selectedStageFailure}</span></div> : null}
-        {selectedStage !== 'milp' ? <StrategyResearchVisuals selectedStage={selectedStage} stageState={stageState} pipelineProgress={pipelineProgress} run={run} analytics={analytics} rocDecisionPolicy={rocDecisionPolicy} risk={risk} alternativeAction={alternativeAction} operationalQualification={operationalQualification} intervention={intervention} confidence={confidence} stateful={stateful} leadershipRegime={leadershipRegime} clustering={clustering} fragileIncumbent={fragileIncumbent} emergingTrend={emergingTrend} pipelineError={error} /> : null}
+        {selectedStage !== 'milp' ? <StrategyResearchVisuals selectedStage={selectedStage} stageState={stageState} pipelineProgress={pipelineProgress} run={run} analytics={analytics} rocDecisionPolicy={rocDecisionPolicy} risk={risk} alternativeAction={alternativeAction} operationalQualification={operationalQualification} intervention={intervention} confidence={confidence} stateful={stateful} leadershipRegime={leadershipRegime} clustering={clustering} opportunityDrought={opportunityDrought} fragileIncumbent={fragileIncumbent} emergingTrend={emergingTrend} pipelineError={error} /> : null}
         {selectedStage === 'milp' ? <DecisionCandidates stateful={stateful} milp={milpResult} selectedCandidate={selectedCandidate} onCandidateSelect={setSelectedCandidate} /> : null}
         {selectedStage === 'validation' ? <FinalValidation control={analytics} stateful={stateful} milp={milpResult} selectedCandidate={selectedCandidate} onCandidateSelect={setSelectedCandidate} /> : null}
       </section>

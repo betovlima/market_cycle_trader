@@ -6,6 +6,7 @@ import { CoffeeProgress } from '../../shared/CoffeeProgress'
 import { money, number, percent } from '../../shared/formatters'
 import { RocCurveControl } from '../../shared/components/RocCurveControl'
 import { LeadershipRegimePanel } from '../leadershipRegime'
+import { OpportunityDroughtPanel } from '../opportunityDrought/OpportunityDroughtPanel'
 import { FragileIncumbentPanel } from '../fragileIncumbent/FragileIncumbentPanel'
 import { RegimeClusteringPanel } from '../regimeClustering/RegimeClusteringPanel'
 import { EmergingTrendPanel } from '../emergingTrend/EmergingTrendPanel'
@@ -53,25 +54,33 @@ function equityValue(row) {
   return null
 }
 
-function monthlyReturns(equity = []) {
+function monthlyReturns(equity = [], initialCapital = null) {
   const grouped = new Map()
-  for (const row of equity || []) {
+  const orderedEquity = [...(equity || [])].sort((left, right) => String(left?.timestamp || left?.recorded_at || left?.date || '').localeCompare(String(right?.timestamp || right?.recorded_at || right?.date || '')))
+  for (const row of orderedEquity) {
     const month = monthKey(row?.timestamp || row?.recorded_at || row?.date)
     const value = equityValue(row)
     if (!month || value == null) continue
-    const current = grouped.get(month) || { first: value, last: value, observations: 0 }
+    const current = grouped.get(month) || { firstObserved: value, last: value, observations: 0 }
     current.last = value
     current.observations += 1
     grouped.set(month, current)
   }
-  return [...grouped.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([month, values]) => ({
-    month,
-    first: values.first,
-    last: values.last,
-    observations: values.observations,
-    capitalDelta: values.last - values.first,
-    value: values.first > 0 ? values.last / values.first - 1 : 0,
-  }))
+  let previousEnding = Number(initialCapital)
+  if (!Number.isFinite(previousEnding) || previousEnding <= 0) previousEnding = null
+  return [...grouped.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([month, values]) => {
+    const starting = previousEnding ?? values.firstObserved
+    const result = {
+      month,
+      first: starting,
+      last: values.last,
+      observations: values.observations,
+      capitalDelta: values.last - starting,
+      value: starting > 0 ? values.last / starting - 1 : 0,
+    }
+    previousEnding = values.last
+    return result
+  })
 }
 
 function yearlyReturns(rows = []) {
@@ -160,7 +169,7 @@ function ResearchDetailDialog({ detail, onClose }) {
 
 function MonthlyHeatmap({ analytics }) {
   const [selectedDetail, setSelectedDetail] = useState(null)
-  const rows = useMemo(() => monthlyReturns(analytics?.equity || []), [analytics?.equity])
+  const rows = useMemo(() => monthlyReturns(analytics?.equity || [], analytics?.metrics?.initial_capital), [analytics?.equity, analytics?.metrics?.initial_capital])
   const yearMap = useMemo(() => yearlyReturns(rows), [rows])
   if (!rows.length) return <EmptyVisual title="Strategy replay visualization will appear here." />
   const years = [...new Set(rows.map((item) => item.month.slice(0, 4)))]
@@ -607,7 +616,7 @@ function FoldHeatmap({ run, stateful }) {
   </div>
 }
 
-export function StrategyResearchVisuals({ selectedStage, stageState = {}, pipelineProgress = 0, run, analytics, rocDecisionPolicy, risk, alternativeAction, operationalQualification, intervention, confidence, stateful, leadershipRegime, clustering, fragileIncumbent, emergingTrend, pipelineError = '' }) {
+export function StrategyResearchVisuals({ selectedStage, stageState = {}, pipelineProgress = 0, run, analytics, rocDecisionPolicy, risk, alternativeAction, operationalQualification, intervention, confidence, stateful, leadershipRegime, clustering, opportunityDrought, fragileIncumbent, emergingTrend, pipelineError = '' }) {
   const selectedStageRunning = stageState[selectedStage] === 'running'
   const temporalProgress = Number(run?.progress)
   const selectedProgress = selectedStage === 'temporal' && Number.isFinite(temporalProgress) ? temporalProgress : pipelineProgress
@@ -617,6 +626,7 @@ export function StrategyResearchVisuals({ selectedStage, stageState = {}, pipeli
     temporal: run?.result?.horizon_metrics?.length ? <TemporalHeatmap run={run} /> : empty('Temporal horizon analysis will appear here.'),
     roc_policy: rocDecisionPolicy?.id ? <RocDecisionPolicyStep analysis={rocDecisionPolicy} /> : empty('ROC Decision Policy will appear here.'),
     clustering: clustering?.id ? <RegimeClusteringPanel analysis={clustering} /> : empty('Regime Clustering will appear here.'),
+    opportunity_drought: opportunityDrought?.id ? <OpportunityDroughtPanel analysis={opportunityDrought} /> : empty('Opportunity Drought Research will appear here.'),
     fragile_incumbent: fragileIncumbent?.id ? <FragileIncumbentPanel analysis={fragileIncumbent} /> : empty('Fragile Incumbent Research will appear here.'),
     emerging_trend: emergingTrend?.id ? <EmergingTrendPanel analysis={emergingTrend} /> : empty('Emerging Trend Research will appear here.'),
     risk: (risk?.oos?.high_risk_transitions || risk?.oos?.scored_transitions || []).length

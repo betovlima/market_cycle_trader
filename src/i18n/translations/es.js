@@ -3234,5 +3234,11 @@ export const ES_TRANSLATIONS = {
   'OOS samples': 'Muestras OOS',
   'Each threshold is learned from the chronological calibration split, frozen for that fold and then evaluated out of sample. OOS data never selects the threshold.': 'Cada umbral se aprende en el recorte cronológico de calibración, se congela para ese fold y después se evalúa fuera de muestra. Los datos OOS nunca seleccionan el umbral.',
   'Selected on chronological calibration': 'Seleccionado en la calibración cronológica',
+  "Winner promotion is temporarily unavailable while the daily calibration and pre-market plan are being prepared.": "La promoción a Winner no está disponible temporalmente mientras se preparan la calibración diaria y el plan pre-market.",
+  "Winner promotion is temporarily unavailable while the current buy/sell operation is being executed.": "La promoción a Winner no está disponible temporalmente mientras se ejecuta la operación actual de compra/venta.",
+  "Winner promotion is temporarily unavailable while the daily market-data synchronization used by calibration is running.": "La promoción a Winner no está disponible temporalmente mientras se ejecuta la sincronización diaria de datos usada por la calibración.",
+  "Another Winner promotion is already in progress.": "Ya hay otra promoción a Winner en curso.",
+  "Winner promotion is temporarily unavailable.": "La promoción a Winner no está disponible temporalmente.",
+  ". You may clone, edit and promote strategies. Strategy selection and a new backtest remain locked until it finishes. The strategy used by the running backtest cannot be deleted until it finishes.": ". Puede clonar, editar y promover estrategias. La selección de Strategy y un nuevo backtest permanecen bloqueados hasta que termine. La Strategy usada por el backtest en ejecución no puede eliminarse hasta que finalice.",
 
 }

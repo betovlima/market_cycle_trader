@@ -260,12 +260,9 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
       setError(tr('Save or discard the current strategy changes before promotion.'))
       return
     }
-    if (activeJob) {
-      setError(tr('Wait for the active backtest to finish before promoting another Winner.'))
-      return
-    }
-    if (catalog.control?.live_market_refresh_in_progress) {
-      setError(tr('Winner promotion is temporarily unavailable while temporal market-series synchronization is running.'))
+    const promotionGuard = catalog.control?.winner_promotion_guard
+    if (promotionGuard && promotionGuard.available === false) {
+      setError(tr(promotionGuard.reason || 'Winner promotion is temporarily unavailable.'))
       return
     }
     const promotingResearch = strategy.id === catalog.control?.research_strategy_id
@@ -373,7 +370,9 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
   const latestSavedId = catalog.control?.latest_saved_strategy_id
   const legacyConfigurationIncomplete = Boolean(selected.legacy_configuration_incomplete)
   const hasActiveBacktest = Boolean(activeJob)
-  const temporalSeriesUpdateInProgress = Boolean(catalog.control?.live_market_refresh_in_progress)
+  const winnerPromotionGuard = catalog.control?.winner_promotion_guard || { available: true }
+  const winnerPromotionBlocked = winnerPromotionGuard.available === false
+  const winnerPromotionBlockReason = tr(winnerPromotionGuard.reason || 'Winner promotion is temporarily unavailable.')
   const isTemporalStrategy = selected.strategy_kind === 'temporal_intelligence'
   const isStatefulTemporalStrategy = isTemporalStrategy && selected.temporal_strategy_variant === 'winner_transition_stateful'
   const statefulValidation = isStatefulTemporalStrategy ? (selected.temporal_policy?.stateful_validation || {}) : {}
@@ -381,11 +380,6 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
   const statefulControlParityPassed = String(statefulValidation?.control_parity?.status || '').toLowerCase() === 'passed'
   const traderRuntimeReady = Boolean(selected.trader_compatibility?.eligible)
   const traderRuntimeBlockReason = tr(selected.trader_compatibility?.reason || 'This Strategy is not compatible with the installed Trader runtime.')
-    && !legacyConfigurationIncomplete
-    && selected.id !== winnerId
-    && !hasActiveBacktest
-    && !temporalSeriesUpdateInProgress
-    && (!isStatefulTemporalStrategy || statefulControlParityPassed)
   const orderedStrategies = [...catalog.items].sort((left, right) => {
     const rankDifference = strategyCatalogRank(left, winnerId, latestSavedId, researchId)
       - strategyCatalogRank(right, winnerId, latestSavedId, researchId)
@@ -411,7 +405,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
       {notice ? <div className="global-inline-message success-inline">{notice}</div> : null}
       {hasActiveBacktest ? (
         <div className="global-inline-message warning-inline">
-          {tr("Backtest")}{' '}{activeJob.id} {tr("is")}{' '}{statusLabel(activeJob.status)}{tr(". You may clone and edit test strategies, but strategy selection, promotion and a new backtest remain locked until it finishes. The strategy used by the running backtest cannot be deleted until it finishes.")}</div>
+          {tr("Backtest")}{' '}{activeJob.id} {tr("is")}{' '}{statusLabel(activeJob.status)}{tr(". You may clone, edit and promote strategies. Strategy selection and a new backtest remain locked until it finishes. The strategy used by the running backtest cannot be deleted until it finishes.")}</div>
       ) : null}
 
       <StrategyBoundaryGrid catalog={catalog} />
@@ -444,7 +438,7 @@ export function StrategySettingsPanel({ onSessionExpired, onTraderWinnerChanged,
             <div className="strategy-editor-actions">
               <button type="button" onClick={() => cloneStrategy(selected)} disabled={Boolean(busy)}>{tr("Clone Strategy")}</button>
               {selected.id !== researchId ? <button type="button" onClick={() => useForStrategyResearch(selected)} disabled={Boolean(busy) || hasActiveBacktest}>{tr("Mark as RESEARCH")}</button> : <button type="button" disabled>{tr("RESEARCH")}</button>}
-              {selected.id !== winnerId ? <button type="button" className="promote-action" title={temporalSeriesUpdateInProgress ? tr('Winner promotion is temporarily unavailable while temporal market-series synchronization is running.') : (!traderRuntimeReady ? traderRuntimeBlockReason : '')} onClick={() => promoteToTrader(selected)} disabled={Boolean(busy) || temporalSeriesUpdateInProgress}>{tr("Promote to WINNER")}</button> : <button type="button" className="promote-action" disabled>{tr("WINNER")}</button>}
+              {selected.id !== winnerId ? <button type="button" className="promote-action" title={winnerPromotionBlocked ? winnerPromotionBlockReason : (!traderRuntimeReady ? traderRuntimeBlockReason : '')} onClick={() => promoteToTrader(selected)} disabled={Boolean(busy) || winnerPromotionBlocked}>{tr("Promote to WINNER")}</button> : <button type="button" className="promote-action" disabled>{tr("WINNER")}</button>}
               {selected.id !== winnerId && selected.id !== researchId ? <button type="button" className="danger" onClick={() => deleteStrategy(selected)} disabled={Boolean(busy)}>{tr("Delete strategy")}</button> : null}
             </div>
           </div>

@@ -5,6 +5,7 @@ const STAGES = [
   { id: 'temporal', label: 'Temporal Intelligence', icon: '⚙' },
   { id: 'roc_policy', label: 'ROC Decision Policy', icon: '⌁' },
   { id: 'clustering', label: 'Regime Clustering', icon: '◍' },
+  { id: 'opportunity_drought', label: 'Opportunity Drought', icon: '○' },
   { id: 'fragile_incumbent', label: 'Fragile Incumbent', icon: '◌' },
   { id: 'emerging_trend', label: 'Emerging Trend', icon: '↗' },
   { id: 'risk', label: 'Risk & Intervention', icon: '◉' },
