@@ -10,6 +10,12 @@ function statusLabel(status) {
   return tr('Inconclusive fit diagnosis')
 }
 
+function reliabilityLabel(level) {
+  if (level === 'HIGH') return tr('High diagnostic confidence')
+  if (level === 'MODERATE') return tr('Moderate diagnostic confidence')
+  return tr('Low diagnostic confidence')
+}
+
 function statusExplanation(status) {
   if (status === 'POSSIBLE_UNDERFITTING') return tr('The model shows limited separation ability even on training data. This suggests possible underfitting, but weak feature or target signal remains an alternative explanation.')
   if (status === 'OVERFITTING_RISK') return tr('Training separation is materially stronger than unseen-period separation, indicating risk that the model learned patterns that do not generalize.')
@@ -20,6 +26,17 @@ function statusExplanation(status) {
 
 function metric(label, value) {
   return <div className="fit-diagnostic-metric"><span>{tr(label)}</span><strong>{value == null ? '—' : number(value, 3)}</strong></div>
+}
+
+function sampleText(evidence) {
+  if (!evidence || evidence.rows == null) return '—'
+  const positives = evidence.positive_count == null ? '—' : evidence.positive_count
+  const negatives = evidence.negative_count == null ? '—' : evidence.negative_count
+  return `${evidence.rows} ${tr('samples')} · ${positives} ${tr('positive')} · ${negatives} ${tr('negative')}`
+}
+
+function aucCell(value, evidence) {
+  return <span className="fit-diagnostic-auc-cell"><b>{value == null ? '—' : number(value, 3)}</b><small>{sampleText(evidence)}</small></span>
 }
 
 export function FitDiagnosticsCard({ analysis, foldScope = null }) {
@@ -36,10 +53,15 @@ export function FitDiagnosticsCard({ analysis, foldScope = null }) {
         <span className="panel-kicker">{tr('MODEL FIT DIAGNOSTICS')}</span>
         <h5>{tr('Training × validation × unseen-period diagnosis')}</h5>
       </div>
-      <strong className="fit-diagnostic-status">{statusLabel(diagnostic.status)}</strong>
+      <div className="fit-diagnostic-status-stack">
+        <strong className="fit-diagnostic-status">{statusLabel(diagnostic.status)}</strong>
+        <small>{reliabilityLabel(diagnostic.reliability_level)}</small>
+      </div>
     </header>
 
     <p className="fit-diagnostic-explanation">{statusExplanation(diagnostic.status)}</p>
+    {diagnostic.reliability_level === 'LOW' || diagnostic.reliability_level === 'MODERATE' ?
+      <p className="fit-diagnostic-reliability-note">{tr('The diagnosis is limited by sample size or class balance in at least one chronological partition. Low-confidence folds do not drive the aggregate conclusion.')}</p> : null}
 
     <div className="fit-diagnostic-metrics">
       {metric('Training separation ability', diagnostic.median_training_auc)}
@@ -49,16 +71,17 @@ export function FitDiagnosticsCard({ analysis, foldScope = null }) {
     </div>
 
     {folds.length ? <div className="fit-diagnostic-folds">
-      <div className="fit-diagnostic-fold-head"><span>{tr('Fold')}</span><span>{tr('Training')}</span><span>{tr('Internal validation')}</span><span>{tr('Unseen period')}</span><span>{tr('Diagnosis')}</span></div>
-      {folds.map((fold) => <div className="fit-diagnostic-fold-row" key={fold.foldId}>
+      <div className="fit-diagnostic-fold-head fit-diagnostic-fold-head-v91"><span>{tr('Fold')}</span><span>{tr('Training')}</span><span>{tr('Internal validation')}</span><span>{tr('Unseen period')}</span><span>{tr('Diagnostic confidence')}</span><span>{tr('Diagnosis')}</span></div>
+      {folds.map((fold) => <div className="fit-diagnostic-fold-row fit-diagnostic-fold-row-v91" key={fold.foldId}>
         <strong>{fold.foldId}</strong>
-        <span>{fold.training_auc == null ? '—' : number(fold.training_auc, 3)}</span>
-        <span>{fold.validation_auc == null ? '—' : number(fold.validation_auc, 3)}</span>
-        <span>{fold.oos_auc == null ? '—' : number(fold.oos_auc, 3)}</span>
+        {aucCell(fold.training_auc, fold.sample_evidence?.training)}
+        {aucCell(fold.validation_auc, fold.sample_evidence?.validation)}
+        {aucCell(fold.oos_auc, fold.sample_evidence?.oos)}
+        <small>{reliabilityLabel(fold.reliability?.level)}</small>
         <small>{statusLabel(fold.status)}</small>
       </div>)}
     </div> : null}
 
-    <footer>{tr('Diagnostic only. Model capacity and Strategy decisions are not changed. A controlled capacity test is required before changing model complexity.')}</footer>
+    <footer>{tr('Diagnostic only. Model parameters and Strategy decisions remain unchanged. First confirm that the statistical evidence is reliable before changing model complexity or training windows.')}</footer>
   </section>
 }
