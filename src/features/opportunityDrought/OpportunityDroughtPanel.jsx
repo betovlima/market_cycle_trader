@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { getIntlLocale, tr } from '../../i18n/runtime'
 import { number, percent } from '../../shared/formatters'
 import { RocCurveControl } from '../../shared/components/RocCurveControl'
+import { FitDiagnosticsCard } from '../strategyResearch/FitDiagnosticsCard'
 import './opportunityDrought.css'
 
 const FEATURE_LABELS = {
@@ -133,6 +134,8 @@ export function OpportunityDroughtPanel({ analysis }) {
       <Metric label="Jun/2026 drought probability" value={focus.oos_drought_probability == null ? '—' : percent(focus.oos_drought_probability, 1)} />
       <Metric label="Policy ready" value={readiness.policy_ready ? tr('Yes') : tr('No')} tone={readiness.policy_ready ? 'positive' : 'negative'} />
     </div>
+
+    <FitDiagnosticsCard analysis={analysis} foldScope="monthly" />
 
     <div className="opportunity-drought-section-heading"><strong>{tr('Official monthly outcomes')}</strong><span>{tr('Click a cell for the month-level opportunity diagnostics and model explanation.')}</span></div>
     <div className="opportunity-drought-calendar" role="grid" aria-label={tr('Opportunity Drought monthly outcomes')}>

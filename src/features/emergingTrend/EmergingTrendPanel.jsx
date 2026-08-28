@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { getIntlLocale, tr } from '../../i18n/runtime'
 import { number, percent } from '../../shared/formatters'
 import { RocCurveControl } from '../../shared/components/RocCurveControl'
+import { FitDiagnosticsCard } from '../strategyResearch/FitDiagnosticsCard'
 import './emergingTrend.css'
 
 const FEATURE_LABELS = {
@@ -129,6 +130,8 @@ export function EmergingTrendPanel({ analysis }) {
       <Metric label="Average missed edge 10d" value={summary.average_missed_edge_10 == null ? '—' : percent(summary.average_missed_edge_10, 2)} tone={Number(summary.average_missed_edge_10) > 0 ? 'negative' : 'positive'} />
       <Metric label="Policy ready" value={readiness.policy_ready ? tr('Yes') : tr('No')} tone={readiness.policy_ready ? 'positive' : 'negative'} />
     </div>
+
+    <FitDiagnosticsCard analysis={analysis} />
 
     <div className="emerging-trend-section-heading"><strong>{tr('Focus: May to July 2021')}</strong><span>{tr('May tests under-capture, June tests confirmation, July is the mature-trend reference.')}</span></div>
     <div className="emerging-trend-focus-row">{focus.map((row) => <FocusCard key={row.month} row={row} />)}</div>

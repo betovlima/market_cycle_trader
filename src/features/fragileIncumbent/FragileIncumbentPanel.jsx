@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { getIntlLocale, tr } from '../../i18n/runtime'
 import { number, percent } from '../../shared/formatters'
 import { RocCurveControl } from '../../shared/components/RocCurveControl'
+import { FitDiagnosticsCard } from '../strategyResearch/FitDiagnosticsCard'
 import './fragileIncumbent.css'
 
 const FEATURE_LABELS = {
@@ -143,6 +144,8 @@ export function FragileIncumbentPanel({ analysis }) {
       <Metric label="Dec/2022 return" value={december.official_return == null ? '—' : percent(december.official_return, 2)} tone="negative" />
       <Metric label="Policy ready" value={readiness.policy_ready ? tr('Yes') : tr('No')} tone={readiness.policy_ready ? 'positive' : 'negative'} />
     </div>
+
+    <FitDiagnosticsCard analysis={analysis} foldScope="monthly" />
 
     <div className="fragile-incumbent-section-heading"><strong>{tr('Official monthly outcomes')}</strong><span>{tr('Click a month for incumbent, leader and Model details.')}</span></div>
     <div className="fragile-incumbent-calendar" role="grid" aria-label={tr('Fragile Incumbent monthly outcomes')}>

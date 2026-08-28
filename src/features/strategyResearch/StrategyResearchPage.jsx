@@ -48,6 +48,12 @@ function wait(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms))
 }
 
+function isTransportFetchError(requestError) {
+  if (requestError instanceof ApiError) return false
+  const message = String(requestError?.message || '').toLowerCase()
+  return requestError instanceof TypeError || message.includes('failed to fetch') || message.includes('networkerror') || message.includes('load failed')
+}
+
 function defaultStageState() {
   return Object.fromEntries(STRATEGY_RESEARCH_STAGES.map((stage) => [stage.id, 'waiting']))
 }
@@ -118,6 +124,8 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
   const [materializing, setMaterializing] = useState(false)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
+  const [pipelineSyncWarning, setPipelineSyncWarning] = useState('')
+  const pipelineSyncFailuresRef = useRef(0)
   const stopRequestedRef = useRef(false)
   const activeTemporalRunRef = useRef(null)
   const activeStageRef = useRef(null)
@@ -528,15 +536,24 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     let disposed = false
     let timer = null
 
+    const scheduleNextSync = (delayMs) => {
+      if (disposed) return
+      if (timer) window.clearTimeout(timer)
+      timer = window.setTimeout(syncPipelineControl, delayMs)
+    }
+
     const syncPipelineControl = async () => {
+      let keepPolling = true
       try {
         const controlValue = await apiFetch(`${API}/temporal-intelligence/${encodeURIComponent(run.id)}/strategy-research/pipeline`)
         if (disposed) return
+        pipelineSyncFailuresRef.current = 0
+        setPipelineSyncWarning('')
         if (controlValue) applyPipelineControl(controlValue)
         await hydratePipelineStageResults(run, startMonth, endMonth, controlValue)
         const statusValue = String(controlValue?.status || '').toLowerCase()
         if (!ACTIVE_PIPELINE.has(statusValue)) {
-          if (timer) window.clearInterval(timer)
+          keepPolling = false
           try {
             const value = await apiFetch(`${API}/temporal-intelligence/${encodeURIComponent(run.id)}`)
             if (disposed) return
@@ -549,15 +566,29 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
           }
         }
       } catch (requestError) {
-        if (!disposed) handleError(requestError)
+        if (disposed) return
+        if (isTransportFetchError(requestError)) {
+          pipelineSyncFailuresRef.current += 1
+          if (pipelineSyncFailuresRef.current >= 2) {
+            setPipelineSyncWarning(tr('Connection to the research service was interrupted. Reconnecting automatically; the server-side pipeline may continue running.'))
+          }
+        } else {
+          keepPolling = false
+          handleError(requestError)
+        }
+      } finally {
+        if (!disposed && keepPolling) {
+          const failures = pipelineSyncFailuresRef.current
+          const retryDelay = failures > 0 ? Math.min(10_000, 2500 * (2 ** Math.min(failures - 1, 2))) : 2500
+          scheduleNextSync(retryDelay)
+        }
       }
     }
 
     syncPipelineControl()
-    timer = window.setInterval(syncPipelineControl, 2500)
     return () => {
       disposed = true
-      if (timer) window.clearInterval(timer)
+      if (timer) window.clearTimeout(timer)
     }
   }, [applyPipelineControl, endMonth, handleError, hydratePipelineStageResults, loadExistingPipelineData, persistedPipelineActive, run, run?.id, running, startMonth])
 
@@ -905,6 +936,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
 
     {!validPeriod(startMonth, endMonth) ? <div className="global-inline-message error-inline">{tr('Select a valid period.')}</div> : null}
     {blockingTemporalActive ? <div className="global-inline-message error-inline">{tr('Another Temporal Intelligence run is active for a different Strategy Research baseline.')} {blockingRun?.id || ''}</div> : null}
+    {pipelineSyncWarning ? <div className="global-inline-message warning-inline">{pipelineSyncWarning}</div> : null}
     {error ? <div className="global-inline-message error-inline">{error}</div> : null}
     {notice ? <div className="global-inline-message success-inline">{notice}</div> : null}
 
