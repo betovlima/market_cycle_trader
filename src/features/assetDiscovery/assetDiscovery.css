@@ -351,3 +351,43 @@
 :root[data-theme='light'] .asset-discovery-worker-state.active { color: #087356; border-color: #afdccc; background: #eef9f5; }
 :root[data-theme='light'] .asset-discovery-stage-progress { background: #e6edf4; }
 :root[data-theme='light'] .asset-discovery-execution-meta strong { color: #405970; }
+
+.asset-discovery-campaign-outcome {
+  margin: 0;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(58, 102, 146, .2);
+  background: rgba(8, 31, 53, .30);
+}
+.asset-discovery-campaign-outcome.found { background: rgba(20, 67, 68, .22); }
+.asset-discovery-campaign-outcome.empty { background: rgba(30, 44, 60, .26); }
+.asset-discovery-campaign-outcome-copy h3 { margin: 3px 0 5px; color: #e7f2fb; font-size: 1rem; }
+.asset-discovery-campaign-outcome-copy p { max-width: 980px; margin: 0; color: #87a5bd; font-size: .68rem; line-height: 1.45; }
+.asset-discovery-campaign-best { display: flex; gap: 8px; align-items: baseline; margin-top: 9px; font-size: .66rem; }
+.asset-discovery-campaign-best span { color: #789ab8; }
+.asset-discovery-campaign-best strong { color: #7ce0b8; }
+.asset-discovery-campaign-funnel { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-top: 14px; border: 1px solid rgba(58, 102, 146, .18); border-radius: 10px; overflow: hidden; }
+.asset-discovery-campaign-funnel > div { min-width: 0; padding: 10px 12px; border-right: 1px solid rgba(58, 102, 146, .14); }
+.asset-discovery-campaign-funnel > div:last-child { border-right: 0; }
+.asset-discovery-campaign-funnel span { display: block; color: #7297b6; font-size: .56rem; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+.asset-discovery-campaign-funnel strong { display: block; margin-top: 4px; color: #e3f0fb; font-size: .88rem; }
+.asset-discovery-campaign-funnel > div.positive strong { color: #7ce0b8; }
+.asset-discovery-campaign-outcome-note { display: block; margin-top: 8px; color: #6f91ae; font-size: .59rem; }
+.asset-discovery-catalog-title { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.asset-discovery-current-run-badge { display: inline-flex !important; align-items: center; min-height: 20px; padding: 2px 7px; border: 1px solid rgba(53, 211, 155, .24); border-radius: 999px; color: #7ce0b8 !important; background: rgba(53, 211, 155, .08); font-size: .54rem !important; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; }
+@media (max-width: 850px) { .asset-discovery-campaign-funnel { grid-template-columns: repeat(2, minmax(0, 1fr)); } .asset-discovery-campaign-funnel > div { border-bottom: 1px solid rgba(58, 102, 146, .14); } }
+@media (max-width: 620px) { .asset-discovery-campaign-funnel { grid-template-columns: 1fr; } .asset-discovery-campaign-funnel > div { border-right: 0; } }
+:root[data-theme='light'] .asset-discovery-campaign-outcome { background: #ffffff; border-color: #dfe7ef; }
+:root[data-theme='light'] .asset-discovery-campaign-outcome.found { background: #f1fbf7; }
+:root[data-theme='light'] .asset-discovery-campaign-outcome.empty { background: #f8fafc; }
+:root[data-theme='light'] .asset-discovery-campaign-outcome-copy h3 { color: #18324a; }
+:root[data-theme='light'] .asset-discovery-campaign-outcome-copy p,
+:root[data-theme='light'] .asset-discovery-campaign-outcome-note,
+:root[data-theme='light'] .asset-discovery-campaign-best span { color: #536b82; }
+:root[data-theme='light'] .asset-discovery-campaign-best strong { color: #087356; }
+:root[data-theme='light'] .asset-discovery-campaign-funnel { border-color: #d8e2ec; }
+:root[data-theme='light'] .asset-discovery-campaign-funnel > div { border-color: #e1e8ef; }
+:root[data-theme='light'] .asset-discovery-campaign-funnel span { color: #536b82; }
+:root[data-theme='light'] .asset-discovery-campaign-funnel strong { color: #18324a; }
+:root[data-theme='light'] .asset-discovery-campaign-funnel > div.positive strong,
+:root[data-theme='light'] .asset-discovery-current-run-badge { color: #087356 !important; }
+:root[data-theme='light'] .asset-discovery-current-run-badge { border-color: #afdccc; background: #eef9f5; }

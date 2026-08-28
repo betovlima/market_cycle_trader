@@ -123,6 +123,46 @@ function ExecutionStatusBar({ campaign }) {
   </div>
 }
 
+function CampaignOutcome({ campaign, results, catalogCount }) {
+  const status = String(campaign?.status || '').toLowerCase()
+  if (status !== 'completed') return null
+
+  const replay = campaign?.marginal_replay || {}
+  const retained = Number(replay.persistent_candidate_count ?? results.length ?? 0)
+  const scanned = Number(campaign?.attempted_count || 0)
+  const evaluated = Number(campaign?.evaluated_count || 0)
+  const replayed = Number(replay.completed_count || 0)
+  const best = [...(results || [])]
+    .filter((item) => Number.isFinite(Number(item?.marginal_replay?.ending_capital_delta_rate)))
+    .sort((left, right) => Number(right.marginal_replay.ending_capital_delta_rate) - Number(left.marginal_replay.ending_capital_delta_rate))[0]
+  const bestDelta = best ? Number(best.marginal_replay?.ending_capital_delta_rate) : null
+  const found = retained > 0
+
+  return <section className={`asset-discovery-campaign-outcome ${found ? 'found' : 'empty'}`}>
+    <div className="asset-discovery-campaign-outcome-copy">
+      <span className="eyebrow">{tr('CAMPAIGN OUTCOME')}</span>
+      <h3>{found
+        ? tr('{count} assets increased marginal capital', { count: retained })
+        : tr('No asset increased marginal capital in this campaign')}</h3>
+      <p>{found
+        ? tr('These assets produced positive final-capital contribution versus the Strategy Research baseline and remain eligible for Full Strategy validation.')
+        : tr('The campaign completed successfully, but none of the economically tested assets produced positive final-capital contribution versus the Strategy Research baseline.')}</p>
+      {best && Number.isFinite(bestDelta) ? <div className="asset-discovery-campaign-best">
+        <span>{tr('Best result this campaign')}</span>
+        <strong>{best.symbol} · {percent(bestDelta, 2)} {tr('marginal capital')}</strong>
+      </div> : null}
+    </div>
+    <div className="asset-discovery-campaign-funnel" aria-label={tr('Campaign funnel')}>
+      <div><span>{tr('Scanned')}</span><strong>{scanned}</strong></div>
+      <div><span>{tr('Evaluated')}</span><strong>{evaluated}</strong></div>
+      <div><span>{tr('Economic replays')}</span><strong>{replayed}</strong></div>
+      <div className={found ? 'positive' : ''}><span>{tr('Adherent this campaign')}</span><strong>{retained}</strong></div>
+      <div><span>{tr('Historical catalog')}</span><strong>{catalogCount}</strong></div>
+    </div>
+    <small className="asset-discovery-campaign-outcome-note">{tr('The historical catalog below may contain assets retained by previous campaigns; it is not the result count of the current campaign.')}</small>
+  </section>
+}
+
 function Pipeline({ campaign }) {
   const current = phaseIndex(campaign?.phase, campaign?.status)
   return <div className="asset-discovery-pipeline" aria-label={tr('Research pipeline')}>
@@ -314,7 +354,9 @@ function MarginalReplayPanel({
           </>}
         </article>
       })}
-    </div> : <div className="asset-discovery-empty">{tr('Marginal results will appear after the ranked shortlist is ready.')}</div>}
+    </div> : <div className="asset-discovery-empty">{String(campaign?.status || '').toLowerCase() === 'completed'
+      ? tr('No asset showed positive marginal contribution in this campaign.')
+      : tr('Marginal results will appear after the ranked shortlist is ready.')}</div>}
 
     {(validationActive || validationMatches) ? <div className={`asset-discovery-full-validation ${validationPassed ? 'pass' : ''} ${validationFailed ? 'fail' : ''}`}>
       <div className="asset-discovery-full-validation-head">
@@ -509,12 +551,14 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
           <Pipeline campaign={campaign} />
         </section>
 
+        <CampaignOutcome campaign={campaign} results={orderedResults} catalogCount={catalogAssets.length} />
+
         <section className="asset-discovery-metrics">
           <div><span>{tr('Scanned')}</span><strong>{campaign.attempted_count || 0}</strong></div>
           <div><span>{tr('Evaluated')}</span><strong>{campaign.evaluated_count || 0}</strong></div>
           <div><span>{tr('Rejected')}</span><strong>{campaign.rejected_count || 0}</strong></div>
           <div><span>{tr('Technical failures')}</span><strong>{campaign.technical_failure_count || 0}</strong></div>
-          <div><span>{tr('Stored results')}</span><strong>{persistentCandidateCount}</strong></div>
+          <div><span>{tr('Adherent this campaign')}</span><strong>{persistentCandidateCount}</strong></div>
           <div><span>{tr('Median NDCG@5')}</span><strong>{model.ndcg_at_5 == null ? '—' : number(model.ndcg_at_5, 3)}</strong></div>
         </section>
 
@@ -573,7 +617,9 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
                 <button type="button" className="secondary-action" onClick={() => setSelected(item)}>{tr('View analysis')}</button>
               </article>
             })}
-          </div> : <div className="asset-discovery-empty">{discovery.active ? tr('Results will appear after ranked assets are available.') : tr('No ranked shortlist is available yet.')}</div>}
+          </div> : <div className="asset-discovery-empty">{String(campaign?.status || '').toLowerCase() === 'completed'
+            ? tr('No asset from this campaign remained eligible after Marginal Capital Replay.')
+            : (discovery.active ? tr('Results will appear after ranked assets are available.') : tr('No ranked shortlist is available yet.'))}</div>}
         </section>
 
         <section className="asset-discovery-storage-summary">
@@ -587,9 +633,9 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
       <section className="asset-discovery-catalog">
         <div className="asset-discovery-section-heading asset-discovery-result-heading">
           <div>
-            <span className="eyebrow">{tr('DISCOVERY CATALOG')}</span>
-            <h3>{tr('Discovered assets')}</h3>
-            <small>{tr('Only assets with positive marginal contribution are persisted in this catalog.')}</small>
+            <span className="eyebrow">{tr('HISTORICAL DISCOVERY CATALOG')}</span>
+            <h3>{tr('Historical adherent assets')}</h3>
+            <small>{tr('This catalog accumulates positive-marginal assets from previous and current campaigns. The current campaign outcome is shown above.')}</small>
           </div>
           <div className="asset-discovery-result-actions">
             <span>{tr('{count} catalog assets', { count: catalogAssets.length })}</span>
@@ -631,7 +677,10 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
             }
             return <article className={`asset-discovery-catalog-card ${checked ? 'selected' : ''}`} key={item.symbol}>
               <div className="asset-discovery-result-head">
-                <strong><AssetSymbolTooltip symbol={item.symbol} companyName={item.company_name}>{item.symbol}</AssetSymbolTooltip></strong>
+                <div className="asset-discovery-catalog-title">
+                  <strong><AssetSymbolTooltip symbol={item.symbol} companyName={item.company_name}>{item.symbol}</AssetSymbolTooltip></strong>
+                  {String(item.latest_run_id || '') === String(campaign?.run_id || '') ? <span className="asset-discovery-current-run-badge">{tr('This campaign')}</span> : null}
+                </div>
                 <label className="asset-discovery-select-asset">
                   <input type="checkbox" checked={checked} onChange={() => toggleCatalogSymbol(item.symbol)} />
                   <span>{tr('Select')}</span>
