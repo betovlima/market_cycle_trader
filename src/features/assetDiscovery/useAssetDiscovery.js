@@ -97,8 +97,9 @@ export function useAssetDiscovery({ onSessionExpired }) {
     setError('')
     setNotice('')
     try {
-      await apiFetch(`${API}/asset-discovery/stop`, { method: 'POST' })
-      setNotice(tr('Stop requested. The current batch will finish safely.'))
+      const response = await apiFetch(`${API}/asset-discovery/stop`, { method: 'POST' })
+      if (mountedRef.current && response) setStatus(response)
+      setNotice(tr('Stop requested. Active processing is being cancelled and no new batch will start.'))
       await load({ silent: true })
     } catch (requestError) {
       handleError(requestError)

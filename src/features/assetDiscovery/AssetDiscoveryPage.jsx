@@ -47,6 +47,11 @@ function marginalSelectable(replay) {
   return Number.isFinite(delta) && delta > 0
 }
 
+function visibleDiscoveryResult(item) {
+  if (!item || item.history_window_complete === false) return false
+  return marginalSelectable(item.marginal_replay)
+}
+
 function normalizedSelection(values) {
   return [...new Set((values || []).map((value) => String(value || '').trim().toUpperCase()).filter(Boolean))].sort()
 }
@@ -123,7 +128,7 @@ function MarginalReplayPanel({
 }) {
   const replay = campaign?.marginal_replay || {}
   const validation = campaign?.full_strategy_validation || {}
-  const rows = [...(replay.results || [])].sort((left, right) => {
+  const rows = [...(replay.results || [])].filter(marginalSelectable).sort((left, right) => {
     const leftRank = Number(left?.marginal_rank || 999)
     const rightRank = Number(right?.marginal_rank || 999)
     return leftRank - rightRank
@@ -162,7 +167,7 @@ function MarginalReplayPanel({
       <div>
         <span className="eyebrow">{tr('MARGINAL CAPITAL REPLAY')}</span>
         <h3>{tr('Economic contribution by asset')}</h3>
-        <small>{tr('Every shortlisted asset is replayed automatically against the same baseline. Only positive marginal candidates can be persisted; Strategy creation requires Full Strategy validation.')}</small>
+        <small>{tr('Every shortlisted asset is replayed automatically against the same baseline. Low-adherence assets are discarded and are not shown or persisted; Strategy creation requires Full Strategy validation.')}</small>
       </div>
       <div className="asset-discovery-result-actions">
         <span>{completed} / {total || '—'} {tr('replayed')}</span>
@@ -316,7 +321,7 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
   const campaign = discovery.campaign
   const catalogAssets = discovery.catalog?.assets || []
   const options = discovery.status?.research_size_options || [8, 16, 24, 32, 40, 48, 56, 64]
-  const results = campaign?.results || []
+  const results = useMemo(() => (campaign?.results || []).filter(visibleDiscoveryResult), [campaign?.results])
   const orderedResults = useMemo(() => [...results].sort((left, right) => {
     const leftMarginalRank = marginalRankValue(left)
     const rightMarginalRank = marginalRankValue(right)
@@ -416,7 +421,7 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
         <div className="asset-discovery-fixed-config"><span>{tr('Batch')}</span><strong>{discovery.status?.batch_size || 8}</strong><small>{tr('assets')}</small></div>
         <div className="asset-discovery-actions">
           {!discovery.active ? <button type="button" className="primary-action" disabled={!canStart || discovery.busy === 'start'} onClick={() => discovery.start(researchSize)}>{discovery.busy === 'start' ? tr('Starting…') : tr('Start research')}</button> : null}
-          {discovery.active ? <button type="button" className="secondary-action danger-soft" disabled={!canStop || discovery.busy === 'stop'} onClick={discovery.stop}>{discovery.busy === 'stop' ? tr('Stopping…') : tr('Stop')}</button> : null}
+          {discovery.active ? <button type="button" className="secondary-action danger-soft" disabled={!canStop || discovery.busy === 'stop' || String(campaign?.status || '').toLowerCase() === 'stopping'} onClick={discovery.stop}>{discovery.busy === 'stop' || String(campaign?.status || '').toLowerCase() === 'stopping' ? tr('Stopping…') : tr('Stop')}</button> : null}
           <button type="button" className="secondary-action" disabled={!canExport || !campaign || discovery.busy === 'export'} onClick={discovery.exportAnalysis}>{tr('Export results')}</button>
         </div>
       </section>
