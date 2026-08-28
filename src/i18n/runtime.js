@@ -43,11 +43,27 @@ function interpolate(message, values) {
   ))
 }
 
+function publicModelText(message, language = currentLanguage) {
+  const normalizedLanguage = normalizeLanguage(language)
+  const labels = normalizedLanguage === 'pt'
+    ? { model: 'Modelo', utility: 'Modelo de utilidade', ranking: 'Modelo de ranking', temporal: 'Modelo Temporal' }
+    : normalizedLanguage === 'es'
+      ? { model: 'Modelo', utility: 'Modelo de utilidad', ranking: 'Modelo de ranking', temporal: 'Modelo Temporal' }
+      : { model: 'Model', utility: 'Utility model', ranking: 'Ranking model', temporal: 'Temporal model' }
+
+  return String(message || '')
+    .replace(/lightgbm\s+lambdamart/gi, labels.ranking)
+    .replace(/lightgbm[_\s-]*utility/gi, labels.utility)
+    .replace(/temporal\s+lightgbm/gi, labels.temporal)
+    .replace(/lightgbm\s+models?/gi, labels.model)
+    .replace(/lightgbm/gi, labels.model)
+}
+
 export function tr(message, values) {
   if (message === null || message === undefined) return ''
   const source = String(message)
   const translated = TRANSLATIONS[currentLanguage]?.[source] || source
-  return interpolate(translated, values)
+  return publicModelText(interpolate(translated, values))
 }
 
 export function translatedStatus(value) {

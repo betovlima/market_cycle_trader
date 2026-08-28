@@ -28,7 +28,7 @@ export const METRIC_HINTS = {
   absolute_utility_gate_decisions: 'Out-of-sample sessions evaluated by the Absolute Utility Cash Gate using the Champion Top-1 utility directly, without fitting a second opportunity classifier.',
   absolute_utility_gate_accepted: 'Sessions in which the Top-1 absolute Utility met the active hysteresis floor and the protected base rotation policy was allowed to remain in the market.',
   absolute_utility_gate_rejected: 'Sessions in which the Top-1 absolute Utility fell below the active hysteresis floor and the portfolio moved or stayed in CASH.',
-  absolute_utility_entry_threshold: 'Absolute Top-1 Utility required to move from CASH back into the market. Model Tuning can search this threshold while the LightGBM Champion remains frozen.',
+  absolute_utility_entry_threshold: 'Absolute Top-1 Utility required to move from CASH back into the market. Model Tuning can search this threshold while the Champion model remains frozen.',
   absolute_utility_exit_threshold: 'Absolute Top-1 Utility floor used while already invested. It is lower than or equal to the entry threshold to reduce unnecessary CASH churn.',
   opportunity_gate_decisions: 'Out-of-sample sessions evaluated by the Opportunity Cash Gate. The gate does not choose the asset; it decides whether the protected base rotation policy may keep capital exposed or must hold CASH.',
   opportunity_gate_accepted: 'Sessions in which the calibrated Opportunity Cash Gate allowed the protected base rotation policy to remain active.',

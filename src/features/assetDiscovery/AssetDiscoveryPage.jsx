@@ -177,9 +177,36 @@ function Pipeline({ campaign }) {
   </div>
 }
 
+
+function fitAssessmentCopy(status) {
+  const value = String(status || 'inconclusive').toLowerCase()
+  if (value === 'possible_underfitting') return {
+    tone: 'warning',
+    label: tr('Possible underfitting'),
+    description: tr('The ranker shows little advantage over random even on training data. Capacity or signal may be insufficient; no parameter is changed automatically.'),
+  }
+  if (value === 'overfitting_risk') return {
+    tone: 'danger',
+    label: tr('Overfitting risk'),
+    description: tr('Training skill is materially stronger than chronological OOS skill. Increasing model capacity is not recommended from this evidence.'),
+  }
+  if (value === 'healthy_fit') return {
+    tone: 'healthy',
+    label: tr('Healthy fit'),
+    description: tr('The ranker retains useful skill out of sample with a controlled train-to-OOS gap.'),
+  }
+  return {
+    tone: 'neutral',
+    label: tr('Inconclusive fit'),
+    description: tr('Current evidence is not sufficient to classify the ranker as underfit or overfit.'),
+  }
+}
+
 function ValidationPanel({ model }) {
   const folds = model?.validation_folds || []
   const summary = model?.validation_summary || {}
+  const fit = summary?.fit_assessment || {}
+  const fitCopy = fitAssessmentCopy(fit.status)
   if (!folds.length) return null
 
   return <section className="asset-discovery-validation">
@@ -197,6 +224,20 @@ function ValidationPanel({ model }) {
       <div><span>{tr('Worst Ranker fold')}</span><strong>{summary.ranker_worst_ndcg_at_5 == null ? '—' : number(summary.ranker_worst_ndcg_at_5, 3)}</strong></div>
       <div><span>{tr('Wins vs momentum')}</span><strong>{summary.win_rate_vs_momentum == null ? '—' : percent(summary.win_rate_vs_momentum, 0)}</strong></div>
     </div>
+    <div className={`asset-discovery-fit-diagnostic ${fitCopy.tone}`}>
+      <div className="asset-discovery-fit-copy">
+        <span className="eyebrow">{tr('MODEL FIT DIAGNOSTICS')}</span>
+        <strong>{fitCopy.label}</strong>
+        <p>{fitCopy.description}</p>
+        {fit.capacity_probe_recommended ? <small>{tr('A controlled capacity probe is recommended before changing model parameters.')}</small> : null}
+      </div>
+      <div className="asset-discovery-fit-metrics">
+        <div><span>{tr('Train NDCG@5')}</span><strong>{fit.train_median_ndcg_at_5 == null ? '—' : number(fit.train_median_ndcg_at_5, 3)}</strong></div>
+        <div><span>{tr('OOS NDCG@5')}</span><strong>{fit.oos_median_ndcg_at_5 == null ? '—' : number(fit.oos_median_ndcg_at_5, 3)}</strong></div>
+        <div><span>{tr('Train → OOS gap')}</span><strong>{fit.median_generalization_gap == null ? '—' : number(fit.median_generalization_gap, 3)}</strong></div>
+        <div><span>{tr('OOS advantage vs random')}</span><strong>{fit.oos_excess_vs_random == null ? '—' : number(fit.oos_excess_vs_random, 3)}</strong></div>
+      </div>
+    </div>
     <div className="asset-discovery-fold-grid">
       {folds.map((fold) => <article className={`asset-discovery-fold ${fold.beats_momentum ? 'winner' : ''}`} key={fold.fold}>
         <div className="asset-discovery-fold-head">
@@ -204,9 +245,10 @@ function ValidationPanel({ model }) {
           <span>{fold.validation_start} → {fold.validation_end}</span>
         </div>
         <div className="asset-discovery-fold-values">
-          <div><span>{tr('Ranker')}</span><strong>{fold.ranker_ndcg_at_5 == null ? '—' : number(fold.ranker_ndcg_at_5, 3)}</strong></div>
+          <div><span>{tr('Train')}</span><strong>{fold.train_ranker_ndcg_at_5 == null ? '—' : number(fold.train_ranker_ndcg_at_5, 3)}</strong></div>
+          <div><span>{tr('OOS')}</span><strong>{fold.ranker_ndcg_at_5 == null ? '—' : number(fold.ranker_ndcg_at_5, 3)}</strong></div>
+          <div><span>{tr('Gap')}</span><strong>{fold.generalization_gap == null ? '—' : number(fold.generalization_gap, 3)}</strong></div>
           <div><span>{tr('Momentum')}</span><strong>{fold.momentum_ndcg_at_5 == null ? '—' : number(fold.momentum_ndcg_at_5, 3)}</strong></div>
-          <div><span>{tr('Random')}</span><strong>{fold.random_ndcg_at_5 == null ? '—' : number(fold.random_ndcg_at_5, 3)}</strong></div>
         </div>
       </article>)}
     </div>
@@ -520,7 +562,7 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
             {options.map((value) => <option key={value} value={value}>{value}</option>)}
           </select>
         </label>
-        <div className="asset-discovery-fixed-config"><span>{tr('Model')}</span><strong>Learning-to-Rank</strong><small>LightGBM LambdaMART</small></div>
+        <div className="asset-discovery-fixed-config"><span>{tr('Model')}</span><strong>Learning-to-Rank</strong><small>Ranking model</small></div>
         <div className="asset-discovery-fixed-config"><span>{tr('Batch')}</span><strong>{discovery.status?.batch_size || 8}</strong><small>{tr('assets')}</small></div>
         <div className="asset-discovery-actions">
           {!discovery.active ? <button type="button" className="primary-action" disabled={!canStart || discovery.busy === 'start'} onClick={() => discovery.start(researchSize)}>{discovery.busy === 'start' ? tr('Starting…') : tr('Start research')}</button> : null}

@@ -261,7 +261,7 @@ export function TemporalIntelligencePanel({ capabilities = {}, onSessionExpired,
         <div className="temporal-run-meta temporal-source-context">
           <span>{tr('Strategy anchor')}</span><strong title={winnerAnchorName}>{winnerAnchorName}</strong>
           {tuningStrategy ? <><i>·</i><span>{tr('Selected for tuning')}</span><strong title={tuningStrategy.name || ''}>{tuningStrategy.name || '—'}</strong></> : null}
-          <i>·</i><span>{tr('Model')}</span><strong>{run?.model_label || currentResearchStrategy?.research_model?.label || currentResearchStrategy?.winner_model?.label || 'LightGBM'}</strong>
+          <i>·</i><span>{tr('Model')}</span><strong>{tr(run?.model_label || currentResearchStrategy?.research_model?.label || currentResearchStrategy?.winner_model?.label || 'Model')}</strong>
           {certifiedBacktestCutoff ? <><i>·</i><span>{tr('Certified through')}</span><strong>{certifiedBacktestCutoff}</strong></> : null}
           {liveMarketCutoff ? <><i>·</i><span>{tr('Live market data')}</span><strong>{liveMarketCutoff}</strong></> : null}
           {researchSnapshotCutoff ? <><i>·</i><span>{tr('Research snapshot')}</span><strong>{researchSnapshotCutoff}</strong></> : null}

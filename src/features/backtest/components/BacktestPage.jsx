@@ -390,7 +390,7 @@ export function BacktestPage({ workspace, capabilities = {}, onSessionExpired })
                   <tr key={item.id} className={detail?.id === item.id ? 'selected-row' : ''}>
                     <td>{shortDateTime(item.created_at)}</td>
                     <td className="backtest-name-cell" title={item.strategy_profile_name || tr('Unknown test')}>{item.strategy_profile_name || tr('Unknown test')}</td>
-                    {canViewResearchModels ? <td>{item.research_model_label || tr('Baseline')}</td> : null}
+                    {canViewResearchModels ? <td>{item.research_model_label ? tr(item.research_model_label) : tr('Baseline')}</td> : null}
                     <td><StatusBadge status={item.status} /></td>
                     <td className={item.metrics?.simulation_return == null ? '' : Number(item.metrics.simulation_return) >= 0 ? 'positive' : 'negative'}>{percent(item.metrics?.simulation_return)}</td>
                     <td>{item.metrics?.sharpe == null ? '—' : Number(item.metrics.sharpe).toFixed(3)}</td>

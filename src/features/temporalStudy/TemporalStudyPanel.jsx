@@ -126,7 +126,7 @@ export function TemporalStudyPanel({ run = null, processing = null, canRun = fal
   const capital = multi?.shadow_capital || {}
   const technique = effectiveRun?.result?.experiment === 'temporal_decision_intelligence_v8_winner_anchored_timing'
     ? tr('Winner-Anchored Temporal Timing')
-    : (effectiveRun?.result?.model_label || effectiveRun?.experiment || tr('Temporal Intelligence'))
+    : tr(effectiveRun?.result?.model_label || effectiveRun?.experiment || 'Temporal Intelligence')
   const horizons = (effectiveRun?.horizons || effectiveRun?.result?.horizons || []).map((item) => `${item}d`).join(' · ')
   const displayedSettings = study?.policy_candidate?.settings || capital
   const timingThresholds = [
@@ -250,7 +250,7 @@ export function TemporalStudyPanel({ run = null, processing = null, canRun = fal
 
     <div className="temporal-study-parameters">
       <Parameter label={tr('Technique')} value={technique} />
-      <Parameter label={tr('Model')} value={effectiveRun?.model_label || effectiveRun?.result?.model_label || 'LightGBM'} />
+      <Parameter label={tr('Model')} value={tr(effectiveRun?.model_label || effectiveRun?.result?.model_label || 'Model')} />
       <Parameter label={tr('Horizons')} value={horizons} />
       <Parameter label={tr('Timing thresholds')} value={timingThresholds} />
       <Parameter label={tr('One-side cost')} value={pctValue(capital?.one_side_cost_rate)} />

@@ -88,7 +88,7 @@ function MonthDialog({ row, onClose }) {
         <article><h4>{tr('Opportunity conditions')}</h4><div className="opportunity-drought-dialog-feature-grid">
           {Object.entries(features).map(([key, value]) => <Metric key={key} label={FEATURE_LABELS[key] || key} value={key.includes('zscore') ? number(value, 2) : percent(value, 1)} />)}
         </div></article>
-        <article><h4>{tr('LightGBM drivers')}</h4>{drivers.length ? <div className="opportunity-drought-driver-list">{drivers.map((driver) => <div key={driver.feature}><span>{featureLabel(driver.feature)}</span><strong className={Number(driver.contribution) >= 0 ? 'negative' : 'positive'}>{number(driver.contribution, 3)}</strong></div>)}</div> : <p className="opportunity-drought-muted">{tr('No OOS LightGBM explanation is available for this month.')}</p>}</article>
+        <article><h4>{tr('Model drivers')}</h4>{drivers.length ? <div className="opportunity-drought-driver-list">{drivers.map((driver) => <div key={driver.feature}><span>{featureLabel(driver.feature)}</span><strong className={Number(driver.contribution) >= 0 ? 'negative' : 'positive'}>{number(driver.contribution, 3)}</strong></div>)}</div> : <p className="opportunity-drought-muted">{tr('No OOS model explanation is available for this month.')}</p>}</article>
       </div>
     </section>
   </div>, document.body)
@@ -118,7 +118,7 @@ export function OpportunityDroughtPanel({ analysis }) {
 
   return <section className="opportunity-drought-panel">
     <div className="opportunity-drought-heading">
-      <div><span className="panel-kicker">{tr('FAILURE FAMILY 01')}</span><h4>{tr('Opportunity Drought')}</h4><p>{tr('LightGBM tests whether weak universe-level opportunity conditions consistently distinguish negative Strategy months. This study is diagnostic only and does not change the Strategy.')}</p></div>
+      <div><span className="panel-kicker">{tr('FAILURE FAMILY 01')}</span><h4>{tr('Opportunity Drought')}</h4><p>{tr('Model tests whether weak universe-level opportunity conditions consistently distinguish negative Strategy months. This study is diagnostic only and does not change the Strategy.')}</p></div>
       <div className="opportunity-drought-heading-actions">
         <RocCurveControl curves={rocCurves} title="Opportunity Drought ROC" />
         <span className={`opportunity-drought-readiness ${readiness.status || 'insufficient'}`}>{readinessLabel(readiness.status)}</span>
@@ -134,7 +134,7 @@ export function OpportunityDroughtPanel({ analysis }) {
       <Metric label="Policy ready" value={readiness.policy_ready ? tr('Yes') : tr('No')} tone={readiness.policy_ready ? 'positive' : 'negative'} />
     </div>
 
-    <div className="opportunity-drought-section-heading"><strong>{tr('Official monthly outcomes')}</strong><span>{tr('Click a cell for the month-level opportunity diagnostics and LightGBM explanation.')}</span></div>
+    <div className="opportunity-drought-section-heading"><strong>{tr('Official monthly outcomes')}</strong><span>{tr('Click a cell for the month-level opportunity diagnostics and model explanation.')}</span></div>
     <div className="opportunity-drought-calendar" role="grid" aria-label={tr('Opportunity Drought monthly outcomes')}>
       <div className="opportunity-drought-month-head"><span />{monthNames().map((month) => <strong key={month}>{month}</strong>)}</div>
       {years.map((year) => <div className="opportunity-drought-row" key={year}><strong>{year}</strong>{Array.from({ length: 12 }, (_, index) => {
@@ -160,7 +160,7 @@ export function OpportunityDroughtPanel({ analysis }) {
     </article>)}</div>
 
     <div className="opportunity-drought-lower-grid">
-      <article className="opportunity-drought-card"><h4>{tr('LightGBM opportunity drivers')}</h4><div className="opportunity-drought-driver-list">{(analysis.feature_importance || []).slice(0, 6).map((row) => <div key={row.feature}><span>{featureLabel(row.feature)}</span><strong>{number(row.mean_abs_contribution, 3)}</strong></div>)}</div></article>
+      <article className="opportunity-drought-card"><h4>{tr('Opportunity drivers')}</h4><div className="opportunity-drought-driver-list">{(analysis.feature_importance || []).slice(0, 6).map((row) => <div key={row.feature}><span>{featureLabel(row.feature)}</span><strong>{number(row.mean_abs_contribution, 3)}</strong></div>)}</div></article>
       <article className="opportunity-drought-card"><h4>{tr('CASH intervention evidence')}</h4><div className="opportunity-drought-dialog-feature-grid"><Metric label="Flagged OOS sessions" value={String(shadow.flagged_sessions ?? '—')} /><Metric label="Flagged share" value={percent(shadow.flagged_share, 1)} /><Metric label="Flagged forward 5d" value={percent(flagged.average_forward_return_5, 2)} /><Metric label="Unflagged forward 5d" value={percent(unflagged.average_forward_return_5, 2)} /></div><p className="opportunity-drought-muted">{tr('No capital is changed in this version. A CASH replay is allowed only after the Opportunity Drought signal is stable OOS.')}</p></article>
     </div>
     <MonthDialog row={selectedMonth} onClose={() => setSelectedMonth(null)} />

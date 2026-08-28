@@ -271,12 +271,12 @@ export function ModelResearchSettingsPanel({
         <label>
           <span>{tr('Algorithm')}</span>
           <select value={selectedModelId} onChange={(event) => selectModel(event.target.value)} disabled={readOnly || Boolean(strategy?.locked)}>
-            {(payload.models || []).map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}
+            {(payload.models || []).map((model) => <option key={model.id} value={model.id}>{tr(model.label)}</option>)}
           </select>
         </label>
         <div className="model-research-bound-state">
           <span>{tr(readOnly ? 'Saved with Strategy' : 'Saved for Backtest')}</span>
-          <strong>{savedModel?.label || tr('Not saved yet')}</strong>
+          <strong>{savedModel?.label ? tr(savedModel.label) : tr('Not saved yet')}</strong>
         </div>
       </div>
 

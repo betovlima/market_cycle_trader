@@ -851,7 +851,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
 
   const strategyName = strategy?.name || run?.strategy_profile_name || tr('Not selected')
   const strategyType = strategyTypeLabel(strategy, run)
-  const model = strategy?.research_model?.label || strategy?.winner_model?.label || run?.model_label || '—'
+  const model = tr(strategy?.research_model?.label || strategy?.winner_model?.label || run?.model_label || '—')
   const runButtonLabel = running
     ? 'Research Pipeline Running'
     : temporalActive || blockingTemporalActive

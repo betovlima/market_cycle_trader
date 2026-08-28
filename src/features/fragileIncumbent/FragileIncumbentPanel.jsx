@@ -98,7 +98,7 @@ function MonthDialog({ row, onClose }) {
         <article><h4>{tr('Incumbent and leader conditions')}</h4><div className="fragile-incumbent-dialog-feature-grid">
           {Object.entries(features).map(([key, value]) => <Metric key={key} label={FEATURE_LABELS[key] || key} value={featureValue(key, value)} />)}
         </div></article>
-        <article><h4>{tr('LightGBM drivers')}</h4>{drivers.length ? <div className="fragile-incumbent-driver-list">{drivers.map((driver) => <div key={driver.feature}><span>{featureLabel(driver.feature)}</span><strong className={Number(driver.contribution) >= 0 ? 'negative' : 'positive'}>{number(driver.contribution, 3)}</strong></div>)}</div> : <p className="fragile-incumbent-muted">{tr('No OOS LightGBM explanation is available for this month.')}</p>}</article>
+        <article><h4>{tr('Model drivers')}</h4>{drivers.length ? <div className="fragile-incumbent-driver-list">{drivers.map((driver) => <div key={driver.feature}><span>{featureLabel(driver.feature)}</span><strong className={Number(driver.contribution) >= 0 ? 'negative' : 'positive'}>{number(driver.contribution, 3)}</strong></div>)}</div> : <p className="fragile-incumbent-muted">{tr('No OOS model explanation is available for this month.')}</p>}</article>
       </div>
     </section>
   </div>, document.body)
@@ -144,7 +144,7 @@ export function FragileIncumbentPanel({ analysis }) {
       <Metric label="Policy ready" value={readiness.policy_ready ? tr('Yes') : tr('No')} tone={readiness.policy_ready ? 'positive' : 'negative'} />
     </div>
 
-    <div className="fragile-incumbent-section-heading"><strong>{tr('Official monthly outcomes')}</strong><span>{tr('Click a month for incumbent, leader and LightGBM details.')}</span></div>
+    <div className="fragile-incumbent-section-heading"><strong>{tr('Official monthly outcomes')}</strong><span>{tr('Click a month for incumbent, leader and Model details.')}</span></div>
     <div className="fragile-incumbent-calendar" role="grid" aria-label={tr('Fragile Incumbent monthly outcomes')}>
       <div className="fragile-incumbent-month-head"><span />{monthNames().map((month) => <strong key={month}>{month}</strong>)}</div>
       {years.map((year) => <div className="fragile-incumbent-row" key={year}><strong>{year}</strong>{Array.from({ length: 12 }, (_, index) => {
@@ -170,7 +170,7 @@ export function FragileIncumbentPanel({ analysis }) {
     </article>)}</div>
 
     <div className="fragile-incumbent-lower-grid">
-      <article className="fragile-incumbent-card"><h4>{tr('LightGBM fragility drivers')}</h4><div className="fragile-incumbent-driver-list">{(analysis.feature_importance || []).slice(0, 7).map((row) => <div key={row.feature}><span>{featureLabel(row.feature)}</span><strong>{number(row.mean_abs_contribution, 3)}</strong></div>)}</div></article>
+      <article className="fragile-incumbent-card"><h4>{tr('Fragility drivers')}</h4><div className="fragile-incumbent-driver-list">{(analysis.feature_importance || []).slice(0, 7).map((row) => <div key={row.feature}><span>{featureLabel(row.feature)}</span><strong>{number(row.mean_abs_contribution, 3)}</strong></div>)}</div></article>
       <article className="fragile-incumbent-card"><h4>{tr('Flagged behavior')}</h4><div className="fragile-incumbent-dialog-feature-grid"><Metric label="Flagged OOS sessions" value={String(behavior.flagged_sessions ?? '—')} /><Metric label="Flagged share" value={percent(behavior.flagged_share, 1)} /><Metric label="HOLD sessions" value={String(hold.sessions ?? '—')} /><Metric label="HOLD forward 5d" value={percent(hold.average_forward_return_5, 2)} /><Metric label="ROTATE sessions" value={String(rotate.sessions ?? '—')} /><Metric label="ROTATE forward 5d" value={percent(rotate.average_forward_return_5, 2)} /></div></article>
     </div>
     <MonthDialog row={selectedMonth} onClose={() => setSelectedMonth(null)} />

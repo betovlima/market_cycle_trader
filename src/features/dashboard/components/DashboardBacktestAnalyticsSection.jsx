@@ -16,7 +16,7 @@ function completedRows(rows) {
 
 function optionLabel(item) {
   const name = item?.processing_label || item?.strategy_profile_name || item?.strategy_name || item?.id || tr('Backtest')
-  const model = item?.processing_kind === 'caro_champion' ? '' : (item?.research_model_label || item?.model_label || '')
+  const model = item?.processing_kind === 'caro_champion' ? '' : tr(item?.research_model_label || item?.model_label || '')
   const at = item?.created_at || item?.finished_at
   return [at ? shortDateTime(at) : null, name, model].filter(Boolean).join(' · ')
 }

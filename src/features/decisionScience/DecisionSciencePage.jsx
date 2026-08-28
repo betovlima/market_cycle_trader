@@ -38,11 +38,11 @@ function FoldCard({ fold }) {
   return <article className="decision-science-fold-card">
     <header>
       <div><small>{tr('Fold')}</small><strong>{fold.fold_id}</strong></div>
-      <div className="decision-science-selected-model">{String(fold.selected_model || '').replaceAll('_', ' ')}</div>
+      <div className="decision-science-selected-model">{tr(String(fold.selected_model || '').replaceAll('_', ' '))}</div>
     </header>
     <div className="decision-science-model-row">
       <ModelMetric title="Logistic Regression" metrics={fold.models?.logistic_regression} />
-      <ModelMetric title="LightGBM" metrics={fold.models?.lightgbm} />
+      <ModelMetric title="Model" metrics={fold.models?.lightgbm} />
     </div>
     <footer>
       <span>{tr('Training rows')}: {Number(fold.train_rows || 0).toLocaleString()}</span>
@@ -325,7 +325,7 @@ export function DecisionSciencePage({ capabilities = {} }) {
           {(transition?.walk_forward_folds || []).map((fold) => <div className="decision-science-transition-fold" key={fold.fold_id}>
             <span>Fold {fold.fold_id}</span>
             <span>Logistic AUC <strong>{num(fold.models?.logistic_regression?.auc)}</strong></span>
-            <span>LightGBM AUC <strong>{num(fold.models?.lightgbm?.auc)}</strong></span>
+            <span>Model AUC <strong>{num(fold.models?.lightgbm?.auc)}</strong></span>
           </div>)}
         </article>
       </section>
