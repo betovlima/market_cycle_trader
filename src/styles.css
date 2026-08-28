@@ -8978,3 +8978,24 @@ a { color: inherit; }
   .trader-manual-recovery { grid-template-columns: 1fr; }
   .trader-manual-recovery-actions { justify-content: flex-start; }
 }
+
+.portfolio-decision-button { border: 1px solid rgba(77, 147, 220, .36); border-radius: 8px; padding: 5px 9px; color: #b9d9f7; background: rgba(16, 50, 82, .52); font-size: .62rem; font-weight: 800; cursor: pointer; }
+.portfolio-decision-button:hover { border-color: rgba(77, 147, 220, .68); background: rgba(25, 76, 119, .62); color: #fff; }
+.portfolio-decision-dialog-backdrop { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 20px; background: rgba(1, 7, 13, .82); backdrop-filter: blur(5px); }
+.portfolio-decision-dialog { width: min(1040px, calc(100vw - 40px)); max-height: calc(100vh - 40px); overflow: auto; border: 1px solid rgba(68, 128, 190, .38); border-radius: 14px; background: #071527; box-shadow: 0 24px 80px rgba(0, 0, 0, .52); }
+.portfolio-decision-dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px 20px 14px; border-bottom: 1px solid rgba(76, 112, 149, .22); }
+.portfolio-decision-dialog-header h3 { margin: 3px 0 4px; color: #eef7ff; font-size: 1.04rem; }
+.portfolio-decision-dialog-header p { margin: 0; color: #7f9bb6; font-size: .65rem; }
+.portfolio-decision-dialog-close { width: 32px; height: 32px; border: 1px solid rgba(100, 137, 174, .28); border-radius: 8px; color: #9fb8d0; background: rgba(10, 35, 59, .62); cursor: pointer; font-size: 1rem; }
+.portfolio-decision-summary, .portfolio-decision-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 14px 20px 0; }
+.portfolio-decision-summary > div, .portfolio-decision-grid > div { min-width: 0; padding: 10px 12px; border: 1px solid rgba(66, 105, 143, .22); border-radius: 9px; background: rgba(6, 24, 42, .72); }
+.portfolio-decision-summary span, .portfolio-decision-grid span, .portfolio-decision-reason span { display: block; color: #7f9bb6; font-size: .58rem; }
+.portfolio-decision-summary strong, .portfolio-decision-grid strong { display: block; margin-top: 4px; color: #e3f1ff; font-size: .7rem; overflow-wrap: anywhere; }
+.portfolio-decision-reason { margin: 12px 20px 0; padding: 11px 12px; border: 1px solid rgba(38, 185, 137, .28); border-radius: 9px; background: rgba(13, 61, 53, .28); }
+.portfolio-decision-reason strong { display: block; margin-top: 4px; color: #bcebdc; font-size: .7rem; line-height: 1.45; }
+.portfolio-decision-candidates { padding: 14px 20px 0; }
+.portfolio-decision-candidates .table-wrap { max-height: 260px; overflow: auto; border: 1px solid rgba(66, 105, 143, .20); border-radius: 9px; }
+.portfolio-decision-target-row { background: rgba(24, 118, 91, .16); }
+.portfolio-decision-periods { display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 14px 20px 20px; padding-top: 12px; border-top: 1px solid rgba(76, 112, 149, .18); color: #7895b1; font-size: .6rem; }
+.portfolio-decision-periods strong { color: #bfd4e8; }
+@media (max-width: 760px) { .portfolio-decision-dialog-backdrop { padding: 10px; } .portfolio-decision-dialog { width: calc(100vw - 20px); max-height: calc(100vh - 20px); } .portfolio-decision-summary, .portfolio-decision-grid { grid-template-columns: 1fr; } }

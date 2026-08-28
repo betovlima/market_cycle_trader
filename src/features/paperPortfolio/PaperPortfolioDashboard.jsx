@@ -7,6 +7,79 @@ import { money, number, percent, shortDateTime } from '../../shared/formatters'
 import { POLL_MS, ROBOT_POLL_MS } from './portfolioConfig'
 import { CurrentPosition, PortfolioMetricsStrip, TradingSessionStrip } from './components/PortfolioPrimitives'
 
+
+function DecisionAuditDialog({ audit, onClose }) {
+  if (!audit) return null
+  const reasonLabels = {
+    raw_best_selected: 'The highest-utility asset was selected.',
+    hold_current: 'The policy kept the current asset.',
+    cash_selected: 'The policy selected cash.',
+    policy_selected_non_raw_best: 'Policy constraints selected a different asset from the raw highest-utility candidate.',
+    stateful_intervention: 'The stateful policy changed the control decision.',
+  }
+  const candidates = Array.isArray(audit.top_candidates) ? audit.top_candidates : []
+  return (
+    <div className="portfolio-decision-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+      <section className="portfolio-decision-dialog" role="dialog" aria-modal="true" aria-label={tr('Operation decision')}>
+        <header className="portfolio-decision-dialog-header">
+          <div>
+            <span className="panel-kicker">{tr('Model audit')}</span>
+            <h3>{tr('Operation decision')}</h3>
+            <p>{tr('Decision data persisted when the Paper plan was created.')}</p>
+          </div>
+          <button type="button" className="portfolio-decision-dialog-close" aria-label={tr('Close')} onClick={onClose}>×</button>
+        </header>
+
+        <div className="portfolio-decision-summary">
+          <div><span>{tr('Strategy')}</span><strong>{audit.winner_strategy_name || '—'}{audit.winner_strategy_revision != null ? ` · r${audit.winner_strategy_revision}` : ''}</strong></div>
+          <div><span>{tr('Decision date')}</span><strong>{audit.decision_date || '—'}</strong></div>
+          <div><span>{tr('Execution session')}</span><strong>{audit.execution_session || '—'}</strong></div>
+          <div><span>{tr('Rotation')}</span><strong>{audit.current_asset || 'CASH'} → {audit.target_asset || 'CASH'}</strong></div>
+          <div><span>{tr('Raw best asset')}</span><strong>{audit.raw_best_asset || '—'}</strong></div>
+          <div><span>{tr('Selected utility')}</span><strong>{number(audit.selected_utility, 6)}</strong></div>
+        </div>
+
+        <div className="portfolio-decision-reason">
+          <span>{tr('Why this asset')}</span>
+          <strong>{tr(reasonLabels[audit.selection_reason] || 'Decision preserved from the persisted Paper plan.')}</strong>
+        </div>
+
+        <div className="portfolio-decision-grid">
+          <div><span>{tr('Current utility')}</span><strong>{number(audit.current_utility, 6)}</strong></div>
+          <div><span>{tr('Target utility')}</span><strong>{number(audit.target_utility, 6)}</strong></div>
+          <div><span>{tr('Target advantage')}</span><strong>{number(audit.target_vs_current_utility, 6)}</strong></div>
+          <div><span>{tr('Effective switch margin')}</span><strong>{number(audit.effective_switch_margin, 6)}</strong></div>
+          <div><span>{tr('Calibrated margin')}</span><strong>{number(audit.calibrated_candidate_margin, 6)}</strong></div>
+          <div><span>{tr('Calibration score')}</span><strong>{number(audit.calibration_score, 6)}</strong></div>
+        </div>
+
+        <div className="portfolio-decision-candidates">
+          <div className="portfolio-section-heading compact"><div><span className="panel-kicker">{tr('Ranking at decision time')}</span><h3>{tr('Top candidates')}</h3></div></div>
+          <div className="table-wrap">
+            <table className="dashboard-table">
+              <thead><tr><th>#</th><th>{tr('Asset')}</th><th>{tr('Utility')}</th><th>{tr('Cash edge')}</th><th>{tr('Role')}</th></tr></thead>
+              <tbody>
+                {candidates.length ? candidates.map((candidate, index) => (
+                  <tr key={`${candidate.symbol}-${index}`} className={candidate.is_target ? 'portfolio-decision-target-row' : ''}>
+                    <td>{index + 1}</td><td>{candidate.symbol}</td><td>{number(candidate.utility, 6)}</td><td>{candidate.cash_edge == null ? '—' : number(candidate.cash_edge, 6)}</td>
+                    <td>{candidate.is_target ? tr('Selected') : candidate.is_current ? tr('Current') : candidate.is_raw_best ? tr('Raw best') : '—'}</td>
+                  </tr>
+                )) : <tr><td colSpan="5" className="empty-cell">{tr('Candidate utilities were not persisted for this historical plan.')}</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="portfolio-decision-periods">
+          <span>{tr('Training end')}: <strong>{audit.training_end || '—'}</strong></span>
+          <span>{tr('Internal calibration')}: <strong>{audit.calibration_start || '—'} → {audit.calibration_end || '—'}</strong></span>
+          <span>{tr('Final fit end')}: <strong>{audit.final_fit_end || '—'}</strong></span>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 export function PaperPortfolioDashboard() {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
@@ -16,6 +89,7 @@ export function PaperPortfolioDashboard() {
   const [robot, setRobot] = useState(null)
   const [nextRefreshAt, setNextRefreshAt] = useState(null)
   const [clockNow, setClockNow] = useState(() => Date.now())
+  const [selectedDecision, setSelectedDecision] = useState(null)
   const mountedRef = useRef(false)
   const portfolioTimerRef = useRef(null)
   const portfolioRequestRef = useRef(false)
@@ -138,21 +212,23 @@ export function PaperPortfolioDashboard() {
             </div>
             <div className="table-wrap portfolio-orders-table-wrap compact-order-scroll">
               <table className="dashboard-table portfolio-orders-table">
-                <thead><tr><th>{tr("Created")}</th><th>{tr("Asset")}</th><th>{tr("Side")}</th><th>{tr("Status")}</th><th>{tr("Quantity")}</th><th>{tr("Average Fill")}</th></tr></thead>
+                <thead><tr><th>{tr("Created")}</th><th>{tr("Asset")}</th><th>{tr("Side")}</th><th>{tr("Status")}</th><th>{tr("Quantity")}</th><th>{tr("Average Fill")}</th><th>{tr("Decision")}</th></tr></thead>
                 <tbody>
                   {data.recent_orders?.length ? data.recent_orders.map((order, index) => (
                     <tr key={`${order.created_at || 'order'}-${order.symbol || 'asset'}-${index}`}>
                       <td>{shortDateTime(order.created_at)}</td><td>{order.symbol || '—'}</td>
                       <td><span className={`order-side ${order.side}`}>{order.side === 'buy' ? tr('Buy') : order.side === 'sell' ? tr('Sell') : String(order.side || '—').toUpperCase()}</span></td>
                       <td>{order.status ? tr(String(order.status).replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())) : '—'}</td><td>{order.filled_quantity ?? order.quantity ?? '—'}</td><td>{order.filled_average_price ? money(order.filled_average_price) : '—'}</td>
+                      <td>{order.decision_audit ? <button type="button" className="portfolio-decision-button" onClick={() => setSelectedDecision(order.decision_audit)}>{tr('View decision')}</button> : '—'}</td>
                     </tr>
-                  )) : <tr><td colSpan="6" className="empty-cell">{tr("No paper orders have been submitted yet.")}</td></tr>}
+                  )) : <tr><td colSpan="7" className="empty-cell">{tr("No paper orders have been submitted yet.")}</td></tr>}
                 </tbody>
               </table>
             </div>
           </section>
         </section>
       )}
+      <DecisionAuditDialog audit={selectedDecision} onClose={() => setSelectedDecision(null)} />
     </section>
   )
 }
