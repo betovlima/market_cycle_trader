@@ -62,6 +62,67 @@ function validationMatchesSelection(validation, selectedSymbols) {
   return left.length > 0 && left.length === right.length && left.every((value, index) => value === right[index])
 }
 
+function executionStageLabel(campaign) {
+  const step = String(campaign?.progress_step || '').toLowerCase()
+  const current = Number(campaign?.stage_current)
+  const total = Number(campaign?.stage_total)
+  if (step === 'queued') return tr('Asset Discovery queued')
+  if (step === 'baseline') return tr('Preparing Strategy Research baseline')
+  if (step === 'baseline_sync') return tr('Synchronizing Strategy Research market data')
+  if (step === 'training_dataset') return tr('Preparing Learning-to-Rank training dataset')
+  if (step === 'walk_forward') {
+    const label = tr('Purged walk-forward validation')
+    return Number.isFinite(current) && Number.isFinite(total) && total > 0
+      ? `${label} · ${tr('Fold')} ${current}/${total}`
+      : label
+  }
+  if (step === 'final_refit') return tr('Refitting final Learning-to-Rank model')
+  if (step === 'ranker_completed') return tr('Learning-to-Rank training completed')
+  if (step === 'external_scan') {
+    const label = tr('Scanning external assets')
+    return Number.isFinite(current) && Number.isFinite(total) && total > 0
+      ? `${label} · ${current}/${total}`
+      : label
+  }
+  if (step === 'adherence_validation') return tr('Validating shortlist adherence')
+  if (step === 'marginal_replay') return tr('Marginal Capital Replay')
+  if (step === 'completed') return tr('Asset Discovery completed')
+  if (step === 'stopped') return tr('STOPPED')
+  if (step === 'failed') return tr('FAILED')
+  return tr('Processing')
+}
+
+function ExecutionStatusBar({ campaign }) {
+  const status = String(campaign?.status || '').toLowerCase()
+  const active = ['queued', 'running', 'stopping'].includes(status)
+  const rawProgress = campaign?.stage_progress_percent
+  const numericProgress = Number(rawProgress)
+  const determinate = rawProgress != null && Number.isFinite(numericProgress)
+  const progress = determinate ? Math.max(0, Math.min(100, numericProgress)) : 0
+  const workerActive = active && Boolean(campaign?.worker_active)
+  const heartbeat = campaign?.worker_heartbeat_at ? shortDateTime(campaign.worker_heartbeat_at) : '—'
+
+  return <div className={`asset-discovery-execution-status ${active ? 'active' : ''}`}>
+    <div className="asset-discovery-execution-head">
+      <div>
+        <span>{tr('Current stage')}</span>
+        <strong>{executionStageLabel(campaign)}</strong>
+      </div>
+      <div className={`asset-discovery-worker-state ${workerActive ? 'active' : ''}`}>
+        <span className="asset-discovery-worker-dot" aria-hidden="true" />
+        <strong>{workerActive ? tr('Processing') : tr(String(campaign?.status || '').toUpperCase())}</strong>
+      </div>
+    </div>
+    <div className={`asset-discovery-stage-progress ${determinate ? '' : 'indeterminate'}`}>
+      <span style={determinate ? { width: `${progress}%` } : undefined} />
+    </div>
+    <div className="asset-discovery-execution-meta">
+      <span>{determinate ? `${number(progress, 1)}%` : tr('Working…')}</span>
+      <span>{tr('Last activity')}: <strong>{heartbeat}</strong></span>
+    </div>
+  </div>
+}
+
 function Pipeline({ campaign }) {
   const current = phaseIndex(campaign?.phase, campaign?.status)
   return <div className="asset-discovery-pipeline" aria-label={tr('Research pipeline')}>
@@ -434,14 +495,17 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
             <div><span>{tr('Current batch')}</span><strong>{campaign.current_batch || '—'}</strong></div>
             <div><span>{tr('Current asset')}</span><strong>{campaign.current_symbol || '—'}</strong></div>
           </div>
+          <ExecutionStatusBar campaign={campaign} />
           {String(campaign.status || '').toLowerCase() === 'failed' && campaign.message ? (
             <div className="inline-error asset-discovery-campaign-failure">
               <strong>{tr('Asset Discovery failed')}</strong>
               <span>{campaign.message}</span>
             </div>
           ) : null}
-          <div className="asset-discovery-progress-copy"><span>{tr('Scanned')}</span><strong>{campaign.attempted_count || 0} / {campaign.research_size || researchSize}</strong></div>
-          <div className="asset-discovery-progress"><span style={{ width: `${progress}%` }} /></div>
+          {String(campaign.phase || '').toLowerCase() === 'scanning' ? <>
+            <div className="asset-discovery-progress-copy asset-discovery-scan-progress-copy"><span>{tr('External scan')}</span><strong>{campaign.attempted_count || 0} / {campaign.scan_budget || campaign.research_size || researchSize}</strong></div>
+            <div className="asset-discovery-progress"><span style={{ width: `${progress}%` }} /></div>
+          </> : null}
           <Pipeline campaign={campaign} />
         </section>
 

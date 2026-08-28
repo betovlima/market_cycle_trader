@@ -26,7 +26,7 @@
 .asset-discovery-progress { height: 6px; overflow: hidden; border-radius: 999px; background: rgba(94, 131, 165, .14); }
 .asset-discovery-progress > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #2f8fea, #35d39b); transition: width .25s ease; }
 .asset-discovery-progress-stage { margin-top: 6px; color: #6f91ae; font-size: .62rem; min-height: 1em; }
-.asset-discovery-pipeline { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+.asset-discovery-pipeline { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
 .asset-discovery-stage { min-width: 0; display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid rgba(65, 105, 143, .16); border-radius: 10px; background: rgba(8, 31, 53, .34); color: #6f8ba4; }
 .asset-discovery-stage strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .66rem; }
 .asset-discovery-stage-dot { width: 23px; height: 23px; flex: 0 0 23px; display: grid; place-items: center; border-radius: 50%; background: rgba(94, 131, 165, .12); font-size: .7rem; }
@@ -321,3 +321,33 @@
   text-decoration: underline dotted rgba(135, 186, 255, .75);
   text-underline-offset: 3px;
 }
+.asset-discovery-execution-status { margin: 2px 0 14px; padding: 12px 14px; border: 1px solid rgba(65, 105, 143, .20); border-radius: 12px; background: rgba(8, 31, 53, .42); }
+.asset-discovery-execution-status.active { border-color: rgba(47, 143, 234, .32); background: rgba(12, 43, 70, .48); }
+.asset-discovery-execution-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 9px; }
+.asset-discovery-execution-head > div:first-child { min-width: 0; }
+.asset-discovery-execution-head span { display: block; color: #7297b6; font-size: .58rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.asset-discovery-execution-head strong { display: block; margin-top: 4px; color: #e3f0fb; font-size: .76rem; }
+.asset-discovery-worker-state { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 7px; padding: 6px 9px; border: 1px solid rgba(94, 131, 165, .18); border-radius: 999px; color: #86a3bb; }
+.asset-discovery-worker-state strong { margin: 0; color: inherit; font-size: .62rem; text-transform: uppercase; letter-spacing: .03em; }
+.asset-discovery-worker-dot { width: 7px; height: 7px; border-radius: 50%; background: #71869a; }
+.asset-discovery-worker-state.active { color: #86e4c0; border-color: rgba(53, 211, 155, .24); }
+.asset-discovery-worker-state.active .asset-discovery-worker-dot { background: #35d39b; animation: asset-discovery-worker-pulse 1.4s ease-in-out infinite; }
+.asset-discovery-stage-progress { position: relative; height: 9px; overflow: hidden; border-radius: 999px; background: rgba(94, 131, 165, .15); }
+.asset-discovery-stage-progress > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #2f8fea, #35d39b); transition: width .35s ease; }
+.asset-discovery-stage-progress.indeterminate > span { position: absolute; width: 34%; animation: asset-discovery-progress-sweep 1.3s ease-in-out infinite; }
+.asset-discovery-execution-meta { display: flex; justify-content: space-between; gap: 12px; margin-top: 7px; color: #7697b4; font-size: .61rem; }
+.asset-discovery-execution-meta strong { color: #b8ccdc; font-weight: 700; }
+.asset-discovery-scan-progress-copy { margin-top: 12px; }
+@keyframes asset-discovery-worker-pulse { 0%, 100% { opacity: .45; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.16); } }
+@keyframes asset-discovery-progress-sweep { 0% { left: -36%; } 55% { left: 58%; } 100% { left: 105%; } }
+@media (max-width: 620px) { .asset-discovery-execution-head, .asset-discovery-execution-meta { align-items: flex-start; flex-direction: column; } }
+
+:root[data-theme='light'] .asset-discovery-execution-status { background: #ffffff; border-color: #d8e2ec; }
+:root[data-theme='light'] .asset-discovery-execution-status.active { background: #f8fbfe; border-color: #b8d6f2; }
+:root[data-theme='light'] .asset-discovery-execution-head span,
+:root[data-theme='light'] .asset-discovery-execution-meta { color: #536b82; }
+:root[data-theme='light'] .asset-discovery-execution-head strong { color: #18324a; }
+:root[data-theme='light'] .asset-discovery-worker-state { color: #657b91; border-color: #d4dee8; }
+:root[data-theme='light'] .asset-discovery-worker-state.active { color: #087356; border-color: #afdccc; background: #eef9f5; }
+:root[data-theme='light'] .asset-discovery-stage-progress { background: #e6edf4; }
+:root[data-theme='light'] .asset-discovery-execution-meta strong { color: #405970; }

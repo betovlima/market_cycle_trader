@@ -1469,7 +1469,7 @@ export const PT_TRANSLATIONS = {
   "Model": "Modelo",
   "selected model": "modelo selecionado",
   "Make the latest completed run for the selected model the single active Candidate": "Tornar a execução concluída mais recente do modelo selecionado a única Candidata ativa",
-  "Select XGBoost or LightGBM and complete a backtest for this strategy revision first": "Selecione XGBoost ou LightGBM e conclua primeiro um backtest para esta revisão da estratégia",
+  "Select LightGBM and complete a backtest for this strategy revision first": "Selecione LightGBM e conclua primeiro um backtest para esta revisão da estratégia",
   "Model snapshot": "Snapshot do modelo",
   ". Saving Strategy parameters will return it to draft; model settings remain frozen by the certified job.": ". Salvar parâmetros da Strategy fará com que ela volte para rascunho; as configurações do modelo permanecem congeladas pelo job certificado.",
   "Winner model": "Modelo Winner",
@@ -3390,5 +3390,18 @@ export const PT_TRANSLATIONS = {
   'With 5 eligible market sessions in a week, each session can have one post-close calibration and one market-open recalibration.': 'Com 5 sessões de mercado elegíveis na semana, cada sessão pode ter uma calibração após o fechamento e uma recalibração na abertura.',
   "The sell completed but the target buy did not. Execute contingency to reconcile Alpaca and complete only the missing buy leg.": "A venda foi concluída, mas a compra do ativo-alvo não. Execute a contingência para reconciliar a Alpaca e concluir somente a compra que falta.",
   "Execute contingency": "Executar contingência",
+
+  'Last activity': 'Última atividade',
+  'Working…': 'Em andamento…',
+  'Preparing Strategy Research baseline': 'Preparando baseline da Strategy Research',
+  'Synchronizing Strategy Research market data': 'Sincronizando dados de mercado da Strategy Research',
+  'Preparing Learning-to-Rank training dataset': 'Preparando dataset de treinamento do Learning-to-Rank',
+  'Purged walk-forward validation': 'Validação walk-forward purgada',
+  'Refitting final Learning-to-Rank model': 'Treinando o modelo final de Learning-to-Rank',
+  'Learning-to-Rank training completed': 'Treinamento do Learning-to-Rank concluído',
+  'Scanning external assets': 'Pesquisando ativos externos',
+  'Validating shortlist adherence': 'Validando aderência da shortlist',
+  'Asset Discovery queued': 'Pesquisa de ativos na fila',
+  'Asset Discovery completed': 'Pesquisa de ativos concluída',
 
 }
