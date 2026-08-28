@@ -1,6 +1,6 @@
 import { getIntlLocale, tr } from '../../i18n/runtime'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { apiFetch } from '../../api/http'
+import { apiFetch, downloadFile } from '../../api/http'
 import { API } from '../../config/env'
 import { PortfolioIcon } from '../../shared/components/Icons'
 import { money, number, percent, shortDateTime } from '../../shared/formatters'
@@ -90,6 +90,7 @@ export function PaperPortfolioDashboard() {
   const [nextRefreshAt, setNextRefreshAt] = useState(null)
   const [clockNow, setClockNow] = useState(() => Date.now())
   const [selectedDecision, setSelectedDecision] = useState(null)
+  const [exporting, setExporting] = useState(false)
   const mountedRef = useRef(false)
   const portfolioTimerRef = useRef(null)
   const portfolioRequestRef = useRef(false)
@@ -140,6 +141,18 @@ export function PaperPortfolioDashboard() {
     }, POLL_MS)
   }, [loadPortfolio])
 
+  const exportTransactionAudit = useCallback(async () => {
+    setExporting(true)
+    try {
+      await downloadFile(`${API}/paper-market/public-portfolio/export.zip`, 'mct_paper_transaction_audit.zip')
+      if (mountedRef.current) setError('')
+    } catch (requestError) {
+      if (mountedRef.current) setError(requestError.message)
+    } finally {
+      if (mountedRef.current) setExporting(false)
+    }
+  }, [])
+
   const refreshPortfolio = useCallback(async ({ silent = false, includeRobot = false } = {}) => {
     if (portfolioTimerRef.current) window.clearTimeout(portfolioTimerRef.current)
     if (mountedRef.current) setNextRefreshAt(null)
@@ -183,6 +196,10 @@ export function PaperPortfolioDashboard() {
             </div>
             <div className="portfolio-workspace-actions">
               <span>{lastUpdated ? tr('Updated {time}', { time: lastUpdated.toLocaleTimeString(getIntlLocale()) }) : tr('Read-only snapshot')}</span>
+              <button type="button" className="secondary-action portfolio-export-button compact" disabled={exporting} onClick={exportTransactionAudit}>
+                {exporting ? <span className="portfolio-button-spinner" aria-hidden="true" /> : null}
+                {tr(exporting ? 'Exporting…' : 'Export audit')}
+              </button>
               <button type="button" className="secondary-action portfolio-refresh-button compact" disabled={refreshing} onClick={() => refreshPortfolio({ includeRobot: true })}>
                 {refreshing ? <span className="portfolio-button-spinner" aria-hidden="true" /> : null}
                 {tr(refreshing ? 'Refreshing…' : 'Refresh')}

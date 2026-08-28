@@ -3442,4 +3442,5 @@ export const ES_TRANSLATIONS = {
   'Expanding history': 'Historial creciente',
   'Unseen period': 'Período no visto',
   'This is diagnostic only. It does not change model parameters, Strategy decisions, Winner, Paper or Live execution.': 'Esta prueba es solo diagnóstica. No cambia parámetros del modelo, decisiones de Strategy, Winner ni la ejecución simulada o real.',
+  'Export audit': 'Exportar auditoría',
 }

@@ -2269,7 +2269,8 @@ a { color: inherit; }
   font-size: .62rem;
   white-space: nowrap;
 }
-.portfolio-refresh-button.compact {
+.portfolio-refresh-button.compact,
+.portfolio-export-button.compact {
   min-width: 82px;
   min-height: 31px;
   padding: 6px 11px;
@@ -2369,7 +2370,7 @@ a { color: inherit; }
 .portfolio-session-schedule {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 .portfolio-session-step {
   min-width: 0;
@@ -2403,8 +2404,7 @@ a { color: inherit; }
 
 .portfolio-workspace-main {
   min-width: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 3.25fr) minmax(260px, .75fr);
+  display: block;
   border-bottom: 1px solid rgba(82, 132, 190, .16);
 }
 .portfolio-evolution-section {
@@ -2416,7 +2416,7 @@ a { color: inherit; }
   display: flex;
   flex-direction: column;
   padding: 12px 14px;
-  border-left: 1px solid rgba(82, 132, 190, .16);
+  border-left: 0;
   background: rgba(6, 20, 36, .30);
 }
 .portfolio-section-heading {
@@ -2557,7 +2557,7 @@ a { color: inherit; }
 .current-position-asset strong { font-size: 1.08rem; }
 .current-position-stats {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
   margin-top: 7px;
 }
@@ -2627,13 +2627,11 @@ a { color: inherit; }
 @media (max-width: 1320px) {
   .portfolio-session-strip { grid-template-columns: 1fr; }
   .portfolio-session-main { border-right: 0; border-bottom: 1px solid rgba(82, 132, 190, .12); }
-  .portfolio-workspace-main { grid-template-columns: minmax(0, 2.35fr) minmax(250px, .75fr); }
 }
 
 @media (max-width: 1040px) {
   .portfolio-workspace-metrics { grid-template-columns: repeat(5, minmax(130px, 1fr)); overflow-x: auto; }
-  .portfolio-workspace-main { grid-template-columns: 1fr; }
-  .current-position-section { border-left: 0; border-top: 1px solid rgba(82, 132, 190, .16); }
+  .current-position-section { border-left: 0; }
   .current-position-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .portfolio-chart-events { height: 300px; }
 }
@@ -2655,7 +2653,8 @@ a { color: inherit; }
 @media (max-width: 520px) {
   .portfolio-workspace-header { padding: 9px 10px; }
   .portfolio-workspace-actions > span { display: none; }
-  .portfolio-refresh-button.compact { min-width: 76px; }
+  .portfolio-refresh-button.compact,
+  .portfolio-export-button.compact { min-width: 76px; }
   .portfolio-workspace-metrics { grid-template-columns: repeat(5, minmax(118px, 1fr)); }
   .portfolio-workspace-metric { padding: 8px 10px; }
   .portfolio-session-statuses .session-status-chip { font-size: .53rem; }
