@@ -92,6 +92,30 @@ function FocusCard({ row }) {
   </article>
 }
 
+
+function temporalProbeStatusLabel(status) {
+  if (status === 'RECENCY_SUPPORTED') return tr('Recent history is supported')
+  if (status === 'NO_RECENCY_BENEFIT') return tr('No recent-history benefit')
+  if (status === 'MIXED_RECENCY_EVIDENCE') return tr('Mixed recent-history evidence')
+  if (status === 'VALIDATION_ONLY_RECENCY') return tr('Validation-only recent-history signal')
+  return tr('Inconclusive temporal stability')
+}
+
+function TemporalStabilityProbe({ analysis }) {
+  const probe = analysis?.temporal_stability_probe
+  const folds = analysis?.folds || []
+  if (!probe || !folds.length) return null
+  return <div className="emerging-trend-card temporal-stability-probe">
+    <div className="emerging-trend-section-heading"><div><strong>{tr('Temporal stability probe')}</strong><span>{tr('Tests whether recent training history generalizes better than the full expanding history. The unseen period confirms the hypothesis and is never used to choose the window.')}</span></div><span className={`emerging-trend-readiness ${String(probe.status || '').toLowerCase()}`}>{temporalProbeStatusLabel(probe.status)}</span></div>
+    <div className="temporal-stability-folds">{folds.map((fold) => {
+      const current = fold?.temporal_stability_probe
+      if (!current) return null
+      return <article key={fold.fold_id}><header><strong>{tr('Fold')} {fold.fold_id}</strong><span>{temporalProbeStatusLabel(current.status)}</span></header><div className="temporal-stability-variants">{(current.variants || []).map((variant) => <div key={variant.label} className={`temporal-stability-variant ${variant.label === current.selected_validation_window ? 'selected' : ''}`}><strong>{variant.window_months ? tr('{months} recent months', { months: variant.window_months }) : tr('Expanding history')}</strong><small>{tr('Training')} {number(variant?.training_metrics?.auc, 3)} · {tr('Validation')} {number(variant?.validation_metrics?.auc, 3)} · {tr('Unseen period')} {number(variant?.oos_metrics?.auc, 3)}</small></div>)}</div></article>
+    })}</div>
+    <p className="temporal-stability-note">{tr('This is diagnostic only. It does not change model parameters, Strategy decisions, Winner, Paper or Live execution.')}</p>
+  </div>
+}
+
 export function EmergingTrendPanel({ analysis }) {
   const [selectedMonth, setSelectedMonth] = useState(null)
   const monthly = analysis?.monthly || []
@@ -132,6 +156,7 @@ export function EmergingTrendPanel({ analysis }) {
     </div>
 
     <FitDiagnosticsCard analysis={analysis} />
+    <TemporalStabilityProbe analysis={analysis} />
 
     <div className="emerging-trend-section-heading"><strong>{tr('Focus: May to July 2021')}</strong><span>{tr('May tests under-capture, June tests confirmation, July is the mature-trend reference.')}</span></div>
     <div className="emerging-trend-focus-row">{focus.map((row) => <FocusCard key={row.month} row={row} />)}</div>
