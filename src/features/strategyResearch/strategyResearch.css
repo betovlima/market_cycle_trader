@@ -89,3 +89,5 @@
 .strategy-research-stage-failure span{font-size:.82rem;line-height:1.45;overflow-wrap:anywhere}
 .strategy-research-temporal-wrap{display:grid;gap:12px}.strategy-research-heatmap-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}.strategy-research-heatmap-actions>span{font-size:.72rem;color:var(--muted)}.strategy-research-risk-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}
 @media(max-width:760px){.strategy-research-heatmap-actions,.strategy-research-risk-actions{justify-content:flex-start}}
+
+.strategy-research-confidence-view{display:grid;gap:14px;align-content:start}

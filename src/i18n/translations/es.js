@@ -1,4 +1,17 @@
 export const ES_TRANSLATIONS = {
+  'No prior OOS history': 'Sin historial OOS previo',
+  'Insufficient prior OOS alerts': 'Alertas OOS previas insuficientes',
+  'No robust confidence threshold': 'Ningún umbral de confianza robusto',
+  'Control preserved': 'Control preservado',
+  'Calibration outcome': 'Resultado de la calibración',
+  'Calibrated intervention found': 'Intervención calibrada encontrada',
+  'At least one chronological OOS year activated a calibrated confidence intervention.': 'Al menos un año OOS cronológico activó una intervención de confianza calibrada.',
+  'No chronological OOS year activated a calibrated confidence intervention. The original Strategy was preserved in every evaluated year.': 'Ningún año OOS cronológico activó una intervención de confianza calibrada. La Strategy original se preservó en todos los años evaluados.',
+  'OOS years evaluated': 'Años OOS evaluados',
+  'Calibrated interventions': 'Intervenciones calibradas',
+  'Control years': 'Años en control',
+  'Future information used': 'Información futura utilizada',
+
   'CAMPAIGN OUTCOME': 'RESULTADO DE LA CAMPAÑA',
   '{count} assets increased marginal capital': '{count} activo(s) aumentaron el capital marginal',
   'No asset increased marginal capital in this campaign': 'Ningún activo aumentó el capital marginal en esta campaña',

@@ -440,13 +440,32 @@ function confidenceReason(reason) {
   return tr('The calibration result did not activate a confidence intervention for this year.')
 }
 
+function confidenceReasonShort(reason) {
+  if (reason === 'warmup_no_prior_oos_year') return tr('No prior OOS history')
+  if (reason === 'insufficient_prior_oos_alerts') return tr('Insufficient prior OOS alerts')
+  if (reason === 'no_positive_tail_safe_confidence_gate') return tr('No robust confidence threshold')
+  if (reason === 'best_positive_tail_safe_prior_oos_confidence_gate') return tr('Calibrated intervention')
+  return tr('Control preserved')
+}
+
 function ConfidenceTiles({ confidence }) {
   const [selectedDetail, setSelectedDetail] = useState(null)
   const rows = confidence?.outer_results || []
   if (!rows.length) return <EmptyVisual title="Confidence calibration tiles will appear here." />
+  const activeRows = rows.filter((row) => String(row?.selected_mode || '') === 'confidence_calibrated_one_session')
+  const controlRows = rows.length - activeRows.length
+  const futureInformationUsed = Boolean(confidence?.protocol?.future_information_in_selection)
   const values = rows.map((row) => row?.test_result?.ending_capital_delta_rate).filter((value) => value != null).map(Number).filter(Number.isFinite)
   const maxAbs = Math.max(...values.map(Math.abs), 0.0001)
-  return <div className="strategy-research-confidence-tiles">{rows.map((row, index) => {
+  return <div className="strategy-research-confidence-view">
+    <div className="strategy-research-compact-metrics">
+      <div className="strategy-research-metric-card"><span>{tr('Calibration outcome')}</span><strong>{activeRows.length ? tr('Calibrated intervention found') : tr('Control preserved')}</strong><small>{activeRows.length ? tr('At least one chronological OOS year activated a calibrated confidence intervention.') : tr('No chronological OOS year activated a calibrated confidence intervention. The original Strategy was preserved in every evaluated year.')}</small></div>
+      <div className="strategy-research-metric-card"><span>{tr('OOS years evaluated')}</span><strong>{rows.length}</strong></div>
+      <div className="strategy-research-metric-card"><span>{tr('Calibrated interventions')}</span><strong>{activeRows.length}</strong></div>
+      <div className="strategy-research-metric-card"><span>{tr('Control years')}</span><strong>{controlRows}</strong></div>
+      <div className="strategy-research-metric-card"><span>{tr('Future information used')}</span><strong>{futureInformationUsed ? tr('Yes') : tr('No')}</strong></div>
+    </div>
+    <div className="strategy-research-confidence-tiles">{rows.map((row, index) => {
     const selectedMode = String(row?.selected_mode || '')
     const active = selectedMode === 'confidence_calibrated_one_session'
     const rawDelta = row?.test_result?.ending_capital_delta_rate
@@ -480,9 +499,11 @@ function ConfidenceTiles({ confidence }) {
       <strong>{active ? (Number.isFinite(delta) ? percent(delta, 1) : '—') : tr('Control')}</strong>
       <small>{active
         ? `${tr('Margin')} ${Number.isFinite(threshold) ? number(threshold, 3) : '—'} · ${safe ? tr('Tail safe') : tr('Tail warning')}`
-        : tr('No calibrated intervention')}</small>
+        : confidenceReasonShort(row?.reason)}</small>
     </button>
-  })}<ResearchDetailDialog detail={selectedDetail} onClose={() => setSelectedDetail(null)} /></div>
+  })}</div>
+  <ResearchDetailDialog detail={selectedDetail} onClose={() => setSelectedDetail(null)} />
+  </div>
 }
 
 function decisionAction(previousAsset, currentAsset) {
