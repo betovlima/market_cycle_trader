@@ -307,6 +307,7 @@ function MarginalReplayPanel({
   validationError,
   createError,
   updatedResearchStrategy,
+  currentCampaignSymbols,
 }) {
   const replay = campaign?.marginal_replay || {}
   const validation = campaign?.full_strategy_validation || {}
@@ -316,7 +317,10 @@ function MarginalReplayPanel({
     const rightRank = Number(right?.marginal_rank || 999)
     return leftRank - rightRank
   })
-  const selectableSymbols = rows.map((row) => String(row.symbol || '').trim().toUpperCase()).filter(Boolean)
+  const currentCampaignSet = new Set((currentCampaignSymbols || []).map((symbol) => String(symbol || '').trim().toUpperCase()).filter(Boolean))
+  const selectableSymbols = rows
+    .map((row) => String(row.symbol || '').trim().toUpperCase())
+    .filter((symbol) => symbol && currentCampaignSet.has(symbol))
   const allSelected = selectableSymbols.length > 0 && selectableSymbols.every((symbol) => selectedSymbols.includes(symbol))
   const toggleAll = () => setSelectedSymbols(allSelected ? [] : selectableSymbols)
   const baseline = replay.baseline || {}
@@ -410,7 +414,7 @@ function MarginalReplayPanel({
     {rows.length ? <div className="asset-discovery-marginal-grid">
       {rows.map((row) => {
         const result = (campaign?.results || []).find((item) => item.symbol === row.symbol) || {}
-        const selectable = marginalSelectable(row)
+        const selectable = marginalSelectable(row) && currentCampaignSet.has(String(row.symbol || '').trim().toUpperCase())
         const checked = selectable && selectedSymbols.includes(row.symbol)
         const candidate = row.candidate || {}
         const tone = marginalTone(row)
@@ -522,6 +526,8 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
     if (rightMarginalRank != null) return 1
     return Number(left?.rank || 999) - Number(right?.rank || 999)
   }), [results])
+  const currentCampaignSymbols = useMemo(() => normalizedSelection(results.map((item) => item?.symbol)), [results])
+  const currentCampaignSymbolKey = currentCampaignSymbols.join('|')
   const canStart = hasCapability(capabilities, 'asset_discovery.start')
   const canStop = hasCapability(capabilities, 'asset_discovery.stop')
   const canExport = hasCapability(capabilities, 'asset_discovery.export')
@@ -532,6 +538,14 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
     setSelected(null)
   }, [campaign?.run_id])
 
+  useEffect(() => {
+    const allowed = new Set(currentCampaignSymbols)
+    setSelectedSymbols((current) => {
+      const next = current.filter((symbol) => allowed.has(String(symbol || '').trim().toUpperCase()))
+      return next.length === current.length && next.every((symbol, index) => symbol === current[index]) ? current : next
+    })
+  }, [campaign?.run_id, currentCampaignSymbolKey])
+
   const progress = useMemo(() => {
     const requested = Number(campaign?.research_size || researchSize || 1)
     const attempted = Number(campaign?.attempted_count || 0)
@@ -539,15 +553,23 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
   }, [campaign?.attempted_count, campaign?.research_size, researchSize])
 
   const toggleSymbol = (symbol) => {
-    setSelectedSymbols((current) => current.includes(symbol) ? current.filter((item) => item !== symbol) : [...current, symbol])
+    const normalized = String(symbol || '').trim().toUpperCase()
+    if (!currentCampaignSymbols.includes(normalized)) return
+    setSelectedSymbols((current) => current.includes(normalized) ? current.filter((item) => item !== normalized) : [...current, normalized])
   }
 
+  const selectedCurrentCampaignSymbols = selectedSymbols.filter((symbol) => currentCampaignSymbols.includes(String(symbol || '').trim().toUpperCase()))
+
   const validateStrategySelection = async () => {
-    await discovery.validateSelection(campaign?.run_id, selectedSymbols)
+    if (!selectedCurrentCampaignSymbols.length) return
+    if (selectedCurrentCampaignSymbols.length !== selectedSymbols.length) setSelectedSymbols(selectedCurrentCampaignSymbols)
+    await discovery.validateSelection(campaign?.run_id, selectedCurrentCampaignSymbols)
   }
 
   const addSelectedToResearchStrategy = async () => {
-    const updated = await discovery.appendToResearchStrategy(campaign?.run_id, selectedSymbols)
+    if (!selectedCurrentCampaignSymbols.length) return
+    if (selectedCurrentCampaignSymbols.length !== selectedSymbols.length) setSelectedSymbols(selectedCurrentCampaignSymbols)
+    const updated = await discovery.appendToResearchStrategy(campaign?.run_id, selectedCurrentCampaignSymbols)
     if (updated) setSelectedSymbols([])
   }
 
@@ -648,7 +670,7 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
 
         <MarginalReplayPanel
           campaign={campaign}
-          selectedSymbols={selectedSymbols}
+          selectedSymbols={selectedCurrentCampaignSymbols}
           toggleSymbol={toggleSymbol}
           canStart={canStart}
           canCreateStrategy={canCreateStrategy}
@@ -660,6 +682,7 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
           validationError={discovery.validationError}
           createError={discovery.createError}
           updatedResearchStrategy={discovery.updatedResearchStrategy}
+          currentCampaignSymbols={currentCampaignSymbols}
         />
 
         <section className="asset-discovery-results">
