@@ -26,13 +26,13 @@
 .asset-discovery-progress { height: 6px; overflow: hidden; border-radius: 999px; background: rgba(94, 131, 165, .14); }
 .asset-discovery-progress > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #2f8fea, #35d39b); transition: width .25s ease; }
 .asset-discovery-progress-stage { margin-top: 6px; color: #6f91ae; font-size: .62rem; min-height: 1em; }
-.asset-discovery-pipeline { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+.asset-discovery-pipeline { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
 .asset-discovery-stage { min-width: 0; display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid rgba(65, 105, 143, .16); border-radius: 10px; background: rgba(8, 31, 53, .34); color: #6f8ba4; }
 .asset-discovery-stage strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .66rem; }
 .asset-discovery-stage-dot { width: 23px; height: 23px; flex: 0 0 23px; display: grid; place-items: center; border-radius: 50%; background: rgba(94, 131, 165, .12); font-size: .7rem; }
 .asset-discovery-stage.complete { color: #78dbb6; border-color: rgba(53, 211, 155, .20); }
 .asset-discovery-stage.active { color: #ffd56c; border-color: rgba(242, 188, 40, .25); }
-.asset-discovery-metrics { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-bottom: 1px solid rgba(58, 102, 146, .2); }
+.asset-discovery-metrics { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-bottom: 1px solid rgba(58, 102, 146, .2); }
 .asset-discovery-metrics > div { padding: 13px 18px; border-right: 1px solid rgba(58, 102, 146, .16); }
 .asset-discovery-metrics > div:last-child { border-right: 0; }
 .asset-discovery-metrics strong { display: block; margin-top: 4px; color: #e3f0fb; font-size: .92rem; }
@@ -351,6 +351,30 @@
 :root[data-theme='light'] .asset-discovery-worker-state.active { color: #087356; border-color: #afdccc; background: #eef9f5; }
 :root[data-theme='light'] .asset-discovery-stage-progress { background: #e6edf4; }
 :root[data-theme='light'] .asset-discovery-execution-meta strong { color: #405970; }
+
+
+.asset-discovery-causal-validation {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid rgba(58, 102, 146, .2);
+  background: rgba(10, 36, 61, .34);
+}
+.asset-discovery-causal-validation > div { min-width: 0; padding: 13px 18px; border-right: 1px solid rgba(58, 102, 146, .16); }
+.asset-discovery-causal-validation > div:last-child { border-right: 0; }
+.asset-discovery-causal-validation span { display: block; color: #7297b6; font-size: .56rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.asset-discovery-causal-validation strong { display: block; margin-top: 5px; color: #e3f0fb; font-size: .76rem; }
+.asset-discovery-causal-validation small { display: block; margin-top: 5px; color: #789ab5; font-size: .59rem; line-height: 1.4; }
+.asset-discovery-causal-validation .asset-discovery-causal-rule strong { color: #7ce0b8; }
+.asset-discovery-causal-validation .asset-discovery-causal-rule.blocked strong { color: #ff8f9b; }
+.asset-discovery-causal-validation .asset-discovery-causal-rule.blocked small { color: #d99aa2; }
+@media (max-width: 850px) { .asset-discovery-causal-validation { grid-template-columns: 1fr; } .asset-discovery-causal-validation > div { border-right: 0; border-bottom: 1px solid rgba(58, 102, 146, .14); } }
+:root[data-theme='light'] .asset-discovery-causal-validation { background: #f8fbfe; border-color: #dfe7ef; }
+:root[data-theme='light'] .asset-discovery-causal-validation > div { border-color: #e1e8ef; }
+:root[data-theme='light'] .asset-discovery-causal-validation span,
+:root[data-theme='light'] .asset-discovery-causal-validation small { color: #536b82; }
+:root[data-theme='light'] .asset-discovery-causal-validation strong { color: #18324a; }
+:root[data-theme='light'] .asset-discovery-causal-validation .asset-discovery-causal-rule strong { color: #087356; }
+:root[data-theme='light'] .asset-discovery-causal-validation .asset-discovery-causal-rule.blocked strong { color: #a52c3c; }
 
 .asset-discovery-campaign-outcome {
   margin: 0;
