@@ -432,3 +432,35 @@
 @media (max-width: 700px) { .asset-discovery-fit-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 .asset-discovery-select-all { padding: 5px 8px; border: 1px solid #284a63; border-radius: 7px; background: rgba(20, 48, 68, .45); }
+
+.asset-discovery-selection-bar {
+  display: grid;
+  grid-template-columns: minmax(180px, .7fr) minmax(420px, 1.8fr);
+  gap: 12px 18px;
+  align-items: center;
+  margin: 14px 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(47, 143, 234, .30);
+  border-radius: 12px;
+  background: rgba(12, 43, 70, .52);
+}
+.asset-discovery-selection-bar.certified { border-color: rgba(53, 211, 155, .42); background: rgba(20, 67, 68, .28); }
+.asset-discovery-selection-summary span { display: block; color: #7297b6; font-size: .56rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.asset-discovery-selection-summary strong { display: block; margin-top: 3px; color: #e8f3fc; font-size: .9rem; }
+.asset-discovery-selection-summary small { display: block; margin-top: 4px; color: #86a7c0; font-size: .62rem; }
+.asset-discovery-selection-actions { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 8px; }
+.asset-discovery-selection-actions .secondary-action,
+.asset-discovery-selection-actions .primary-action { width: auto; min-width: 0; margin: 0; }
+.asset-discovery-selection-actions .asset-discovery-append-action { min-width: 250px; }
+.asset-discovery-selection-feedback { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 14px; min-height: 14px; }
+.asset-discovery-selection-feedback .asset-discovery-create-feedback { margin: 0; }
+@media (max-width: 850px) {
+  .asset-discovery-selection-bar { grid-template-columns: 1fr; }
+  .asset-discovery-selection-actions { justify-content: flex-start; }
+  .asset-discovery-selection-feedback { grid-column: auto; justify-content: flex-start; }
+}
+:root[data-theme='light'] .asset-discovery-selection-bar { background: #f8fbfe; border-color: #b8d6f2; }
+:root[data-theme='light'] .asset-discovery-selection-bar.certified { background: #f1fbf7; border-color: #afdccc; }
+:root[data-theme='light'] .asset-discovery-selection-summary span,
+:root[data-theme='light'] .asset-discovery-selection-summary small { color: #536b82; }
+:root[data-theme='light'] .asset-discovery-selection-summary strong { color: #18324a; }
