@@ -500,12 +500,11 @@ function DetailModal({ item, evaluatedCount, onClose }) {
 
 export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
   const discovery = useAssetDiscovery({ onSessionExpired })
-  const [researchSize, setResearchSize] = useState(24)
+  const [researchSize, setResearchSize] = useState(64)
   const [selected, setSelected] = useState(null)
   const [selectedSymbols, setSelectedSymbols] = useState([])
   const campaign = discovery.campaign
   const catalogAssets = discovery.catalog?.assets || []
-  const options = discovery.status?.research_size_options || [8, 16, 24, 32, 40, 48, 56, 64]
   const results = useMemo(() => (campaign?.results || []).filter(visibleDiscoveryResult), [campaign?.results])
   const orderedResults = useMemo(() => [...results].sort((left, right) => {
     const leftMarginalRank = marginalRankValue(left)
@@ -582,13 +581,19 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
           <small>{baseline.asset_count ? tr('{count} assets', { count: baseline.asset_count }) : '—'}{baseline.market_snapshot_end ? ` · ${baseline.market_snapshot_end}` : ''}</small>
         </div>
         <label>
-          <span>{tr('Scan limit')}</span>
-          <select value={researchSize} disabled={discovery.active} onChange={(event) => setResearchSize(Number(event.target.value))}>
-            {options.map((value) => <option key={value} value={value}>{value}</option>)}
-          </select>
+          <span>{tr('Assets to research')}</span>
+          <input
+            type="number"
+            min="1"
+            step="1"
+            value={researchSize}
+            disabled={discovery.active}
+            onChange={(event) => setResearchSize(Math.max(1, Number(event.target.value) || 1))}
+          />
         </label>
         <div className="asset-discovery-fixed-config"><span>{tr('Model')}</span><strong>Learning-to-Rank</strong><small>Ranking model</small></div>
-        <div className="asset-discovery-fixed-config"><span>{tr('Batch')}</span><strong>{discovery.status?.batch_size || 8}</strong><small>{tr('assets')}</small></div>
+        <div className="asset-discovery-fixed-config"><span>{tr('Scan parallelism')}</span><strong>{discovery.status?.scan_parallelism || campaign?.scan_parallelism || '—'}</strong><small>{tr('parallel jobs')}</small></div>
+        <div className="asset-discovery-fixed-config"><span>{tr('Validation parallelism')}</span><strong>{discovery.status?.validation_parallelism || campaign?.validation_parallelism || '—'}</strong><small>{tr('parallel jobs')}</small></div>
         <div className="asset-discovery-actions">
           {!discovery.active ? <button type="button" className="primary-action" disabled={!canStart || discovery.busy === 'start'} onClick={() => discovery.start(researchSize)}>{discovery.busy === 'start' ? tr('Starting…') : tr('Start research')}</button> : null}
           {discovery.active ? <button type="button" className="secondary-action danger-soft" disabled={!canStop || discovery.busy === 'stop' || String(campaign?.status || '').toLowerCase() === 'stopping'} onClick={discovery.stop}>{discovery.busy === 'stop' || String(campaign?.status || '').toLowerCase() === 'stopping' ? tr('Stopping…') : tr('Stop')}</button> : null}
@@ -602,7 +607,7 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
             <div><span>{tr('Campaign')}</span><strong>{campaign.run_id}</strong></div>
             <div><span>{tr('Status')}</span><strong>{tr(String(campaign.status || '').toUpperCase())}</strong></div>
             <div><span>{tr('Current batch')}</span><strong>{campaign.current_batch || '—'}</strong></div>
-            <div><span>{tr('Current asset')}</span><strong>{campaign.current_symbol || '—'}</strong></div>
+            <div><span>{tr('Validated in parallel')}</span><strong>{campaign?.marginal_replay?.completed_count ?? '—'} / {campaign?.marginal_replay?.total_count ?? '—'}</strong></div>
           </div>
           <ExecutionStatusBar campaign={campaign} />
           {String(campaign.status || '').toLowerCase() === 'failed' && campaign.message ? (
