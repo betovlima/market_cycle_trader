@@ -55,7 +55,9 @@ function marginalSelectable(replay) {
 }
 
 function visibleDiscoveryResult(item) {
-  if (!item || item.history_window_complete === false) return false
+  if (!item) return false
+  if (item.persistence_eligible === true) return true
+  if (item.history_window_complete === false) return false
   return marginalSelectable(item.marginal_replay)
 }
 
@@ -526,7 +528,10 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
     if (rightMarginalRank != null) return 1
     return Number(left?.rank || 999) - Number(right?.rank || 999)
   }), [results])
-  const currentCampaignSymbols = useMemo(() => normalizedSelection(results.map((item) => item?.symbol)), [results])
+  const currentCampaignSymbols = useMemo(
+    () => normalizedSelection((campaign?.results || []).map((item) => item?.symbol)),
+    [campaign?.results],
+  )
   const currentCampaignSymbolKey = currentCampaignSymbols.join('|')
   const canStart = hasCapability(capabilities, 'asset_discovery.start')
   const canStop = hasCapability(capabilities, 'asset_discovery.stop')
