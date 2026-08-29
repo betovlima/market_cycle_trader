@@ -135,13 +135,14 @@ export function useAssetDiscovery({ onSessionExpired }) {
         method: 'POST',
         body: { run_id: runId || null, symbols },
       })
-      setNotice(tr('Full Strategy validation started for the selected assets.'))
+      if (mountedRef.current && response) setStatus(response)
+      setNotice(tr('Historical impact validation started for the selected assets.'))
       await load({ silent: true })
       return response
     } catch (requestError) {
-      const message = tr(requestError?.message || 'Unable to start Full Strategy validation.')
+      const message = tr(requestError?.message || 'Unable to start historical impact validation.')
       setValidationError(message)
-      handleError(requestError)
+      if (requestError instanceof ApiError && requestError.status === 401) handleError(requestError)
       return null
     } finally {
       if (mountedRef.current) setBusy('')

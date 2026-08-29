@@ -1,1 +1,0 @@
-"""Opportunity Drought research package."""

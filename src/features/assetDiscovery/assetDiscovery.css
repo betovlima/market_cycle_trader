@@ -454,6 +454,15 @@
 .asset-discovery-selection-actions .asset-discovery-append-action { min-width: 250px; }
 .asset-discovery-selection-feedback { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 14px; min-height: 14px; }
 .asset-discovery-selection-feedback .asset-discovery-create-feedback { margin: 0; }
+.asset-discovery-validation-inline { width: 100%; padding: 9px 10px; border: 1px solid rgba(71, 157, 235, .26); border-radius: 9px; background: rgba(8, 32, 55, .46); }
+.asset-discovery-validation-inline-copy { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; margin-bottom: 6px; }
+.asset-discovery-validation-inline-copy strong { color: #9ccaff; font-size: .64rem; }
+.asset-discovery-validation-inline-copy span { min-width: 0; overflow: hidden; color: #86a7c0; font-size: .6rem; text-overflow: ellipsis; white-space: nowrap; }
+.asset-discovery-validation-inline-copy b { color: #dcecf9; font-size: .64rem; }
+:root[data-theme='light'] .asset-discovery-validation-inline { background: #f4f9fd; border-color: #bedcf4; }
+:root[data-theme='light'] .asset-discovery-validation-inline-copy strong { color: #165f9f; }
+:root[data-theme='light'] .asset-discovery-validation-inline-copy span { color: #536b82; }
+:root[data-theme='light'] .asset-discovery-validation-inline-copy b { color: #18324a; }
 @media (max-width: 850px) {
   .asset-discovery-selection-bar { grid-template-columns: 1fr; }
   .asset-discovery-selection-actions { justify-content: flex-start; }
