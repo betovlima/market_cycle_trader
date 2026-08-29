@@ -3656,4 +3656,12 @@ export const PT_TRANSLATIONS = {
   'Historical validation candidates': 'Candidatos históricos de validação',
   'Validation candidates': 'Candidatos da validação',
   'Validation contribution rank': 'Posição por contribuição na validação',
+  'Select all': 'Selecionar todos',
+  'Add selected to Research Strategy': 'Adicionar selecionados à Strategy de Pesquisa',
+  'Adding selected assets…': 'Adicionando ativos selecionados…',
+  'Selected assets added to the Research Strategy.': 'Ativos selecionados adicionados à Strategy de Pesquisa.',
+  '{count} selected assets added to Research Strategy #{sequence}. Total assets: {total}.': '{count} ativos selecionados adicionados à Strategy de Pesquisa #{sequence}. Total de ativos: {total}.',
+  'Unable to add selected assets to the Research Strategy.': 'Não foi possível adicionar os ativos selecionados à Strategy de Pesquisa.',
+  'Research Strategy #{sequence} updated · {count} assets': 'Strategy de Pesquisa #{sequence} atualizada · {count} ativos',
+
 }
