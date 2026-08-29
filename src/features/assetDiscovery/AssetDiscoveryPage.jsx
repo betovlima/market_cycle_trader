@@ -394,7 +394,7 @@ function MarginalReplayPanel({
       </div>
       <div className="asset-discovery-selection-actions">
         <label className="asset-discovery-select-asset asset-discovery-select-all">
-          <input type="checkbox" checked={allSelected} disabled={!selectableSymbols.length} onChange={toggleAll} />
+          <input type="checkbox" checked={allSelected} disabled={!selectableSymbols.length || validationActive} onChange={toggleAll} />
           <span>{tr('Select all')}</span>
         </label>
         <button
@@ -404,10 +404,10 @@ function MarginalReplayPanel({
           onClick={onValidate}
         >
           {validationActive || busy === 'full-strategy-validation'
-            ? tr('Validating selected universe…')
+            ? tr('Validating historical impact — {count}', { count: validation.selected_assets?.length || selectedSymbols.length })
             : selectedSymbols.length
-              ? tr('Validate {count} selected', { count: selectedSymbols.length })
-              : tr('Validate selected universe')}
+              ? tr('Validate historical impact — {count}', { count: selectedSymbols.length })
+              : tr('Validate historical impact')}
         </button>
         <button
           type="button"
@@ -427,6 +427,14 @@ function MarginalReplayPanel({
         </button>
       </div>
       <div className="asset-discovery-selection-feedback">
+        {validationActive ? <div className="asset-discovery-validation-inline" role="status" aria-live="polite">
+          <div className="asset-discovery-validation-inline-copy">
+            <strong>{tr('Historical validation running')}</strong>
+            <span>{tr(validation.current_stage || 'Validating selection')}</span>
+            <b>{number(validationProgress, 1)}%</b>
+          </div>
+          <div className="asset-discovery-progress"><span style={{ width: `${validationProgress}%` }} /></div>
+        </div> : null}
         {validationPassed ? <small className="asset-discovery-create-feedback success">{tr('Selected-universe validation PASS for this exact selection.')}</small> : null}
         {validationFailed ? <small className="asset-discovery-create-feedback error">{tr('Selected-universe validation FAIL for this exact selection.')}</small> : null}
         {validationError ? <small className="asset-discovery-create-feedback error">{validationError}</small> : null}
@@ -452,7 +460,7 @@ function MarginalReplayPanel({
               <small className="asset-discovery-rank-line"><span>{tr('Discovery rank')}</span><strong>#{result?.discovery_selection?.rank || result.rank || '—'}</strong></small>
             </div>
             {selectable ? <label className="asset-discovery-select-asset">
-              <input type="checkbox" checked={checked} onChange={() => toggleSymbol(row.symbol)} />
+              <input type="checkbox" checked={checked} disabled={validationActive} onChange={() => toggleSymbol(row.symbol)} />
               <span>{tr('Select')}</span>
             </label> : <span className="asset-discovery-adherence-label">{tr('Low adherence')}</span>}
           </div>
@@ -570,6 +578,20 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
       return next.length === current.length && next.every((symbol, index) => symbol === current[index]) ? current : next
     })
   }, [campaign?.run_id, currentCampaignSymbolKey])
+
+  useEffect(() => {
+    const validation = campaign?.full_strategy_validation || {}
+    const status = String(validation.status || '').toLowerCase()
+    if (!['queued', 'running'].includes(status)) return
+    const activeSelection = normalizedSelection(validation.selected_assets).filter((symbol) => currentCampaignSymbols.includes(symbol))
+    if (!activeSelection.length) return
+    setSelectedSymbols((current) => {
+      const normalizedCurrent = normalizedSelection(current)
+      return normalizedCurrent.length === activeSelection.length && normalizedCurrent.every((symbol, index) => symbol === activeSelection[index])
+        ? current
+        : activeSelection
+    })
+  }, [campaign?.run_id, campaign?.full_strategy_validation?.validation_id, campaign?.full_strategy_validation?.status, currentCampaignSymbolKey])
 
   const progress = useMemo(() => {
     const requested = Number(campaign?.research_size || researchSize || 1)

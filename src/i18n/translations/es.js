@@ -3658,4 +3658,15 @@ export const ES_TRANSLATIONS = {
   'Relative change in final Strategy capital when this asset is added to the baseline universe for the complete research period.': 'Cambio relativo del capital final de la Strategy cuando este activo se agrega al universo de referencia durante todo el período de investigación.',
   'Risk-adjusted return of the baseline Strategy over the complete research period.': 'Retorno ajustado al riesgo de la Strategy de referencia durante todo el período de investigación.',
 
+  'Historical impact validation started for the selected assets.': 'Validación del impacto histórico iniciada para los activos seleccionados.',
+  'Unable to start historical impact validation.': 'No fue posible iniciar la validación del impacto histórico.',
+  'Validate historical impact — {count}': 'Validar impacto histórico — {count}',
+  'Validate historical impact': 'Validar impacto histórico',
+  'Validating historical impact — {count}': 'Validando impacto histórico — {count}',
+  'Historical validation running': 'Validación histórica en curso',
+  'Replaying current Strategy Research over the complete research history': 'Reejecutando la Strategy de Investigación actual en todo el historial de investigación',
+  'Full-history baseline replay': 'Reejecución de la línea base en todo el historial',
+  'Selected-universe full-history replay': 'Reejecución del universo seleccionado en todo el historial',
+  'Selected-universe full-history validation completed': 'Validación del universo seleccionado en todo el historial completada',
+  'An Asset Discovery operation is already running.': 'Ya hay una operación de Descubrimiento de Activos en curso.',
 }
