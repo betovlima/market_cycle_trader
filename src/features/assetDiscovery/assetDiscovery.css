@@ -5,12 +5,12 @@
 .asset-discovery-title-icon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 11px; color: #73aef0; background: rgba(34, 92, 151, .25); }
 .asset-discovery-mode { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; font-size: .68rem; color: #7f9db8; }
 .asset-discovery-mode strong { color: #d8e9f8; }
-.asset-discovery-config { display: grid; grid-template-columns: minmax(210px, 1.35fr) minmax(150px, .6fr) minmax(180px, .9fr) minmax(90px, .35fr) auto; gap: 12px; align-items: end; padding: 16px 20px; border-bottom: 1px solid rgba(58, 102, 146, .2); }
+.asset-discovery-config { display: grid; grid-template-columns: minmax(210px, 1.25fr) minmax(130px, .55fr) minmax(170px, .8fr) minmax(120px, .45fr) minmax(120px, .45fr) auto; gap: 12px; align-items: end; padding: 16px 20px; border-bottom: 1px solid rgba(58, 102, 146, .2); }
 .asset-discovery-config label, .asset-discovery-baseline, .asset-discovery-fixed-config { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
 .asset-discovery-config label > span, .asset-discovery-baseline > span, .asset-discovery-fixed-config > span { color: #789ab8; font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
 .asset-discovery-baseline strong, .asset-discovery-fixed-config strong { color: #e3f0fb; font-size: .84rem; }
 .asset-discovery-baseline small, .asset-discovery-fixed-config small { color: #789ab8; font-size: .65rem; }
-.asset-discovery-config select { min-height: 38px; }
+.asset-discovery-config select, .asset-discovery-config input[type="number"] { min-height: 38px; }
 .asset-discovery-actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
 .asset-discovery-actions .primary-action, .asset-discovery-actions .secondary-action, .asset-discovery-result-card .secondary-action { width: auto; min-width: 0; margin: 0; }
 .asset-discovery-page .inline-notice { margin: 12px 20px 0; padding: 9px 12px; border: 1px solid rgba(53, 211, 155, .24); border-radius: 8px; color: #8ee8c6; background: rgba(53, 211, 155, .07); font-size: .7rem; }
