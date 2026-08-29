@@ -545,7 +545,18 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
   }
 
 
+  if (discovery.loading && !discovery.status) {
+    return <section className="asset-discovery-page"><div className="page-loading">{tr('Loading Asset Discovery…')}</div></section>
+  }
 
+  const baseline = campaign?.baseline || discovery.status?.baseline || {}
+  const winnerSource = campaign?.winner_source || {}
+  const model = campaign?.causal_selection_model || campaign?.model || {}
+  const rejectionSummary = campaign?.rejection_summary || {}
+  const historicalIntegrityRejects = Number(rejectionSummary.insufficient_history || 0)
+    + Number(rejectionSummary.discontinuous_history || 0)
+    + Number(rejectionSummary.ticker_identity_discontinuity || 0)
+    + Number(rejectionSummary.research_context_incomplete || 0)
 
   const persistentCandidateCount = campaign?.marginal_replay?.persistent_candidate_count
     ?? results.filter((item) => marginalSelectable(item?.marginal_replay)).length
