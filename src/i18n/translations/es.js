@@ -3443,4 +3443,15 @@ export const ES_TRANSLATIONS = {
   'Unseen period': 'Período no visto',
   'This is diagnostic only. It does not change model parameters, Strategy decisions, Winner, Paper or Live execution.': 'Esta prueba es solo diagnóstica. No cambia parámetros del modelo, decisiones de Strategy, Winner ni la ejecución simulada o real.',
   'Export audit': 'Exportar auditoría',
+
+  'Decision origin': 'Origen de la decisión',
+  'Execution origin': 'Origen de la ejecución',
+  'Model-generated plan': 'Plan generado por el modelo',
+  'Scheduled automatic execution': 'Ejecución automática programada',
+  'Manual recovery execution': 'Ejecución manual de recuperación',
+  'Manual contingency execution': 'Ejecución manual de contingencia',
+  'Historical execution origin not recorded': 'Origen histórico de la ejecución no registrado',
+  'Execution origin not available': 'Origen de ejecución no disponible',
+  'The asset decision came from the persisted model plan, but the order execution was triggered manually as recovery or contingency.': 'La elección del activo provino del plan persistido del modelo, pero la ejecución de las órdenes se activó manualmente como recuperación o contingencia.',
+  'This historical plan predates execution-origin tracking, so automatic versus manual execution cannot be inferred safely.': 'Este plan es anterior al seguimiento del origen de ejecución; no es seguro inferir si la ejecución fue automática o manual.',
 }

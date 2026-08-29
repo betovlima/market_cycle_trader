@@ -47,10 +47,6 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
   )
 
   useEffect(() => {
-    if (workspace.running && hasCapability(capabilities, 'backtest.view') && activeTab !== 'research') setActiveTab('backtest')
-  }, [activeTab, capabilities, workspace.running])
-
-  useEffect(() => {
     const openDashboardProcessing = (event) => {
       const processingId = String(event?.detail?.processingId || '')
       if (processingId) setDashboardProcessingId(processingId)

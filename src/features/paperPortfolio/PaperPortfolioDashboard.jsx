@@ -18,6 +18,13 @@ function DecisionAuditDialog({ audit, onClose }) {
     stateful_intervention: 'The stateful policy changed the control decision.',
   }
   const candidates = Array.isArray(audit.top_candidates) ? audit.top_candidates : []
+  const executionOriginLabels = {
+    scheduled_automatic: 'Scheduled automatic execution',
+    manual_recovery: 'Manual recovery execution',
+    manual_contingency: 'Manual contingency execution',
+    historical_unknown: 'Historical execution origin not recorded',
+    unknown: 'Execution origin not available',
+  }
   return (
     <div className="portfolio-decision-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
       <section className="portfolio-decision-dialog" role="dialog" aria-modal="true" aria-label={tr('Operation decision')}>
@@ -34,6 +41,8 @@ function DecisionAuditDialog({ audit, onClose }) {
           <div><span>{tr('Strategy')}</span><strong>{audit.winner_strategy_name || '—'}{audit.winner_strategy_revision != null ? ` · r${audit.winner_strategy_revision}` : ''}</strong></div>
           <div><span>{tr('Decision date')}</span><strong>{audit.decision_date || '—'}</strong></div>
           <div><span>{tr('Execution session')}</span><strong>{audit.execution_session || '—'}</strong></div>
+          <div><span>{tr('Decision origin')}</span><strong>{tr('Model-generated plan')}</strong></div>
+          <div><span>{tr('Execution origin')}</span><strong>{tr(executionOriginLabels[audit.execution_origin] || 'Execution origin not available')}</strong></div>
           <div><span>{tr('Rotation')}</span><strong>{audit.current_asset || 'CASH'} → {audit.target_asset || 'CASH'}</strong></div>
           <div><span>{tr('Raw best asset')}</span><strong>{audit.raw_best_asset || '—'}</strong></div>
           <div><span>{tr('Selected utility')}</span><strong>{number(audit.selected_utility, 6)}</strong></div>
@@ -42,6 +51,8 @@ function DecisionAuditDialog({ audit, onClose }) {
         <div className="portfolio-decision-reason">
           <span>{tr('Why this asset')}</span>
           <strong>{tr(reasonLabels[audit.selection_reason] || 'Decision preserved from the persisted Paper plan.')}</strong>
+          {audit.execution_origin === 'manual_recovery' || audit.execution_origin === 'manual_contingency' ? <small>{tr('The asset decision came from the persisted model plan, but the order execution was triggered manually as recovery or contingency.')}</small> : null}
+          {audit.execution_origin === 'historical_unknown' ? <small>{tr('This historical plan predates execution-origin tracking, so automatic versus manual execution cannot be inferred safely.')}</small> : null}
         </div>
 
         <div className="portfolio-decision-grid">
