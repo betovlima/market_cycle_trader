@@ -302,10 +302,11 @@ function MarginalReplayPanel({
   busy,
   onRunReplay,
   onValidate,
-  onCreate,
+  onAddSelected,
+  setSelectedSymbols,
   validationError,
   createError,
-  createdStrategy,
+  updatedResearchStrategy,
 }) {
   const replay = campaign?.marginal_replay || {}
   const validation = campaign?.full_strategy_validation || {}
@@ -315,6 +316,9 @@ function MarginalReplayPanel({
     const rightRank = Number(right?.marginal_rank || 999)
     return leftRank - rightRank
   })
+  const selectableSymbols = rows.map((row) => String(row.symbol || '').trim().toUpperCase()).filter(Boolean)
+  const allSelected = selectableSymbols.length > 0 && selectableSymbols.every((symbol) => selectedSymbols.includes(symbol))
+  const toggleAll = () => setSelectedSymbols(allSelected ? [] : selectableSymbols)
   const baseline = replay.baseline || {}
   const total = Number(replay.total_count || campaign?.shortlisted_count || 0)
   const completed = Number(replay.completed_count || 0)
@@ -361,6 +365,10 @@ function MarginalReplayPanel({
         >
           {busy === 'marginal-replay' ? tr('Starting replay…') : tr('Run Marginal Capital Replay')}
         </button> : null}
+        {selectableSymbols.length ? <label className="asset-discovery-select-asset asset-discovery-select-all">
+          <input type="checkbox" checked={allSelected} onChange={toggleAll} />
+          <span>{tr('Select all')}</span>
+        </label> : null}
         <button
           type="button"
           className="secondary-action"
@@ -372,16 +380,16 @@ function MarginalReplayPanel({
         <button
           type="button"
           className="primary-action"
-          disabled={!canCreateStrategy || !selectedSymbols.length || !validationPassed || busy === 'create-strategy'}
-          onClick={onCreate}
+          disabled={!canCreateStrategy || !selectedSymbols.length || !validationPassed || busy === 'append-to-research-strategy'}
+          onClick={onAddSelected}
         >
-          {busy === 'create-strategy' ? tr('Creating Strategy…') : tr('Create Research Strategy')}
+          {busy === 'append-to-research-strategy' ? tr('Adding selected assets…') : tr('Add selected to Research Strategy')}
         </button>
         <small>{tr('{count} selected', { count: selectedSymbols.length })}</small>
         {!certificationAvailable ? <small className="asset-discovery-create-feedback error">{tr('Final certification is unavailable because this period overlaps data already consumed by an earlier certification.')}</small> : null}
         {validationError ? <small className="asset-discovery-create-feedback error">{validationError}</small> : null}
         {createError ? <small className="asset-discovery-create-feedback error">{createError}</small> : null}
-        {createdStrategy?.strategy?.strategy_sequence ? <small className="asset-discovery-create-feedback success">{tr('Strategy #{sequence} created · {count} assets', { sequence: createdStrategy.strategy.strategy_sequence, count: createdStrategy.asset_count || '—' })}</small> : null}
+        {updatedResearchStrategy?.research_strategy?.strategy_sequence ? <small className="asset-discovery-create-feedback success">{tr('Research Strategy #{sequence} updated · {count} assets', { sequence: updatedResearchStrategy.research_strategy.strategy_sequence, count: updatedResearchStrategy.asset_count_after || '—' })}</small> : null}
       </div>
     </div>
     {replayActive ? <>
@@ -538,9 +546,9 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
     await discovery.validateSelection(campaign?.run_id, selectedSymbols)
   }
 
-  const createStrategy = async () => {
-    const created = await discovery.createStrategy(campaign?.run_id, selectedSymbols)
-    if (created) setSelectedSymbols([])
+  const addSelectedToResearchStrategy = async () => {
+    const updated = await discovery.appendToResearchStrategy(campaign?.run_id, selectedSymbols)
+    if (updated) setSelectedSymbols([])
   }
 
 
@@ -647,10 +655,11 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
           busy={discovery.busy}
           onRunReplay={discovery.runMarginalReplay}
           onValidate={validateStrategySelection}
-          onCreate={createStrategy}
+          onAddSelected={addSelectedToResearchStrategy}
+          setSelectedSymbols={setSelectedSymbols}
           validationError={discovery.validationError}
           createError={discovery.createError}
-          createdStrategy={discovery.createdStrategy}
+          updatedResearchStrategy={discovery.updatedResearchStrategy}
         />
 
         <section className="asset-discovery-results">

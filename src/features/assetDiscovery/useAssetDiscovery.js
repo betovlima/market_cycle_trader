@@ -15,7 +15,7 @@ export function useAssetDiscovery({ onSessionExpired }) {
   const [notice, setNotice] = useState('')
   const [createError, setCreateError] = useState('')
   const [validationError, setValidationError] = useState('')
-  const [createdStrategy, setCreatedStrategy] = useState(null)
+  const [updatedResearchStrategy, setUpdatedResearchStrategy] = useState(null)
   const mountedRef = useRef(true)
 
   const handleError = useCallback((requestError) => {
@@ -129,7 +129,7 @@ export function useAssetDiscovery({ onSessionExpired }) {
     setError('')
     setNotice('')
     setValidationError('')
-    setCreatedStrategy(null)
+    setUpdatedResearchStrategy(null)
     try {
       const response = await apiFetch(`${API}/asset-discovery/full-strategy-validation`, {
         method: 'POST',
@@ -148,33 +148,29 @@ export function useAssetDiscovery({ onSessionExpired }) {
     }
   }, [handleError, load])
 
-  const createStrategy = useCallback(async (runId, symbols) => {
+  const appendToResearchStrategy = useCallback(async (runId, symbols) => {
     if (!Array.isArray(symbols) || !symbols.length) return null
-    setBusy('create-strategy')
+    setBusy('append-to-research-strategy')
     setError('')
     setNotice('')
     setCreateError('')
-    setCreatedStrategy(null)
+    setUpdatedResearchStrategy(null)
     try {
-      const response = await apiFetch(`${API}/asset-discovery/create-strategy`, {
+      const response = await apiFetch(`${API}/asset-discovery/append-to-research-strategy`, {
         method: 'POST',
         body: { run_id: runId || null, symbols },
       })
-      const sequence = response?.strategy?.strategy_sequence
-      const count = response?.selected_assets?.length || 0
-      const discarded = Array.isArray(response?.discarded_assets)
-        ? response.discarded_assets.map((item) => item?.symbol).filter(Boolean)
-        : []
+      const sequence = response?.research_strategy?.strategy_sequence
+      const added = response?.added_assets?.length || 0
+      const total = response?.asset_count_after
       setNotice(sequence
-        ? (discarded.length
-          ? tr('Strategy #{sequence} created with {count} selected assets. Discarded: {discarded}.', { sequence, count, discarded: discarded.join(', ') })
-          : tr('Strategy #{sequence} created with {count} selected assets.', { sequence, count }))
-        : tr('Research Strategy created.'))
-      setCreatedStrategy(response)
+        ? tr('{count} selected assets added to Research Strategy #{sequence}. Total assets: {total}.', { count: added, sequence, total: total ?? '—' })
+        : tr('Selected assets added to the Research Strategy.'))
+      setUpdatedResearchStrategy(response)
       await load({ silent: true })
       return response
     } catch (requestError) {
-      const message = tr(requestError?.message || 'Unable to create Research Strategy.')
+      const message = tr(requestError?.message || 'Unable to add selected assets to the Research Strategy.')
       setCreateError(message)
       handleError(requestError)
       return null
@@ -194,13 +190,13 @@ export function useAssetDiscovery({ onSessionExpired }) {
     notice,
     createError,
     validationError,
-    createdStrategy,
+    updatedResearchStrategy,
     load,
     start,
     runMarginalReplay,
     validateSelection,
     stop,
     exportAnalysis,
-    createStrategy,
+    appendToResearchStrategy,
   }
 }

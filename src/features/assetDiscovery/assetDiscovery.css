@@ -430,3 +430,5 @@
 .asset-discovery-fit-metrics strong { display: block; margin-top: 4px; color: #dcecf9; font-size: .76rem; }
 @media (max-width: 1000px) { .asset-discovery-fit-diagnostic { grid-template-columns: 1fr; } }
 @media (max-width: 700px) { .asset-discovery-fit-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.asset-discovery-select-all { padding: 5px 8px; border: 1px solid #284a63; border-radius: 7px; background: rgba(20, 48, 68, .45); }
