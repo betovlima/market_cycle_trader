@@ -599,6 +599,9 @@ function StatisticalPredictiveControlPanel({ analysis }) {
   const gates = analysis?.gates || []
   const folds = analysis?.folds || []
   const monthly = analysis?.monthly || []
+  const trajectory = analysis?.daily_regime_trajectory || {}
+  const trajectoryOverall = trajectory?.overall || {}
+  const trajectoryFolds = trajectory?.folds || []
   const decisionStatus = String(analysis?.decision?.status || '').toLowerCase()
   const candidateLift = Number(summary?.ending_capital_delta_rate)
   const worstMonths = [...monthly]
@@ -619,6 +622,11 @@ function StatisticalPredictiveControlPanel({ analysis }) {
       <MetricCard label={tr('Opportunity-risk conflicts')} value={number(summary?.opportunity_risk_conflict_count, 0)} />
       <MetricCard label={tr('Regime silhouette')} value={number(summary?.mean_regime_silhouette, 3)} note={tr('Training-only causal regime separation')} />
       <MetricCard label={tr('Q4 regime sessions')} value={number(summary?.regime_quadrant_counts?.Q4, 0)} note={tr('High opportunity signal with weaker market/risk context')} />
+      <MetricCard label={tr('Daily trajectory AUC')} value={number(summary?.daily_regime_trajectory_auc, 3)} note={tr('Shadow-only early-warning evaluation')} />
+      <MetricCard label={tr('Daily regime warnings')} value={number(summary?.daily_regime_warning_count, 0)} />
+      <MetricCard label={tr('Warning precision')} value={percent(summary?.daily_regime_warning_precision, 1)} />
+      <MetricCard label={tr('Warning recall')} value={percent(summary?.daily_regime_warning_recall, 1)} />
+      <MetricCard label={tr('Median lead time')} value={Number.isFinite(Number(summary?.daily_regime_median_lead_sessions)) ? `${number(summary?.daily_regime_median_lead_sessions, 1)} ${tr('sessions')}` : '—'} />
       <MetricCard label={tr('Capital effect')} value={percent(candidateLift, 2)} tone={candidateLift > 0 ? 'positive' : candidateLift < 0 ? 'negative' : ''} />
     </div>
     <div className="strategy-research-control-protocol">
@@ -655,6 +663,25 @@ function StatisticalPredictiveControlPanel({ analysis }) {
         ],
         notes: [{ label: tr('No future leakage'), text: tr('The monthly diagnostic clustering remains visual only. Predictive regime features are rebuilt causally inside each outer training fold.') }],
       })}><strong>{tr('Regime context')}</strong><span>{tr('Rolling cluster distances + causal quadrants')}</span></button>
+      <button type="button" onClick={() => setSelectedDetail({
+        kicker: 'DAILY REGIME TRAJECTORY',
+        title: tr('Daily regime trajectory'),
+        description: tr('Tracks how the daily causal market state moves toward or away from the defensive regime. This release measures anticipation only and does not change HOLD, ROTATE or CASH decisions.'),
+        metrics: [
+          { label: tr('Trajectory AUC'), value: number(trajectoryOverall?.auc, 3) },
+          { label: tr('Warnings'), value: number(trajectoryOverall?.warnings, 0) },
+          { label: tr('Severe future windows'), value: number(trajectoryOverall?.severe_windows, 0) },
+          { label: tr('True warnings'), value: number(trajectoryOverall?.true_warnings, 0) },
+          { label: tr('Warning precision'), value: percent(trajectoryOverall?.precision, 1) },
+          { label: tr('Warning recall'), value: percent(trajectoryOverall?.recall, 1) },
+          { label: tr('Median lead time'), value: Number.isFinite(Number(trajectoryOverall?.median_trough_lead_sessions)) ? `${number(trajectoryOverall?.median_trough_lead_sessions, 1)} ${tr('sessions')}` : '—' },
+          { label: tr('Trajectory window'), value: `${number(trajectory?.trajectory_window_sessions, 0)} ${tr('sessions')}` },
+        ],
+        notes: [
+          { label: tr('Causality'), text: tr('Regime centroids, normalization and warning thresholds are learned only from prior training years inside each chronological fold.') },
+          { label: tr('Research isolation'), text: tr('Daily trajectory is diagnostic-only in v10.4.3. It is not a model feature and cannot alter the researched Strategy.') },
+        ],
+      })}><strong>{tr('Daily regime trajectory')}</strong><span>{tr('Direction + speed + persistence toward defensive regimes')}</span></button>
     </div>
     <div className="strategy-research-stat-grid">
       <div className="strategy-research-stat-section">
@@ -685,6 +712,9 @@ function StatisticalPredictiveControlPanel({ analysis }) {
               { label: tr('Test rows'), value: number(fold?.test_rows, 0) },
               { label: tr('Regime silhouette'), value: number(fold?.regime_context?.silhouette_score, 3) },
               { label: tr('Regime clusters'), value: number(fold?.regime_context?.cluster_count, 0) },
+              { label: tr('Trajectory AUC'), value: number(trajectoryFolds.find((item) => Number(item?.test_year) === Number(fold?.test_year))?.auc, 3) },
+              { label: tr('Trajectory precision'), value: percent(trajectoryFolds.find((item) => Number(item?.test_year) === Number(fold?.test_year))?.precision, 1) },
+              { label: tr('Trajectory recall'), value: percent(trajectoryFolds.find((item) => Number(item?.test_year) === Number(fold?.test_year))?.recall, 1) },
             ],
           })}><span>{fold.test_year}</span><span>{number(fold?.close_metrics?.auc, 3)}</span><span>{number(fold?.open_metrics?.auc, 3)}</span><span>{number(fold?.test_rows, 0)}</span></button>)}
         </div>
