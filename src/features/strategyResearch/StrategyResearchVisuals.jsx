@@ -599,7 +599,7 @@ function DailyRegimeMap({ trajectory, folds = [], onOpenDetail }) {
   const [selectedYear, setSelectedYear] = useState(() => years.at(-1) || null)
   const effectiveYear = years.includes(selectedYear) ? selectedYear : (years.at(-1) || null)
   const visible = effectiveYear == null ? points : points.filter((row) => Number(row?.test_year) === Number(effectiveYear))
-  if (!visible.length) return <div className="strategy-research-stat-section"><div className="strategy-research-section-heading"><strong>{tr('Daily causal regime map')}</strong><span>{tr('Daily regime points are not available for this persisted analysis. Reload after the API update; rerunning the research is not required.')}</span></div></div>
+  if (!visible.length) return <div className="strategy-research-stat-section"><div className="strategy-research-section-heading"><strong>{tr('Frozen-fold regime control map')}</strong><span>{tr('Frozen-fold regime points are not available for this persisted analysis.')}</span></div></div>
 
   const width = 920
   const height = 390
@@ -629,9 +629,9 @@ function DailyRegimeMap({ trajectory, folds = [], onOpenDetail }) {
   const clusterLabel = (clusterId) => clusterId === 0 ? tr('Healthy regime') : clusterId === lastClusterId ? tr('Defensive regime') : `${tr('Intermediate regime')} ${clusterId + 1}`
 
   const openPoint = (row) => onOpenDetail?.({
-    kicker: 'DAILY CAUSAL REGIME',
+    kicker: 'FROZEN FOLD REGIME CONTROL',
     title: `${String(row?.execution_at || '—').slice(0, 10)} · ${row?.symbol || '—'}`,
-    description: tr('This point is one chronological out-of-sample session projected into the causal regime space learned only from prior training years.'),
+    description: tr('This point belongs to the previous frozen-fold regime control retained for comparison with the new daily refit.'),
     metrics: [
       { label: tr('Test year'), value: String(row?.test_year ?? '—') },
       { label: tr('Cluster'), value: Number.isFinite(Number(row?.regime_cluster_id)) ? `#${Number(row.regime_cluster_id) + 1} · ${clusterLabel(Number(row.regime_cluster_id))}` : '—' },
@@ -654,7 +654,7 @@ function DailyRegimeMap({ trajectory, folds = [], onOpenDetail }) {
 
   return <div className="strategy-research-daily-regime-map strategy-research-stat-section">
     <div className="strategy-research-daily-regime-head">
-      <div className="strategy-research-section-heading"><strong>{tr('Daily causal regime map')}</strong><span>{tr('Each point is one out-of-sample trading session. Clusters are shown inside one chronological test fold so PCA spaces from different folds are never mixed.')}</span></div>
+      <div className="strategy-research-section-heading"><strong>{tr('Frozen-fold regime control map')}</strong><span>{tr('Control visualization from v10.4.4: one clustering model is frozen per chronological test fold. It is retained only for comparison with the daily expanding refit above.')}</span></div>
       <div className="strategy-research-regime-year-tabs" aria-label={tr('Test year')}>
         {years.map((year) => <button type="button" key={year} className={Number(effectiveYear) === Number(year) ? 'selected' : ''} onClick={() => setSelectedYear(year)}>{year}</button>)}
       </div>
@@ -672,7 +672,7 @@ function DailyRegimeMap({ trajectory, folds = [], onOpenDetail }) {
       <span><b className="severe-ring" />{tr('Severe future window')}</span>
       <span><b className="center-diamond">◆</b>{tr('Displayed OOS cluster center')}</span>
     </div>
-    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={tr('Daily causal regime map')}>
+    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={tr('Frozen-fold regime control map')}>
       <rect x={plot.left} y={plot.top} width={zeroX - plot.left} height={zeroY - plot.top} className="regime-q2" />
       <rect x={zeroX} y={plot.top} width={plot.right - zeroX} height={zeroY - plot.top} className="regime-q1" />
       <rect x={plot.left} y={zeroY} width={zeroX - plot.left} height={plot.bottom - zeroY} className="regime-q3" />
@@ -697,6 +697,97 @@ function DailyRegimeMap({ trajectory, folds = [], onOpenDetail }) {
   </div>
 }
 
+
+function DynamicDailyRegimeMap({ dynamicRegime, onOpenDetail }) {
+  const points = (dynamicRegime?.points || []).filter((row) => Number.isFinite(Number(row?.dynamic_regime_opportunity_axis)) && Number.isFinite(Number(row?.dynamic_regime_environment_axis)))
+  const years = [...new Set(points.map((row) => Number(row?.test_year)).filter(Number.isFinite))].sort((a, b) => a - b)
+  const [selectedYear, setSelectedYear] = useState(() => years.at(-1) || null)
+  const effectiveYear = years.includes(selectedYear) ? selectedYear : (years.at(-1) || null)
+  const visible = effectiveYear == null ? points : points.filter((row) => Number(row?.test_year) === Number(effectiveYear))
+  if (!visible.length) return null
+
+  const width = 920
+  const height = 390
+  const plot = { left: 58, right: 892, top: 42, bottom: 338 }
+  const xs = visible.map((row) => Number(row.dynamic_regime_opportunity_axis))
+  const ys = visible.map((row) => Number(row.dynamic_regime_environment_axis))
+  const xMin = Math.min(...xs, -1), xMax = Math.max(...xs, 1)
+  const yMin = Math.min(...ys, -1), yMax = Math.max(...ys, 1)
+  const xPad = Math.max(0.2, (xMax - xMin) * 0.08)
+  const yPad = Math.max(0.2, (yMax - yMin) * 0.08)
+  const mapX = (value) => plot.left + ((Number(value) - (xMin - xPad)) / ((xMax + xPad) - (xMin - xPad))) * (plot.right - plot.left)
+  const mapY = (value) => plot.bottom - ((Number(value) - (yMin - yPad)) / ((yMax + yPad) - (yMin - yPad))) * (plot.bottom - plot.top)
+  const zeroX = mapX(0), zeroY = mapY(0)
+  const familyIds = [...new Set(visible.map((row) => Number(row.dynamic_regime_family_id)).filter(Number.isFinite))].sort((a, b) => a - b)
+  const yearSummary = (dynamicRegime?.yearly || []).find((item) => Number(item?.test_year) === Number(effectiveYear))
+  const novelCount = visible.filter((row) => Number(row?.dynamic_regime_is_novel) === 1).length
+  const transitionCount = visible.filter((row) => Number(row?.dynamic_regime_transition) === 1).length
+  const warningCount = visible.filter((row) => Number(row?.dynamic_regime_warning) === 1).length
+
+  const openPoint = (row) => onOpenDetail?.({
+    kicker: 'DAILY EXPANDING REGIME',
+    title: `${String(row?.execution_at || '—').slice(0, 10)} · ${row?.symbol || '—'}`,
+    description: tr('The unsupervised regime model is rebuilt from scratch at this completed close using every causal observation available through this day, including the new completed session.'),
+    metrics: [
+      { label: tr('Stable cluster family'), value: Number.isFinite(Number(row?.dynamic_regime_family_id)) ? `#${Number(row.dynamic_regime_family_id) + 1}` : '—' },
+      { label: tr('Clusters rebuilt today'), value: number(row?.dynamic_regime_cluster_count, 0) },
+      { label: tr('Semantic rank'), value: Number.isFinite(Number(row?.dynamic_regime_semantic_rank)) ? `${Number(row.dynamic_regime_semantic_rank) + 1}/${Number(row.dynamic_regime_cluster_count)}` : '—' },
+      { label: tr('Opportunity state'), value: number(row?.dynamic_regime_opportunity_axis, 3) },
+      { label: tr('Market / risk-health state'), value: number(row?.dynamic_regime_environment_axis, 3) },
+      { label: tr('Daily silhouette'), value: number(row?.dynamic_regime_silhouette, 3) },
+      { label: tr('Nearest-cluster distance'), value: number(row?.dynamic_regime_nearest_distance, 3) },
+      { label: tr('Defensive similarity'), value: number(row?.dynamic_regime_defensive_similarity, 3) },
+      { label: tr('Novelty ratio'), value: number(row?.dynamic_regime_novelty_ratio, 3) },
+      { label: tr('Novel / unknown state'), value: Number(row?.dynamic_regime_is_novel) === 1 ? tr('Yes') : tr('No'), tone: Number(row?.dynamic_regime_is_novel) === 1 ? 'negative' : '' },
+      { label: tr('Cluster transition'), value: Number(row?.dynamic_regime_transition) === 1 ? tr('Yes') : tr('No') },
+      { label: tr('More defensive transition'), value: Number(row?.dynamic_regime_more_defensive_transition) === 1 ? tr('Yes') : tr('No'), tone: Number(row?.dynamic_regime_more_defensive_transition) === 1 ? 'negative' : '' },
+      { label: tr('Geometric pressure'), value: number(row?.dynamic_regime_pressure_score, 3) },
+      { label: tr('Dynamic warning'), value: Number(row?.dynamic_regime_warning) === 1 ? tr('Yes') : tr('No'), tone: Number(row?.dynamic_regime_warning) === 1 ? 'negative' : '' },
+      { label: tr('Severe future window'), value: Number(row?.trajectory_severe_event) === 1 ? tr('Yes') : tr('No'), tone: Number(row?.trajectory_severe_event) === 1 ? 'negative' : '' },
+      { label: tr('Future minimum return'), value: Number.isFinite(Number(row?.trajectory_forward_min_return)) ? percent(row.trajectory_forward_min_return, 2) : '—' },
+    ],
+    notes: [
+      { label: tr('Daily refit'), text: tr('Normalization and clustering are recreated after every completed trading session. The current close participates in the unsupervised refit because it is already known at decision time.') },
+      { label: tr('Stable families'), text: tr('Cluster numeric labels may be reassigned by the algorithm. The UI follows centroid similarity across consecutive daily refits so the same geometric family can be tracked through time.') },
+      { label: tr('Novelty'), text: tr('A novel state means the new completed session is farther from every cluster than the configured historical distance quantile. It is a research signal, not an automatic CASH decision.') },
+    ],
+  })
+
+  return <div className="strategy-research-daily-regime-map strategy-research-stat-section dynamic">
+    <div className="strategy-research-daily-regime-head">
+      <div className="strategy-research-section-heading"><strong>{tr('Daily expanding regime map')}</strong><span>{tr('The full unsupervised clustering process is rebuilt at every completed close. Points are connected chronologically to show how the market state moves while cluster families themselves are re-estimated.')}</span></div>
+      <div className="strategy-research-regime-year-tabs" aria-label={tr('Test year')}>{years.map((year) => <button type="button" key={year} className={Number(effectiveYear) === Number(year) ? 'selected' : ''} onClick={() => setSelectedYear(year)}>{year}</button>)}</div>
+    </div>
+    <div className="strategy-research-regime-map-kpis">
+      <span>{tr('Daily mean silhouette')} <strong>{number(yearSummary?.mean_silhouette, 3)}</strong></span>
+      <span>{tr('Stable families')} <strong>{familyIds.length}</strong></span>
+      <span>{tr('Transitions')} <strong>{transitionCount}</strong></span>
+      <span>{tr('Novel states')} <strong>{novelCount}</strong></span>
+      <span>{tr('Warnings')} <strong>{warningCount}</strong></span>
+      <span>{tr('Pressure AUC')} <strong>{number(yearSummary?.auc, 3)}</strong></span>
+    </div>
+    <div className="strategy-research-regime-map-legend">
+      {familyIds.map((familyId) => <span key={familyId}><i className={`cluster-${familyId % 6}`} />{tr('Stable family')} #{familyId + 1}</span>)}
+      <span><b className="warning-ring" />{tr('Dynamic warning')}</span>
+      <span><b className="severe-ring" />{tr('Novel / unknown')}</span>
+    </div>
+    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={tr('Daily expanding regime map')}>
+      <line x1={plot.left} y1={zeroY} x2={plot.right} y2={zeroY} className="regime-axis" />
+      <line x1={zeroX} y1={plot.top} x2={zeroX} y2={plot.bottom} className="regime-axis" />
+      <text x={(plot.left + plot.right) / 2} y={height - 12} textAnchor="middle" className="regime-axis-label">{tr('Standardized opportunity state')} →</text>
+      <text x="15" y={(plot.top + plot.bottom) / 2} textAnchor="middle" transform={`rotate(-90 15 ${(plot.top + plot.bottom) / 2})`} className="regime-axis-label">{tr('Standardized market / risk-health state')} →</text>
+      <polyline points={visible.map((row) => `${mapX(row.dynamic_regime_opportunity_axis)},${mapY(row.dynamic_regime_environment_axis)}`).join(' ')} className="regime-dynamic-path" />
+      {visible.map((row, index) => {
+        const familyId = Number(row.dynamic_regime_family_id)
+        const warning = Number(row.dynamic_regime_warning) === 1
+        const novel = Number(row.dynamic_regime_is_novel) === 1
+        return <circle key={`${row.execution_at}-${index}`} cx={mapX(row.dynamic_regime_opportunity_axis)} cy={mapY(row.dynamic_regime_environment_axis)} r={warning || novel ? 5.4 : 3.4} className={`regime-daily-point cluster-${Math.max(0, familyId) % 6} ${warning ? 'warning' : ''} ${novel ? 'severe' : ''}`} role="button" tabIndex="0" aria-label={`${String(row.execution_at || '').slice(0, 10)} · ${tr('Stable family')} ${familyId + 1}`} onClick={() => openPoint(row)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') openPoint(row) }} />
+      })}
+    </svg>
+    <div className="strategy-research-regime-map-reading"><strong>{tr('How to read')}</strong><span>{tr('The line follows consecutive closes. A cluster change is not required for deterioration: movement within the same stable family, increasing defensive similarity or a novel state can all be meaningful.')}</span></div>
+  </div>
+}
+
 function StatisticalPredictiveControlPanel({ analysis }) {
   const [selectedDetail, setSelectedDetail] = useState(null)
   const summary = analysis?.summary || {}
@@ -704,6 +795,8 @@ function StatisticalPredictiveControlPanel({ analysis }) {
   const folds = analysis?.folds || []
   const monthly = analysis?.monthly || []
   const trajectory = analysis?.daily_regime_trajectory || {}
+  const dynamicRegime = analysis?.daily_dynamic_regime || {}
+  const dynamicOverall = dynamicRegime?.overall || {}
   const trajectoryOverall = trajectory?.overall || {}
   const trajectoryFolds = trajectory?.folds || []
   const decisionStatus = String(analysis?.decision?.status || '').toLowerCase()
@@ -726,6 +819,10 @@ function StatisticalPredictiveControlPanel({ analysis }) {
       <MetricCard label={tr('Opportunity-risk conflicts')} value={number(summary?.opportunity_risk_conflict_count, 0)} />
       <MetricCard label={tr('Regime silhouette')} value={number(summary?.mean_regime_silhouette, 3)} note={tr('Training-only causal regime separation')} />
       <MetricCard label={tr('Q4 regime sessions')} value={number(summary?.regime_quadrant_counts?.Q4, 0)} note={tr('High opportunity signal with weaker market/risk context')} />
+      <MetricCard label={tr('Daily dynamic regime AUC')} value={number(summary?.daily_dynamic_regime_auc, 3)} note={tr('Full unsupervised refit after every completed close')} />
+      <MetricCard label={tr('Daily dynamic silhouette')} value={number(summary?.daily_dynamic_regime_mean_silhouette, 3)} />
+      <MetricCard label={tr('Novel daily states')} value={number(summary?.daily_dynamic_regime_novel_state_count, 0)} />
+      <MetricCard label={tr('Daily cluster transitions')} value={number(summary?.daily_dynamic_regime_transition_count, 0)} />
       <MetricCard label={tr('Daily trajectory AUC')} value={number(summary?.daily_regime_trajectory_auc, 3)} note={tr('Shadow-only early-warning evaluation')} />
       <MetricCard label={tr('Daily regime warnings')} value={number(summary?.daily_regime_warning_count, 0)} />
       <MetricCard label={tr('Warning precision')} value={percent(summary?.daily_regime_warning_precision, 1)} />
@@ -768,6 +865,25 @@ function StatisticalPredictiveControlPanel({ analysis }) {
         notes: [{ label: tr('No future leakage'), text: tr('The monthly diagnostic clustering remains visual only. Predictive regime features are rebuilt causally inside each outer training fold.') }],
       })}><strong>{tr('Regime context')}</strong><span>{tr('Rolling cluster distances + causal quadrants')}</span></button>
       <button type="button" onClick={() => setSelectedDetail({
+        kicker: 'DAILY EXPANDING REGIME',
+        title: tr('Daily expanding regime'),
+        description: tr('At every completed close the unsupervised process is rebuilt from scratch with all causal observations available through that session. This shadow layer measures cluster families, transitions and novelty without changing HOLD, ROTATE or CASH.'),
+        metrics: [
+          { label: tr('Mean daily silhouette'), value: number(dynamicRegime?.mean_silhouette, 3) },
+          { label: tr('Pressure AUC'), value: number(dynamicOverall?.auc, 3) },
+          { label: tr('Warnings'), value: number(dynamicOverall?.warnings, 0) },
+          { label: tr('Novel states'), value: number(dynamicRegime?.novel_state_count, 0) },
+          { label: tr('Cluster transitions'), value: number(dynamicRegime?.cluster_transition_count, 0) },
+          { label: tr('More defensive transitions'), value: number(dynamicRegime?.more_defensive_transition_count, 0) },
+          { label: tr('Warning precision'), value: percent(dynamicOverall?.precision, 1) },
+          { label: tr('Warning recall'), value: percent(dynamicOverall?.recall, 1) },
+        ],
+        notes: [
+          { label: tr('No frozen yearly cluster'), text: tr('Unlike the previous causal map, this diagnostic does not freeze one clustering model for an entire test year. Every new completed session triggers a complete refit.') },
+          { label: tr('Research isolation'), text: tr('The daily expanding regime is shadow-only in v10.4.5 and cannot alter the researched Strategy.') },
+        ],
+      })}><strong>{tr('Daily expanding regime')}</strong><span>{tr('Full refit each close + stable families + novelty')}</span></button>
+      <button type="button" onClick={() => setSelectedDetail({
         kicker: 'DAILY REGIME TRAJECTORY',
         title: tr('Daily regime trajectory'),
         description: tr('Tracks how the daily causal market state moves toward or away from the defensive regime. This release measures anticipation only and does not change HOLD, ROTATE or CASH decisions.'),
@@ -783,10 +899,11 @@ function StatisticalPredictiveControlPanel({ analysis }) {
         ],
         notes: [
           { label: tr('Causality'), text: tr('Regime centroids, normalization and warning thresholds are learned only from prior training years inside each chronological fold.') },
-          { label: tr('Research isolation'), text: tr('Daily trajectory is diagnostic-only in v10.4.4. It is not a model feature and cannot alter the researched Strategy.') },
+          { label: tr('Research isolation'), text: tr('Daily trajectory is diagnostic-only in v10.4.5. It is not a model feature and cannot alter the researched Strategy.') },
         ],
       })}><strong>{tr('Daily regime trajectory')}</strong><span>{tr('Direction + speed + persistence toward defensive regimes')}</span></button>
     </div>
+    <DynamicDailyRegimeMap dynamicRegime={dynamicRegime} onOpenDetail={setSelectedDetail} />
     <DailyRegimeMap trajectory={trajectory} folds={folds} onOpenDetail={setSelectedDetail} />
     <div className="strategy-research-stat-grid">
       <div className="strategy-research-stat-section">
