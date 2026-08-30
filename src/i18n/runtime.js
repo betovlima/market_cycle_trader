@@ -1,5 +1,6 @@
 import { ES_TRANSLATIONS } from './translations/es'
 import { PT_TRANSLATIONS } from './translations/pt'
+import { ASSET_STATE_ES_TRANSLATIONS, ASSET_STATE_PT_TRANSLATIONS } from './assetStateClusteringTranslations'
 
 export const SUPPORTED_LANGUAGES = ['en', 'pt', 'es']
 export const DEFAULT_LANGUAGE = 'en'
@@ -7,8 +8,8 @@ export const LANGUAGE_STORAGE_KEY = 'market-cycle-trader-language'
 
 const TRANSLATIONS = {
   en: {},
-  pt: PT_TRANSLATIONS,
-  es: ES_TRANSLATIONS,
+  pt: { ...PT_TRANSLATIONS, ...ASSET_STATE_PT_TRANSLATIONS },
+  es: { ...ES_TRANSLATIONS, ...ASSET_STATE_ES_TRANSLATIONS },
 }
 
 const INTL_LOCALES = {
