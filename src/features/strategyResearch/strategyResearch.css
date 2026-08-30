@@ -154,3 +154,12 @@
 .strategy-research-regime-map-reading{display:flex;gap:8px;align-items:flex-start;color:var(--text-muted);font-size:.75rem;line-height:1.45}
 .strategy-research-regime-map-reading strong{color:var(--text);white-space:nowrap}
 @media(max-width:760px){.strategy-research-daily-regime-head{display:grid}.strategy-research-regime-year-tabs{justify-content:flex-start}.strategy-research-daily-regime-map svg{min-height:260px}.strategy-research-regime-map-reading{display:grid}}
+.strategy-research-regime-map-legend .pre-refit-dot,.strategy-research-regime-map-legend .post-refit-dot,.strategy-research-regime-map-legend .pre-warning-ring{width:10px;height:10px;border-radius:50%;display:inline-block}
+.strategy-research-regime-map-legend .pre-refit-dot{background:transparent;border:2px solid var(--text-muted)}
+.strategy-research-regime-map-legend .post-refit-dot{background:var(--text-muted);border:1px solid var(--text-muted)}
+.strategy-research-regime-map-legend .pre-warning-ring{background:transparent;border:2px dashed var(--warning)}
+.strategy-research-daily-regime-map .regime-refit-displacement{stroke:var(--text-muted);stroke-width:1.15;stroke-opacity:.38}
+.strategy-research-daily-regime-map .regime-refit-displacement.absorbed-warning{stroke:var(--warning);stroke-width:2;stroke-opacity:.8;stroke-dasharray:4 3}
+.strategy-research-daily-regime-map .regime-pre-refit-point{fill:var(--surface-raised);stroke:var(--text-muted);stroke-width:1.6;cursor:pointer}
+.strategy-research-daily-regime-map .regime-pre-refit-point.warning{stroke:var(--warning);stroke-width:2.2}
+.strategy-research-daily-regime-map .regime-pre-refit-point.absorbed-warning{stroke-dasharray:2 2}

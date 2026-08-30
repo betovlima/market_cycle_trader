@@ -709,8 +709,8 @@ function DynamicDailyRegimeMap({ dynamicRegime, onOpenDetail }) {
   const width = 920
   const height = 390
   const plot = { left: 58, right: 892, top: 42, bottom: 338 }
-  const xs = visible.map((row) => Number(row.dynamic_regime_opportunity_axis))
-  const ys = visible.map((row) => Number(row.dynamic_regime_environment_axis))
+  const xs = visible.flatMap((row) => [Number(row.dynamic_regime_opportunity_axis), Number(row.dynamic_regime_pre_refit_opportunity_axis)]).filter(Number.isFinite)
+  const ys = visible.flatMap((row) => [Number(row.dynamic_regime_environment_axis), Number(row.dynamic_regime_pre_refit_environment_axis)]).filter(Number.isFinite)
   const xMin = Math.min(...xs, -1), xMax = Math.max(...xs, 1)
   const yMin = Math.min(...ys, -1), yMax = Math.max(...ys, 1)
   const xPad = Math.max(0.2, (xMax - xMin) * 0.08)
@@ -723,12 +723,23 @@ function DynamicDailyRegimeMap({ dynamicRegime, onOpenDetail }) {
   const novelCount = visible.filter((row) => Number(row?.dynamic_regime_is_novel) === 1).length
   const transitionCount = visible.filter((row) => Number(row?.dynamic_regime_transition) === 1).length
   const warningCount = visible.filter((row) => Number(row?.dynamic_regime_warning) === 1).length
+  const preWarningCount = visible.filter((row) => Number(row?.dynamic_regime_pre_refit_warning) === 1).length
+  const preOnlyCount = visible.filter((row) => Number(row?.dynamic_regime_pre_only_warning) === 1).length
 
   const openPoint = (row) => onOpenDetail?.({
-    kicker: 'DAILY EXPANDING REGIME',
+    kicker: 'PRE/POST REFIT REGIME INNOVATION',
     title: `${String(row?.execution_at || '—').slice(0, 10)} · ${row?.symbol || '—'}`,
-    description: tr('The unsupervised regime model is rebuilt from scratch at this completed close using every causal observation available through this day, including the new completed session.'),
+    description: tr('The new completed close is first measured against yesterday’s causal cluster geometry. Only after that pre-refit measurement is preserved is the full unsupervised process rebuilt including today’s observation.'),
     metrics: [
+      { label: tr('Pre-refit pressure'), value: number(row?.dynamic_regime_pre_refit_pressure_score, 3) },
+      { label: tr('Post-refit pressure'), value: number(row?.dynamic_regime_pressure_score, 3) },
+      { label: tr('Pre-refit nearest distance'), value: number(row?.dynamic_regime_pre_refit_nearest_distance, 3) },
+      { label: tr('Post-refit nearest distance'), value: number(row?.dynamic_regime_nearest_distance, 3) },
+      { label: tr('Distance absorbed by refit'), value: number(row?.dynamic_regime_distance_absorption, 3) },
+      { label: tr('Geometry shift'), value: number(row?.dynamic_regime_geometry_shift, 3) },
+      { label: tr('Pre-refit warning'), value: Number(row?.dynamic_regime_pre_refit_warning) === 1 ? tr('Yes') : tr('No'), tone: Number(row?.dynamic_regime_pre_refit_warning) === 1 ? 'negative' : '' },
+      { label: tr('Post-refit warning'), value: Number(row?.dynamic_regime_warning) === 1 ? tr('Yes') : tr('No'), tone: Number(row?.dynamic_regime_warning) === 1 ? 'negative' : '' },
+      { label: tr('Warning absorbed by refit'), value: Number(row?.dynamic_regime_pre_only_warning) === 1 ? tr('Yes') : tr('No'), tone: Number(row?.dynamic_regime_pre_only_warning) === 1 ? 'negative' : '' },
       { label: tr('Stable cluster family'), value: Number.isFinite(Number(row?.dynamic_regime_family_id)) ? `#${Number(row.dynamic_regime_family_id) + 1}` : '—' },
       { label: tr('Clusters rebuilt today'), value: number(row?.dynamic_regime_cluster_count, 0) },
       { label: tr('Semantic rank'), value: Number.isFinite(Number(row?.dynamic_regime_semantic_rank)) ? `${Number(row.dynamic_regime_semantic_rank) + 1}/${Number(row.dynamic_regime_cluster_count)}` : '—' },
@@ -747,7 +758,8 @@ function DynamicDailyRegimeMap({ dynamicRegime, onOpenDetail }) {
       { label: tr('Future minimum return'), value: Number.isFinite(Number(row?.trajectory_forward_min_return)) ? percent(row.trajectory_forward_min_return, 2) : '—' },
     ],
     notes: [
-      { label: tr('Daily refit'), text: tr('Normalization and clustering are recreated after every completed trading session. The current close participates in the unsupervised refit because it is already known at decision time.') },
+      { label: tr('Pre-refit detection'), text: tr('Before today is learned, the completed close is projected into yesterday’s geometry. This preserves geometric surprise and defensive pressure before adaptation can absorb the observation.') },
+      { label: tr('Post-refit adaptation'), text: tr('After the pre-refit measurement is stored, normalization and clustering are rebuilt from scratch with the new completed close included. This post-refit geometry becomes the causal reference for the next session.') },
       { label: tr('Stable families'), text: tr('Cluster numeric labels may be reassigned by the algorithm. The UI follows centroid similarity across consecutive daily refits so the same geometric family can be tracked through time.') },
       { label: tr('Novelty'), text: tr('A novel state means the new completed session is farther from every cluster than the configured historical distance quantile. It is a research signal, not an automatic CASH decision.') },
     ],
@@ -755,7 +767,7 @@ function DynamicDailyRegimeMap({ dynamicRegime, onOpenDetail }) {
 
   return <div className="strategy-research-daily-regime-map strategy-research-stat-section dynamic">
     <div className="strategy-research-daily-regime-head">
-      <div className="strategy-research-section-heading"><strong>{tr('Daily expanding regime map')}</strong><span>{tr('The full unsupervised clustering process is rebuilt at every completed close. Points are connected chronologically to show how the market state moves while cluster families themselves are re-estimated.')}</span></div>
+      <div className="strategy-research-section-heading"><strong>{tr('Daily pre/post refit regime map')}</strong><span>{tr('Each close is shown twice: the hollow pre-refit position against yesterday’s geometry and the filled post-refit position after the complete unsupervised rebuild. The connecting segment shows how much the new observation was absorbed by adaptation.')}</span></div>
       <div className="strategy-research-regime-year-tabs" aria-label={tr('Test year')}>{years.map((year) => <button type="button" key={year} className={Number(effectiveYear) === Number(year) ? 'selected' : ''} onClick={() => setSelectedYear(year)}>{year}</button>)}</div>
     </div>
     <div className="strategy-research-regime-map-kpis">
@@ -763,12 +775,18 @@ function DynamicDailyRegimeMap({ dynamicRegime, onOpenDetail }) {
       <span>{tr('Stable families')} <strong>{familyIds.length}</strong></span>
       <span>{tr('Transitions')} <strong>{transitionCount}</strong></span>
       <span>{tr('Novel states')} <strong>{novelCount}</strong></span>
-      <span>{tr('Warnings')} <strong>{warningCount}</strong></span>
-      <span>{tr('Pressure AUC')} <strong>{number(yearSummary?.auc, 3)}</strong></span>
+      <span>{tr('Pre-refit warnings')} <strong>{preWarningCount}</strong></span>
+      <span>{tr('Post-refit warnings')} <strong>{warningCount}</strong></span>
+      <span>{tr('Pre-only warnings')} <strong>{preOnlyCount}</strong></span>
+      <span>{tr('Pre-refit AUC')} <strong>{number(yearSummary?.pre_refit_auc, 3)}</strong></span>
+      <span>{tr('Post-refit AUC')} <strong>{number(yearSummary?.post_refit_auc ?? yearSummary?.auc, 3)}</strong></span>
     </div>
     <div className="strategy-research-regime-map-legend">
       {familyIds.map((familyId) => <span key={familyId}><i className={`cluster-${familyId % 6}`} />{tr('Stable family')} #{familyId + 1}</span>)}
-      <span><b className="warning-ring" />{tr('Dynamic warning')}</span>
+      <span><b className="pre-refit-dot" />{tr('Pre-refit position')}</span>
+      <span><b className="post-refit-dot" />{tr('Post-refit position')}</span>
+      <span><b className="warning-ring" />{tr('Post-refit warning')}</span>
+      <span><b className="pre-warning-ring" />{tr('Pre-only warning')}</span>
       <span><b className="severe-ring" />{tr('Novel / unknown')}</span>
     </div>
     <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={tr('Daily expanding regime map')}>
@@ -778,13 +796,23 @@ function DynamicDailyRegimeMap({ dynamicRegime, onOpenDetail }) {
       <text x="15" y={(plot.top + plot.bottom) / 2} textAnchor="middle" transform={`rotate(-90 15 ${(plot.top + plot.bottom) / 2})`} className="regime-axis-label">{tr('Standardized market / risk-health state')} →</text>
       <polyline points={visible.map((row) => `${mapX(row.dynamic_regime_opportunity_axis)},${mapY(row.dynamic_regime_environment_axis)}`).join(' ')} className="regime-dynamic-path" />
       {visible.map((row, index) => {
+        const hasPre = Number.isFinite(Number(row.dynamic_regime_pre_refit_opportunity_axis)) && Number.isFinite(Number(row.dynamic_regime_pre_refit_environment_axis))
+        if (!hasPre) return null
+        return <line key={`shift-${row.execution_at}-${index}`} x1={mapX(row.dynamic_regime_pre_refit_opportunity_axis)} y1={mapY(row.dynamic_regime_pre_refit_environment_axis)} x2={mapX(row.dynamic_regime_opportunity_axis)} y2={mapY(row.dynamic_regime_environment_axis)} className={`regime-refit-displacement ${Number(row.dynamic_regime_pre_only_warning) === 1 ? 'absorbed-warning' : ''}`} />
+      })}
+      {visible.map((row, index) => {
+        const hasPre = Number.isFinite(Number(row.dynamic_regime_pre_refit_opportunity_axis)) && Number.isFinite(Number(row.dynamic_regime_pre_refit_environment_axis))
+        if (!hasPre) return null
+        return <circle key={`pre-${row.execution_at}-${index}`} cx={mapX(row.dynamic_regime_pre_refit_opportunity_axis)} cy={mapY(row.dynamic_regime_pre_refit_environment_axis)} r={Number(row.dynamic_regime_pre_refit_warning) === 1 ? 4.8 : 3.2} className={`regime-pre-refit-point ${Number(row.dynamic_regime_pre_refit_warning) === 1 ? 'warning' : ''} ${Number(row.dynamic_regime_pre_only_warning) === 1 ? 'absorbed-warning' : ''}`} role="button" tabIndex="0" aria-label={`${String(row.execution_at || '').slice(0, 10)} · ${tr('Pre-refit position')}`} onClick={() => openPoint(row)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') openPoint(row) }} />
+      })}
+      {visible.map((row, index) => {
         const familyId = Number(row.dynamic_regime_family_id)
         const warning = Number(row.dynamic_regime_warning) === 1
         const novel = Number(row.dynamic_regime_is_novel) === 1
         return <circle key={`${row.execution_at}-${index}`} cx={mapX(row.dynamic_regime_opportunity_axis)} cy={mapY(row.dynamic_regime_environment_axis)} r={warning || novel ? 5.4 : 3.4} className={`regime-daily-point cluster-${Math.max(0, familyId) % 6} ${warning ? 'warning' : ''} ${novel ? 'severe' : ''}`} role="button" tabIndex="0" aria-label={`${String(row.execution_at || '').slice(0, 10)} · ${tr('Stable family')} ${familyId + 1}`} onClick={() => openPoint(row)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') openPoint(row) }} />
       })}
     </svg>
-    <div className="strategy-research-regime-map-reading"><strong>{tr('How to read')}</strong><span>{tr('The line follows consecutive closes. A cluster change is not required for deterioration: movement within the same stable family, increasing defensive similarity or a novel state can all be meaningful.')}</span></div>
+    <div className="strategy-research-regime-map-reading"><strong>{tr('How to read')}</strong><span>{tr('The hollow point is the new close before learning it; the filled point is the same close after the complete refit. A long displacement or a warning that exists only before refit indicates that adaptation absorbed a meaningful part of the new observation.')}</span></div>
   </div>
 }
 
@@ -797,6 +825,8 @@ function StatisticalPredictiveControlPanel({ analysis }) {
   const trajectory = analysis?.daily_regime_trajectory || {}
   const dynamicRegime = analysis?.daily_dynamic_regime || {}
   const dynamicOverall = dynamicRegime?.overall || {}
+  const dynamicPreOverall = dynamicRegime?.pre_refit_overall || {}
+  const dynamicWarningComparison = dynamicRegime?.warning_comparison || {}
   const trajectoryOverall = trajectory?.overall || {}
   const trajectoryFolds = trajectory?.folds || []
   const decisionStatus = String(analysis?.decision?.status || '').toLowerCase()
@@ -820,6 +850,9 @@ function StatisticalPredictiveControlPanel({ analysis }) {
       <MetricCard label={tr('Regime silhouette')} value={number(summary?.mean_regime_silhouette, 3)} note={tr('Training-only causal regime separation')} />
       <MetricCard label={tr('Q4 regime sessions')} value={number(summary?.regime_quadrant_counts?.Q4, 0)} note={tr('High opportunity signal with weaker market/risk context')} />
       <MetricCard label={tr('Daily dynamic regime AUC')} value={number(summary?.daily_dynamic_regime_auc, 3)} note={tr('Full unsupervised refit after every completed close')} />
+      <MetricCard label={tr('Pre-refit regime AUC')} value={number(summary?.daily_dynamic_pre_refit_auc ?? dynamicPreOverall?.auc, 3)} note={tr('New close measured against yesterday’s geometry before learning it')} />
+      <MetricCard label={tr('Pre-only warnings')} value={number(summary?.daily_dynamic_pre_only_warning_count ?? dynamicWarningComparison?.pre_only_warnings, 0)} note={tr('Warnings visible before refit but absorbed after adaptation')} />
+      <MetricCard label={tr('Geometry shift AUC')} value={number(summary?.daily_dynamic_geometry_shift_auc ?? dynamicRegime?.geometry_shift_auc, 3)} />
       <MetricCard label={tr('Daily dynamic silhouette')} value={number(summary?.daily_dynamic_regime_mean_silhouette, 3)} />
       <MetricCard label={tr('Novel daily states')} value={number(summary?.daily_dynamic_regime_novel_state_count, 0)} />
       <MetricCard label={tr('Daily cluster transitions')} value={number(summary?.daily_dynamic_regime_transition_count, 0)} />
@@ -865,11 +898,16 @@ function StatisticalPredictiveControlPanel({ analysis }) {
         notes: [{ label: tr('No future leakage'), text: tr('The monthly diagnostic clustering remains visual only. Predictive regime features are rebuilt causally inside each outer training fold.') }],
       })}><strong>{tr('Regime context')}</strong><span>{tr('Rolling cluster distances + causal quadrants')}</span></button>
       <button type="button" onClick={() => setSelectedDetail({
-        kicker: 'DAILY EXPANDING REGIME',
-        title: tr('Daily expanding regime'),
-        description: tr('At every completed close the unsupervised process is rebuilt from scratch with all causal observations available through that session. This shadow layer measures cluster families, transitions and novelty without changing HOLD, ROTATE or CASH.'),
+        kicker: 'PRE/POST REFIT REGIME INNOVATION',
+        title: tr('Pre/post refit regime innovation'),
+        description: tr('Each completed close is first evaluated against the previous day’s causal geometry and only then incorporated into a complete expanding refit. This separates detection of geometric surprise from adaptation of the clusters.'),
         metrics: [
           { label: tr('Mean daily silhouette'), value: number(dynamicRegime?.mean_silhouette, 3) },
+          { label: tr('Pre-refit AUC'), value: number(dynamicPreOverall?.auc, 3) },
+          { label: tr('Post-refit AUC'), value: number(dynamicOverall?.auc, 3) },
+          { label: tr('Pre-only warnings'), value: number(dynamicWarningComparison?.pre_only_warnings, 0) },
+          { label: tr('Pre-only severe windows'), value: number(dynamicWarningComparison?.pre_only_severe_windows, 0) },
+          { label: tr('Geometry shift AUC'), value: number(dynamicRegime?.geometry_shift_auc, 3) },
           { label: tr('Pressure AUC'), value: number(dynamicOverall?.auc, 3) },
           { label: tr('Warnings'), value: number(dynamicOverall?.warnings, 0) },
           { label: tr('Novel states'), value: number(dynamicRegime?.novel_state_count, 0) },
@@ -880,9 +918,9 @@ function StatisticalPredictiveControlPanel({ analysis }) {
         ],
         notes: [
           { label: tr('No frozen yearly cluster'), text: tr('Unlike the previous causal map, this diagnostic does not freeze one clustering model for an entire test year. Every new completed session triggers a complete refit.') },
-          { label: tr('Research isolation'), text: tr('The daily expanding regime is shadow-only in v10.4.5 and cannot alter the researched Strategy.') },
+          { label: tr('Research isolation'), text: tr('The daily expanding regime is shadow-only in v10.4.6 and cannot alter the researched Strategy.') },
         ],
-      })}><strong>{tr('Daily expanding regime')}</strong><span>{tr('Full refit each close + stable families + novelty')}</span></button>
+      })}><strong>{tr('Pre/post refit regime innovation')}</strong><span>{tr('Detect before refit + adapt after refit')}</span></button>
       <button type="button" onClick={() => setSelectedDetail({
         kicker: 'DAILY REGIME TRAJECTORY',
         title: tr('Daily regime trajectory'),
@@ -899,7 +937,7 @@ function StatisticalPredictiveControlPanel({ analysis }) {
         ],
         notes: [
           { label: tr('Causality'), text: tr('Regime centroids, normalization and warning thresholds are learned only from prior training years inside each chronological fold.') },
-          { label: tr('Research isolation'), text: tr('Daily trajectory is diagnostic-only in v10.4.5. It is not a model feature and cannot alter the researched Strategy.') },
+          { label: tr('Research isolation'), text: tr('Daily trajectory is diagnostic-only in v10.4.6. It is not a model feature and cannot alter the researched Strategy.') },
         ],
       })}><strong>{tr('Daily regime trajectory')}</strong><span>{tr('Direction + speed + persistence toward defensive regimes')}</span></button>
     </div>
