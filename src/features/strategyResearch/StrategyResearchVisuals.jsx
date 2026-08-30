@@ -611,7 +611,9 @@ function StatisticalPredictiveControlPanel({ analysis }) {
       <MetricCard label={tr('Close checkpoint AUC')} value={number(summary?.mean_close_auc, 3)} note={tr('Chronological out-of-sample evaluation')} />
       <MetricCard label={tr('Open checkpoint AUC')} value={number(summary?.mean_open_auc, 3)} note={tr('Adds only information available at the market open')} />
       <MetricCard label={tr('CASH interventions')} value={number(summary?.cash_interventions, 0)} />
+      <MetricCard label={tr('ROTATE interventions')} value={number(summary?.rotation_interventions, 0)} />
       <MetricCard label={tr('Opening changed decision')} value={number(summary?.opening_changed_decision_count, 0)} />
+      <MetricCard label={tr('Open ROTATE AUC')} value={number(summary?.mean_open_rotate_auc, 3)} note={tr('Chronological out-of-sample evaluation')} />
       <MetricCard label={tr('Close statistical shocks')} value={number(summary?.statistical_close_shock_count, 0)} />
       <MetricCard label={tr('Open statistical shocks')} value={number(summary?.statistical_open_shock_count, 0)} />
       <MetricCard label={tr('Opportunity-risk conflicts')} value={number(summary?.opportunity_risk_conflict_count, 0)} />
@@ -672,7 +674,7 @@ function StatisticalPredictiveControlPanel({ analysis }) {
       </div>
     </div>
     {worstMonths.length ? <div className="strategy-research-stat-section">
-      <div className="strategy-research-section-heading"><strong>{tr('Worst control months')}</strong><span>{tr('Shadow CASH effect without changing the researched Strategy.')}</span></div>
+      <div className="strategy-research-section-heading"><strong>{tr('Worst control months')}</strong><span>{tr('Shadow HOLD / ROTATE / CASH effect without changing the researched Strategy.')}</span></div>
       <div className="strategy-research-fold-control-table wide">
         <div className="head"><span>{tr('Month')}</span><span>{tr('Control')}</span><span>{tr('Shadow control')}</span><span>{tr('Difference')}</span></div>
         {worstMonths.map((row) => <div key={row.month}><span>{row.month}</span><span>{percent(row.control_return, 2)}</span><span>{percent(row.candidate_return, 2)}</span><span>{percent(row.delta_return, 2)}</span></div>)}
