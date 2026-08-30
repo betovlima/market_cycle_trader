@@ -8,6 +8,7 @@ import { DASHBOARD_HINTS } from './dashboardConfig'
 import { DashboardMetric, MarketUpdateMetric } from './components/DashboardPrimitives'
 import { DashboardBacktestAnalyticsSection } from './components/DashboardBacktestAnalyticsSection'
 import { RotationQualityPerformanceSection } from './components/RotationQualityPerformanceSection'
+import { ResearchTreePanel } from './components/ResearchTreePanel'
 
 export function DashboardPage({ workspace, capabilities = {}, onOpenBacktest, initialProcessingId = "" }) {
   const { dashboard, loadingDashboard, running, restoringExecution, startingBacktest, startDisabled, runBacktest } = workspace
@@ -15,6 +16,7 @@ export function DashboardPage({ workspace, capabilities = {}, onOpenBacktest, in
   const last = dashboard?.last_backtest
   const recentBacktests = useMemo(() => dashboard?.recent_backtests || [], [dashboard])
   const canRunBacktest = hasCapability(capabilities, 'backtest.start')
+  const canViewBacktest = hasCapability(capabilities, 'backtest.view')
   const canViewTemporal = hasCapability(capabilities, 'temporal_intelligence.view')
 
   async function startBacktest() {
@@ -42,6 +44,8 @@ export function DashboardPage({ workspace, capabilities = {}, onOpenBacktest, in
           <DashboardMetric id="dashboard-hint-last-backtest" label={tr('Last Backtest')} value={last?.created_at ? relativeTime(last.created_at) : '—'} note={last?.created_at ? shortDateTime(last.created_at) : tr('No execution yet')} tone="blue" hint={DASHBOARD_HINTS.lastBacktest} />
           <MarketUpdateMetric />
         </div>
+
+        {canViewBacktest ? <ResearchTreePanel refreshKey={dashboard?.selected_strategy_research_name || ''} /> : null}
 
         {canViewTemporal ? <RotationQualityPerformanceSection /> : null}
 
