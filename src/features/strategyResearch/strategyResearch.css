@@ -91,3 +91,29 @@
 @media(max-width:760px){.strategy-research-heatmap-actions,.strategy-research-risk-actions{justify-content:flex-start}}
 
 .strategy-research-confidence-view{display:grid;gap:14px;align-content:start}
+
+
+.strategy-research-stat-control { display: grid; gap: 18px; }
+.strategy-research-control-protocol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.strategy-research-control-protocol button { border: 1px solid var(--border-subtle); background: var(--surface-raised); border-radius: 14px; padding: 15px; text-align: left; display: grid; gap: 5px; cursor: pointer; color: inherit; }
+.strategy-research-control-protocol button strong { font-size: .92rem; }
+.strategy-research-control-protocol button span { font-size: .78rem; color: var(--text-muted); }
+.strategy-research-stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.strategy-research-stat-section { border: 1px solid var(--border-subtle); border-radius: 14px; padding: 14px; background: var(--surface-raised); display: grid; gap: 12px; }
+.strategy-research-section-heading { display: grid; gap: 3px; }
+.strategy-research-section-heading strong { font-size: .9rem; }
+.strategy-research-section-heading span { color: var(--text-muted); font-size: .75rem; }
+.strategy-research-gate-list { display: grid; gap: 6px; }
+.strategy-research-gate-row { border: 0; border-bottom: 1px solid var(--border-subtle); background: transparent; color: inherit; padding: 9px 3px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; text-align: left; }
+.strategy-research-gate-row:last-child { border-bottom: 0; }
+.strategy-research-gate-row strong { font-size: .74rem; }
+.strategy-research-gate-row.passed strong { color: var(--positive); }
+.strategy-research-gate-row.failed strong { color: var(--negative); }
+.strategy-research-fold-control-table { display: grid; gap: 2px; }
+.strategy-research-fold-control-table .head,
+.strategy-research-fold-control-table button,
+.strategy-research-fold-control-table > div:not(.head) { display: grid; grid-template-columns: 1fr 1fr 1fr .8fr; align-items: center; gap: 8px; padding: 8px 5px; }
+.strategy-research-fold-control-table .head { color: var(--text-muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; }
+.strategy-research-fold-control-table button { border: 0; border-top: 1px solid var(--border-subtle); background: transparent; color: inherit; cursor: pointer; text-align: left; font-size: .78rem; }
+.strategy-research-fold-control-table.wide > div:not(.head) { border-top: 1px solid var(--border-subtle); font-size: .78rem; }
+@media (max-width: 900px) { .strategy-research-control-protocol, .strategy-research-stat-grid { grid-template-columns: 1fr; } }

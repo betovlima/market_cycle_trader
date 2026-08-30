@@ -593,6 +593,95 @@ function SankeyVisual({ stateful }) {
   </div>
 }
 
+function StatisticalPredictiveControlPanel({ analysis }) {
+  const [selectedDetail, setSelectedDetail] = useState(null)
+  const summary = analysis?.summary || {}
+  const gates = analysis?.gates || []
+  const folds = analysis?.folds || []
+  const monthly = analysis?.monthly || []
+  const decisionStatus = String(analysis?.decision?.status || '').toLowerCase()
+  const candidateLift = Number(summary?.ending_capital_delta_rate)
+  const worstMonths = [...monthly]
+    .filter((item) => Number.isFinite(Number(item?.control_return)))
+    .sort((left, right) => Number(left.control_return) - Number(right.control_return))
+    .slice(0, 8)
+  return <div className="strategy-research-stat-control">
+    <div className="strategy-research-compact-metrics">
+      <MetricCard label={tr('Research decision')} value={decisionStatus === 'approved' ? tr('Qualified') : tr('Research only')} tone={decisionStatus === 'approved' ? 'positive' : ''} />
+      <MetricCard label={tr('Close checkpoint AUC')} value={number(summary?.mean_close_auc, 3)} note={tr('Chronological out-of-sample evaluation')} />
+      <MetricCard label={tr('Open checkpoint AUC')} value={number(summary?.mean_open_auc, 3)} note={tr('Adds only information available at the market open')} />
+      <MetricCard label={tr('CASH interventions')} value={number(summary?.cash_interventions, 0)} />
+      <MetricCard label={tr('Opening changed decision')} value={number(summary?.opening_changed_decision_count, 0)} />
+      <MetricCard label={tr('Close statistical shocks')} value={number(summary?.statistical_close_shock_count, 0)} />
+      <MetricCard label={tr('Open statistical shocks')} value={number(summary?.statistical_open_shock_count, 0)} />
+      <MetricCard label={tr('Opportunity-risk conflicts')} value={number(summary?.opportunity_risk_conflict_count, 0)} />
+      <MetricCard label={tr('Capital effect')} value={percent(candidateLift, 2)} tone={candidateLift > 0 ? 'positive' : candidateLift < 0 ? 'negative' : ''} />
+    </div>
+    <div className="strategy-research-control-protocol">
+      <button type="button" onClick={() => setSelectedDetail({
+        kicker: 'STATISTICAL & PREDICTIVE CONTROLS',
+        title: tr('Close checkpoint'),
+        description: tr('The close checkpoint estimates defensive risk using only information available after the completed market session. It never uses the next opening price.'),
+        metrics: [
+          { label: tr('Mean OOS AUC'), value: number(summary?.mean_close_auc, 3) },
+          { label: tr('Research rows'), value: number(summary?.research_rows, 0) },
+        ],
+        notes: [{ label: tr('Causality'), text: tr('Future observations are used only to build training labels. They are never used as model inputs for the historical decision.') }],
+      })}><strong>{tr('Close checkpoint')}</strong><span>{tr('Completed session statistics + opportunity/risk state')}</span></button>
+      <button type="button" onClick={() => setSelectedDetail({
+        kicker: 'STATISTICAL & PREDICTIVE CONTROLS',
+        title: tr('Open checkpoint'),
+        description: tr('The opening checkpoint re-evaluates the provisional decision with the new regular-session opening price and its statistical gap before execution.'),
+        metrics: [
+          { label: tr('Mean OOS AUC'), value: number(summary?.mean_open_auc, 3) },
+          { label: tr('Opening changed decision'), value: number(summary?.opening_changed_decision_count, 0) },
+        ],
+        notes: [{ label: tr('Operational parity'), text: tr('This checkpoint mirrors the second daily evaluation without using the high, low or close of the session that has just opened.') }],
+      })}><strong>{tr('Open checkpoint')}</strong><span>{tr('Opening gap + completed-session state')}</span></button>
+    </div>
+    <div className="strategy-research-stat-grid">
+      <div className="strategy-research-stat-section">
+        <div className="strategy-research-section-heading"><strong>{tr('Qualification gates')}</strong><span>{tr('A control remains research-only unless every chronological gate passes.')}</span></div>
+        <div className="strategy-research-gate-list">
+          {gates.map((gate) => <button type="button" key={gate.name} className={`strategy-research-gate-row ${gate.passed ? 'passed' : 'failed'}`} onClick={() => setSelectedDetail({
+            kicker: 'QUALIFICATION GATE',
+            title: tr(String(gate.name || '').replaceAll('_', ' ')),
+            description: tr('This gate is evaluated only with chronological out-of-sample evidence.'),
+            metrics: [
+              { label: tr('Observed'), value: typeof gate.observed === 'number' ? number(gate.observed, 4) : String(gate.observed ?? '—') },
+              { label: tr('Requirement'), value: gate.requirement || '—' },
+              { label: tr('Status'), value: gate.passed ? tr('Passed') : tr('Failed') },
+            ],
+          })}><span>{tr(String(gate.name || '').replaceAll('_', ' '))}</span><strong>{gate.passed ? tr('Passed') : tr('Failed')}</strong></button>)}
+        </div>
+      </div>
+      <div className="strategy-research-stat-section">
+        <div className="strategy-research-section-heading"><strong>{tr('Chronological folds')}</strong><span>{tr('Close and open checkpoints are evaluated on future years not used for training.')}</span></div>
+        <div className="strategy-research-fold-control-table">
+          <div className="head"><span>{tr('Year')}</span><span>{tr('Close AUC')}</span><span>{tr('Open AUC')}</span><span>{tr('Rows')}</span></div>
+          {folds.map((fold) => <button type="button" key={fold.test_year} onClick={() => setSelectedDetail({
+            kicker: 'CHRONOLOGICAL FOLD', title: String(fold.test_year), description: tr('The model was trained only with rows before this test year.'),
+            metrics: [
+              { label: tr('Close AUC'), value: number(fold?.close_metrics?.auc, 3) },
+              { label: tr('Open AUC'), value: number(fold?.open_metrics?.auc, 3) },
+              { label: tr('Training rows'), value: number(fold?.train_rows, 0) },
+              { label: tr('Test rows'), value: number(fold?.test_rows, 0) },
+            ],
+          })}><span>{fold.test_year}</span><span>{number(fold?.close_metrics?.auc, 3)}</span><span>{number(fold?.open_metrics?.auc, 3)}</span><span>{number(fold?.test_rows, 0)}</span></button>)}
+        </div>
+      </div>
+    </div>
+    {worstMonths.length ? <div className="strategy-research-stat-section">
+      <div className="strategy-research-section-heading"><strong>{tr('Worst control months')}</strong><span>{tr('Shadow CASH effect without changing the researched Strategy.')}</span></div>
+      <div className="strategy-research-fold-control-table wide">
+        <div className="head"><span>{tr('Month')}</span><span>{tr('Control')}</span><span>{tr('Shadow control')}</span><span>{tr('Difference')}</span></div>
+        {worstMonths.map((row) => <div key={row.month}><span>{row.month}</span><span>{percent(row.control_return, 2)}</span><span>{percent(row.candidate_return, 2)}</span><span>{percent(row.delta_return, 2)}</span></div>)}
+      </div>
+    </div> : null}
+    <ResearchDetailDialog detail={selectedDetail} onClose={() => setSelectedDetail(null)} />
+  </div>
+}
+
 function FoldHeatmap({ run, stateful }) {
   const [selectedDetail, setSelectedDetail] = useState(null)
   const folds = run?.result?.multi_horizon_fold_metrics || []
@@ -637,7 +726,7 @@ function FoldHeatmap({ run, stateful }) {
   </div>
 }
 
-export function StrategyResearchVisuals({ selectedStage, stageState = {}, pipelineProgress = 0, run, analytics, rocDecisionPolicy, risk, alternativeAction, operationalQualification, intervention, confidence, stateful, leadershipRegime, clustering, opportunityDrought, fragileIncumbent, emergingTrend, pipelineError = '' }) {
+export function StrategyResearchVisuals({ selectedStage, stageState = {}, pipelineProgress = 0, run, analytics, statisticalPredictiveControl, rocDecisionPolicy, risk, alternativeAction, operationalQualification, intervention, confidence, stateful, leadershipRegime, clustering, opportunityDrought, fragileIncumbent, emergingTrend, pipelineError = '' }) {
   const selectedStageRunning = stageState[selectedStage] === 'running'
   const temporalProgress = Number(run?.progress)
   const selectedProgress = selectedStage === 'temporal' && Number.isFinite(temporalProgress) ? temporalProgress : pipelineProgress
@@ -645,6 +734,7 @@ export function StrategyResearchVisuals({ selectedStage, stageState = {}, pipeli
   const content = {
     reference: analytics?.equity?.length ? <MonthlyHeatmap analytics={analytics} /> : empty('Strategy replay visualization will appear here.'),
     temporal: run?.result?.horizon_metrics?.length ? <TemporalHeatmap run={run} /> : empty('Temporal horizon analysis will appear here.'),
+    statistical_ml_control: statisticalPredictiveControl?.id ? <StatisticalPredictiveControlPanel analysis={statisticalPredictiveControl} /> : empty('Statistical and predictive controls will appear here.'),
     roc_policy: rocDecisionPolicy?.id ? <RocDecisionPolicyStep analysis={rocDecisionPolicy} /> : empty('ROC Decision Policy will appear here.'),
     clustering: clustering?.id ? <RegimeClusteringPanel analysis={clustering} /> : empty('Regime Clustering will appear here.'),
     opportunity_drought: opportunityDrought?.id ? <OpportunityDroughtPanel analysis={opportunityDrought} /> : empty('Opportunity Drought Research will appear here.'),
