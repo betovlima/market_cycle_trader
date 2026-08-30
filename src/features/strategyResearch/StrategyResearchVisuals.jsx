@@ -617,6 +617,8 @@ function StatisticalPredictiveControlPanel({ analysis }) {
       <MetricCard label={tr('Close statistical shocks')} value={number(summary?.statistical_close_shock_count, 0)} />
       <MetricCard label={tr('Open statistical shocks')} value={number(summary?.statistical_open_shock_count, 0)} />
       <MetricCard label={tr('Opportunity-risk conflicts')} value={number(summary?.opportunity_risk_conflict_count, 0)} />
+      <MetricCard label={tr('Regime silhouette')} value={number(summary?.mean_regime_silhouette, 3)} note={tr('Training-only causal regime separation')} />
+      <MetricCard label={tr('Q4 regime sessions')} value={number(summary?.regime_quadrant_counts?.Q4, 0)} note={tr('High opportunity signal with weaker market/risk context')} />
       <MetricCard label={tr('Capital effect')} value={percent(candidateLift, 2)} tone={candidateLift > 0 ? 'positive' : candidateLift < 0 ? 'negative' : ''} />
     </div>
     <div className="strategy-research-control-protocol">
@@ -640,6 +642,19 @@ function StatisticalPredictiveControlPanel({ analysis }) {
         ],
         notes: [{ label: tr('Operational parity'), text: tr('This checkpoint mirrors the second daily evaluation without using the high, low or close of the session that has just opened.') }],
       })}><strong>{tr('Open checkpoint')}</strong><span>{tr('Opening gap + completed-session state')}</span></button>
+      <button type="button" onClick={() => setSelectedDetail({
+        kicker: 'CAUSAL REGIME CONTEXT',
+        title: tr('Regime context'),
+        description: tr('Rolling market-state clustering is fitted only on years before each chronological test fold. The model receives distances to historical regimes and a PCA quadrant context, never the completed future month.'),
+        metrics: [
+          { label: tr('Mean silhouette'), value: number(summary?.mean_regime_silhouette, 3) },
+          { label: tr('Q1 sessions'), value: number(summary?.regime_quadrant_counts?.Q1, 0) },
+          { label: tr('Q2 sessions'), value: number(summary?.regime_quadrant_counts?.Q2, 0) },
+          { label: tr('Q3 sessions'), value: number(summary?.regime_quadrant_counts?.Q3, 0) },
+          { label: tr('Q4 sessions'), value: number(summary?.regime_quadrant_counts?.Q4, 0) },
+        ],
+        notes: [{ label: tr('No future leakage'), text: tr('The monthly diagnostic clustering remains visual only. Predictive regime features are rebuilt causally inside each outer training fold.') }],
+      })}><strong>{tr('Regime context')}</strong><span>{tr('Rolling cluster distances + causal quadrants')}</span></button>
     </div>
     <div className="strategy-research-stat-grid">
       <div className="strategy-research-stat-section">
@@ -668,6 +683,8 @@ function StatisticalPredictiveControlPanel({ analysis }) {
               { label: tr('Open AUC'), value: number(fold?.open_metrics?.auc, 3) },
               { label: tr('Training rows'), value: number(fold?.train_rows, 0) },
               { label: tr('Test rows'), value: number(fold?.test_rows, 0) },
+              { label: tr('Regime silhouette'), value: number(fold?.regime_context?.silhouette_score, 3) },
+              { label: tr('Regime clusters'), value: number(fold?.regime_context?.cluster_count, 0) },
             ],
           })}><span>{fold.test_year}</span><span>{number(fold?.close_metrics?.auc, 3)}</span><span>{number(fold?.open_metrics?.auc, 3)}</span><span>{number(fold?.test_rows, 0)}</span></button>)}
         </div>
