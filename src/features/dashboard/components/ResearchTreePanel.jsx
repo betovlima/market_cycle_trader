@@ -12,9 +12,18 @@ function finite(value) {
 function compactNumber(value, digits = 4) {
   const number = finite(value)
   if (number == null) return '—'
+  if (number === 0) return '0'
   const absolute = Math.abs(number)
-  if (absolute >= 1000 || (absolute > 0 && absolute < 0.001)) return number.toExponential(2)
-  return number.toLocaleString(undefined, { maximumFractionDigits: digits })
+  const leadingDecimalZeros = absolute < 1
+    ? Math.max(0, Math.ceil(-Math.log10(absolute)) - 1)
+    : 0
+  const maximumFractionDigits = Math.min(16, Math.max(digits, leadingDecimalZeros + 6))
+  return number.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits,
+    useGrouping: true,
+    notation: 'standard',
+  })
 }
 
 function featureLabel(feature) {

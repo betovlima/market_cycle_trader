@@ -3,6 +3,7 @@ import { tr } from '../../i18n/runtime'
 const STAGES = [
   { id: 'reference', label: 'Strategy Replay', icon: '↻' },
   { id: 'temporal', label: 'Temporal Intelligence', icon: '⚙' },
+  { id: 'asset_state_clustering', label: 'Daily Asset State Clustering', icon: '◈' },
   { id: 'statistical_ml_control', label: 'Statistical & Predictive Controls', icon: '∿' },
   { id: 'roc_policy', label: 'ROC Decision Policy', icon: '⌁' },
   { id: 'clustering', label: 'Regime Clustering', icon: '◍' },
@@ -29,8 +30,15 @@ function stageStateLabel(value) {
   return tr('Waiting')
 }
 
+function resolveStageState(stage, stageState) {
+  if (stage.id === 'asset_state_clustering') {
+    return stageState.asset_state_clustering || stageState.statistical_ml_control || 'waiting'
+  }
+  return stageState[stage.id] || 'waiting'
+}
+
 export function StrategyResearchPipeline({ stageState = {}, selectedStage = 'reference', onSelect, pipelineProgress = null }) {
-  const completed = STAGES.filter((stage) => stageState[stage.id] === 'completed').length
+  const completed = STAGES.filter((stage) => ['completed', 'skipped'].includes(resolveStageState(stage, stageState))).length
   return (
     <aside className="strategy-research-pipeline-shell" aria-label={tr('Research Pipeline')}>
       <div className="strategy-research-pipeline-rail-head">
@@ -39,7 +47,7 @@ export function StrategyResearchPipeline({ stageState = {}, selectedStage = 'ref
       </div>
       <div className="strategy-research-pipeline-track" role="list">
         {STAGES.map((stage, index) => {
-          const state = stageState[stage.id] || 'waiting'
+          const state = resolveStageState(stage, stageState)
           return (
             <button
               type="button"
