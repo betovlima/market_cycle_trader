@@ -593,6 +593,110 @@ function SankeyVisual({ stateful }) {
   </div>
 }
 
+function DailyRegimeMap({ trajectory, folds = [], onOpenDetail }) {
+  const points = (trajectory?.points || []).filter((row) => Number.isFinite(Number(row?.regime_pca_x)) && Number.isFinite(Number(row?.regime_pca_y)))
+  const years = [...new Set(points.map((row) => Number(row?.test_year)).filter(Number.isFinite))].sort((a, b) => a - b)
+  const [selectedYear, setSelectedYear] = useState(() => years.at(-1) || null)
+  const effectiveYear = years.includes(selectedYear) ? selectedYear : (years.at(-1) || null)
+  const visible = effectiveYear == null ? points : points.filter((row) => Number(row?.test_year) === Number(effectiveYear))
+  if (!visible.length) return <div className="strategy-research-stat-section"><div className="strategy-research-section-heading"><strong>{tr('Daily causal regime map')}</strong><span>{tr('Daily regime points are not available for this persisted analysis. Reload after the API update; rerunning the research is not required.')}</span></div></div>
+
+  const width = 920
+  const height = 390
+  const plot = { left: 58, right: 892, top: 42, bottom: 338 }
+  const xs = visible.map((row) => Number(row.regime_pca_x))
+  const ys = visible.map((row) => Number(row.regime_pca_y))
+  const xAbs = Math.max(...xs.map(Math.abs), 1) * 1.08
+  const yAbs = Math.max(...ys.map(Math.abs), 1) * 1.08
+  const mapX = (value) => plot.left + ((Number(value) + xAbs) / (2 * xAbs)) * (plot.right - plot.left)
+  const mapY = (value) => plot.bottom - ((Number(value) + yAbs) / (2 * yAbs)) * (plot.bottom - plot.top)
+  const zeroX = mapX(0)
+  const zeroY = mapY(0)
+  const clusterIds = [...new Set(visible.map((row) => Number(row.regime_cluster_id)).filter(Number.isFinite))].sort((a, b) => a - b)
+  const lastClusterId = clusterIds.at(-1)
+  const centers = clusterIds.map((clusterId) => {
+    const rows = visible.filter((row) => Number(row.regime_cluster_id) === clusterId)
+    return {
+      clusterId,
+      x: rows.reduce((sum, row) => sum + Number(row.regime_pca_x), 0) / Math.max(1, rows.length),
+      y: rows.reduce((sum, row) => sum + Number(row.regime_pca_y), 0) / Math.max(1, rows.length),
+      count: rows.length,
+    }
+  })
+  const fold = folds.find((item) => Number(item?.test_year) === Number(effectiveYear))
+  const warningCount = visible.filter((row) => Number(row?.regime_trajectory_warning) === 1).length
+  const severeCount = visible.filter((row) => Number(row?.trajectory_severe_event) === 1).length
+  const clusterLabel = (clusterId) => clusterId === 0 ? tr('Healthy regime') : clusterId === lastClusterId ? tr('Defensive regime') : `${tr('Intermediate regime')} ${clusterId + 1}`
+
+  const openPoint = (row) => onOpenDetail?.({
+    kicker: 'DAILY CAUSAL REGIME',
+    title: `${String(row?.execution_at || '—').slice(0, 10)} · ${row?.symbol || '—'}`,
+    description: tr('This point is one chronological out-of-sample session projected into the causal regime space learned only from prior training years.'),
+    metrics: [
+      { label: tr('Test year'), value: String(row?.test_year ?? '—') },
+      { label: tr('Cluster'), value: Number.isFinite(Number(row?.regime_cluster_id)) ? `#${Number(row.regime_cluster_id) + 1} · ${clusterLabel(Number(row.regime_cluster_id))}` : '—' },
+      { label: tr('Quadrant'), value: row?.regime_quadrant || '—' },
+      { label: tr('Opportunity component'), value: number(row?.regime_pca_x, 3) },
+      { label: tr('Market / risk-health component'), value: number(row?.regime_pca_y, 3) },
+      { label: tr('Danger similarity'), value: number(row?.regime_danger_similarity, 3) },
+      { label: tr('Trajectory score'), value: number(row?.regime_trajectory_score, 3) },
+      { label: tr('Warning'), value: Number(row?.regime_trajectory_warning) === 1 ? tr('Yes') : tr('No'), tone: Number(row?.regime_trajectory_warning) === 1 ? 'negative' : '' },
+      { label: tr('Policy action'), value: row?.policy_action || '—' },
+      { label: tr('Severe future window'), value: Number(row?.trajectory_severe_event) === 1 ? tr('Yes') : tr('No'), tone: Number(row?.trajectory_severe_event) === 1 ? 'negative' : '' },
+      { label: tr('Future minimum return'), value: Number.isFinite(Number(row?.trajectory_forward_min_return)) ? percent(row.trajectory_forward_min_return, 2) : '—' },
+      { label: tr('Lead time'), value: Number.isFinite(Number(row?.trajectory_trough_lead_sessions)) ? `${number(row.trajectory_trough_lead_sessions, 0)} ${tr('sessions')}` : '—' },
+    ],
+    notes: [
+      { label: tr('How to read it'), text: tr('Horizontal movement represents the opportunity-oriented PCA component. Vertical movement represents market and risk health. The lower-right area is Q4: opportunity remains high while the environment deteriorates.') },
+      { label: tr('Causality'), text: tr('The cluster space for this test year was fitted only with earlier training years. Future-return fields are shown only as post-hoc labels for research validation.') },
+    ],
+  })
+
+  return <div className="strategy-research-daily-regime-map strategy-research-stat-section">
+    <div className="strategy-research-daily-regime-head">
+      <div className="strategy-research-section-heading"><strong>{tr('Daily causal regime map')}</strong><span>{tr('Each point is one out-of-sample trading session. Clusters are shown inside one chronological test fold so PCA spaces from different folds are never mixed.')}</span></div>
+      <div className="strategy-research-regime-year-tabs" aria-label={tr('Test year')}>
+        {years.map((year) => <button type="button" key={year} className={Number(effectiveYear) === Number(year) ? 'selected' : ''} onClick={() => setSelectedYear(year)}>{year}</button>)}
+      </div>
+    </div>
+    <div className="strategy-research-regime-map-kpis">
+      <span>{tr('Clusters')} <strong>{clusterIds.length}</strong></span>
+      <span>{tr('Sessions')} <strong>{visible.length}</strong></span>
+      <span>{tr('Warnings')} <strong>{warningCount}</strong></span>
+      <span>{tr('Severe future windows')} <strong>{severeCount}</strong></span>
+      <span>{tr('Silhouette')} <strong>{number(fold?.regime_context?.silhouette_score, 3)}</strong></span>
+    </div>
+    <div className="strategy-research-regime-map-legend">
+      {clusterIds.map((clusterId) => <span key={clusterId}><i className={`cluster-${clusterId % 6}`} />{tr('Cluster')} #{clusterId + 1} · {clusterLabel(clusterId)}</span>)}
+      <span><b className="warning-ring" />{tr('Warning')}</span>
+      <span><b className="severe-ring" />{tr('Severe future window')}</span>
+      <span><b className="center-diamond">◆</b>{tr('Displayed OOS cluster center')}</span>
+    </div>
+    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={tr('Daily causal regime map')}>
+      <rect x={plot.left} y={plot.top} width={zeroX - plot.left} height={zeroY - plot.top} className="regime-q2" />
+      <rect x={zeroX} y={plot.top} width={plot.right - zeroX} height={zeroY - plot.top} className="regime-q1" />
+      <rect x={plot.left} y={zeroY} width={zeroX - plot.left} height={plot.bottom - zeroY} className="regime-q3" />
+      <rect x={zeroX} y={zeroY} width={plot.right - zeroX} height={plot.bottom - zeroY} className="regime-q4" />
+      <line x1={plot.left} y1={zeroY} x2={plot.right} y2={zeroY} className="regime-axis" />
+      <line x1={zeroX} y1={plot.top} x2={zeroX} y2={plot.bottom} className="regime-axis" />
+      <text x={plot.left + 10} y={plot.top + 18} className="regime-quadrant-label">Q2</text>
+      <text x={plot.right - 10} y={plot.top + 18} textAnchor="end" className="regime-quadrant-label">Q1</text>
+      <text x={plot.left + 10} y={plot.bottom - 10} className="regime-quadrant-label">Q3</text>
+      <text x={plot.right - 10} y={plot.bottom - 10} textAnchor="end" className="regime-quadrant-label danger">Q4</text>
+      <text x={(plot.left + plot.right) / 2} y={height - 12} textAnchor="middle" className="regime-axis-label">{tr('Opportunity-oriented component')} →</text>
+      <text x="15" y={(plot.top + plot.bottom) / 2} textAnchor="middle" transform={`rotate(-90 15 ${(plot.top + plot.bottom) / 2})`} className="regime-axis-label">{tr('Market / risk-health component')} →</text>
+      {visible.map((row, index) => {
+        const clusterId = Number(row.regime_cluster_id)
+        const warning = Number(row.regime_trajectory_warning) === 1
+        const severe = Number(row.trajectory_severe_event) === 1
+        return <circle key={`${row.execution_at}-${row.symbol}-${index}`} cx={mapX(row.regime_pca_x)} cy={mapY(row.regime_pca_y)} r={warning || severe ? 5.2 : 3.4} className={`regime-daily-point cluster-${Math.max(0, clusterId) % 6} ${warning ? 'warning' : ''} ${severe ? 'severe' : ''}`} role="button" tabIndex="0" aria-label={`${String(row.execution_at || '').slice(0, 10)} · ${tr('Cluster')} ${clusterId + 1} · ${row.regime_quadrant || ''}`} onClick={() => openPoint(row)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') openPoint(row) }} />
+      })}
+      {centers.map((center) => <g key={`center-${center.clusterId}`} className={`regime-daily-center cluster-${center.clusterId % 6}`}><text x={mapX(center.x)} y={mapY(center.y) + 6} textAnchor="middle">◆</text><text x={mapX(center.x)} y={mapY(center.y) - 13} textAnchor="middle" className="center-label">#{center.clusterId + 1}</text></g>)}
+    </svg>
+    <div className="strategy-research-regime-map-reading"><strong>{tr('How to read')}</strong><span>{tr('Points close together represent daily states with similar multivariate behavior. Q4 is not automatically a sell signal; it is the region where opportunity remains relatively strong while market/risk health is weaker. Click any day for details.')}</span></div>
+  </div>
+}
+
 function StatisticalPredictiveControlPanel({ analysis }) {
   const [selectedDetail, setSelectedDetail] = useState(null)
   const summary = analysis?.summary || {}
@@ -679,10 +783,11 @@ function StatisticalPredictiveControlPanel({ analysis }) {
         ],
         notes: [
           { label: tr('Causality'), text: tr('Regime centroids, normalization and warning thresholds are learned only from prior training years inside each chronological fold.') },
-          { label: tr('Research isolation'), text: tr('Daily trajectory is diagnostic-only in v10.4.3. It is not a model feature and cannot alter the researched Strategy.') },
+          { label: tr('Research isolation'), text: tr('Daily trajectory is diagnostic-only in v10.4.4. It is not a model feature and cannot alter the researched Strategy.') },
         ],
       })}><strong>{tr('Daily regime trajectory')}</strong><span>{tr('Direction + speed + persistence toward defensive regimes')}</span></button>
     </div>
+    <DailyRegimeMap trajectory={trajectory} folds={folds} onOpenDetail={setSelectedDetail} />
     <div className="strategy-research-stat-grid">
       <div className="strategy-research-stat-section">
         <div className="strategy-research-section-heading"><strong>{tr('Qualification gates')}</strong><span>{tr('A control remains research-only unless every chronological gate passes.')}</span></div>
