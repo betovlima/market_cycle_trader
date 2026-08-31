@@ -30,6 +30,11 @@ export const ASSET_STATE_PT_TRANSLATIONS = {
   'Historical': 'Histórico',
   'Latest per-asset cluster map': 'Mapa mais recente de clusters por ativo',
   'Asset State Clustering completed without enough history to form daily asset maps.': 'O Clustering de Estado dos Ativos foi concluído sem histórico suficiente para formar os mapas diários.',
+  'Processing daily asset checkpoints': 'Processando checkpoints diários dos ativos',
+  'assets completed': 'ativos concluídos',
+  'Last completed asset': 'Último ativo concluído',
+  'Each completed asset is saved as a checkpoint and will be reused after an API restart.': 'Cada ativo concluído é salvo como checkpoint e será reutilizado após uma reinicialização da API.',
+  'Daily Asset State Clustering has not reported activity for more than 30 seconds. The worker may have stopped.': 'O Clustering Diário de Estado dos Ativos não informa atividade há mais de 30 segundos. O processo pode ter sido interrompido.',
 }
 
 export const ASSET_STATE_ES_TRANSLATIONS = {
@@ -64,4 +69,9 @@ export const ASSET_STATE_ES_TRANSLATIONS = {
   'Historical': 'Histórico',
   'Latest per-asset cluster map': 'Mapa más reciente de clusters por activo',
   'Asset State Clustering completed without enough history to form daily asset maps.': 'El Clustering de Estado de los Activos terminó sin historial suficiente para formar los mapas diarios.',
+  'Processing daily asset checkpoints': 'Procesando checkpoints diarios de los activos',
+  'assets completed': 'activos completados',
+  'Last completed asset': 'Último activo completado',
+  'Each completed asset is saved as a checkpoint and will be reused after an API restart.': 'Cada activo completado se guarda como checkpoint y se reutilizará después de reiniciar la API.',
+  'Daily Asset State Clustering has not reported activity for more than 30 seconds. The worker may have stopped.': 'El Clustering Diario de Estado de los Activos no informa actividad desde hace más de 30 segundos. Es posible que el proceso se haya detenido.',
 }

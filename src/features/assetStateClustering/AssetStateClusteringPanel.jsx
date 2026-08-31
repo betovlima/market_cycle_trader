@@ -19,6 +19,32 @@ function profilePercent(value) {
   return Number.isFinite(parsed) ? percent(parsed, 1) : '—'
 }
 
+function RuntimeProgress({ analysis }) {
+  const progress = analysis?.progress || {}
+  const completed = Number(progress.completed_assets)
+  const total = Number(progress.total_assets)
+  const percentValue = Number(progress.percent)
+  const progressPercent = Number.isFinite(percentValue) ? Math.max(0, Math.min(100, percentValue)) : 0
+  const heartbeat = progress.heartbeat_at ? new Date(progress.heartbeat_at) : null
+  const heartbeatLabel = heartbeat && Number.isFinite(heartbeat.getTime())
+    ? heartbeat.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    : '—'
+  const status = String(analysis?.status || 'running').toLowerCase()
+  const statusLabel = status === 'failed' ? tr('Failed') : status === 'stopped' ? tr('Stopped') : tr('Running')
+
+  return <section className={`asset-state-runtime ${status}`}>
+    <header><div><span className="panel-kicker">{tr('UNSUPERVISED RESEARCH')}</span><h4>{tr('Processing daily asset checkpoints')}</h4></div><strong>{statusLabel}</strong></header>
+    <div className="asset-state-runtime-count"><strong>{Number.isFinite(completed) ? completed : 0}/{Number.isFinite(total) ? total : 0}</strong><span>{tr('assets completed')}</span><b>{Math.round(progressPercent)}%</b></div>
+    <div className="asset-state-runtime-track"><span style={{ width: `${progressPercent}%` }} /></div>
+    <div className="asset-state-runtime-details">
+      <span>{tr('Last completed asset')}: <strong>{progress.last_completed_symbol || '—'}</strong></span>
+      <span>{tr('Last activity')}: <strong>{heartbeatLabel}</strong></span>
+    </div>
+    <small>{tr('Each completed asset is saved as a checkpoint and will be reused after an API restart.')}</small>
+    {analysis?.failure_message ? <p>{analysis.failure_message}</p> : null}
+  </section>
+}
+
 function DetailDialog({ detail, onClose }) {
   if (!detail) return null
   return createPortal(
@@ -79,6 +105,7 @@ export function AssetStateClusteringPanel({ analysis }) {
   const summary = analysis?.summary || {}
 
   if (!analysis?.id) return null
+  if (!maps.length && String(analysis?.status || '').toLowerCase() !== 'completed') return <RuntimeProgress analysis={analysis} />
   if (!maps.length) return <div className="asset-state-empty">{tr('Asset State Clustering completed without enough history to form daily asset maps.')}</div>
 
   return <div className="asset-state-panel">

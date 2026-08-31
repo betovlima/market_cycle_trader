@@ -91,6 +91,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
   const [run, setRun] = useState(null)
   const [blockingRun, setBlockingRun] = useState(null)
   const [analytics, setAnalytics] = useState(null)
+  const [assetStateClustering, setAssetStateClustering] = useState(null)
   const [statisticalPredictiveControl, setStatisticalPredictiveControl] = useState(null)
   const [rocDecisionPolicy, setRocDecisionPolicy] = useState(null)
   const [risk, setRisk] = useState(null)
@@ -148,18 +149,24 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
   const blockingPipelineStatus = String(blockingRun?.strategy_research_pipeline?.status || 'idle').toLowerCase()
   const pipelineStatus = String(pipelineControl?.status || run?.strategy_research_pipeline?.status || 'idle').toLowerCase()
   const persistedPipelineActive = ACTIVE_PIPELINE.has(pipelineStatus)
+  const currentStage = useMemo(() => STRATEGY_RESEARCH_STAGES.find((stage) => stageState[stage.id] === 'running') || null, [stageState])
+  const stageProgress = useMemo(() => {
+    const persisted = pipelineControl?.stage_progress || run?.strategy_research_pipeline?.stage_progress || {}
+    const resolved = { ...persisted }
+    const temporalProgress = Number(run?.progress)
+    if (stageState.temporal === 'running' && Number.isFinite(temporalProgress)) {
+      resolved.temporal = { ...(resolved.temporal || {}), percent: temporalProgress }
+    }
+    return resolved
+  }, [pipelineControl?.stage_progress, run?.progress, run?.strategy_research_pipeline?.stage_progress, stageState.temporal])
+  const currentStageProgress = currentStage ? stageProgress?.[currentStage.id] || null : null
   const pipelineProgress = useMemo(() => {
     const completed = STRATEGY_RESEARCH_STAGES.filter((stage) => ['completed', 'skipped'].includes(stageState[stage.id])).length
-    let partial = 0
     const runningStage = STRATEGY_RESEARCH_STAGES.find((stage) => stageState[stage.id] === 'running')
-    if (runningStage?.id === 'temporal') {
-      const temporalProgress = Number(run?.progress)
-      if (Number.isFinite(temporalProgress)) partial = Math.max(0, Math.min(100, temporalProgress)) / 100
-    }
+    const stagePercent = Number(stageProgress?.[runningStage?.id]?.percent)
+    const partial = Number.isFinite(stagePercent) ? Math.max(0, Math.min(100, stagePercent)) / 100 : 0
     return Math.round(((completed + partial) / STRATEGY_RESEARCH_STAGES.length) * 100)
-  }, [run?.progress, stageState])
-
-  const currentStage = useMemo(() => STRATEGY_RESEARCH_STAGES.find((stage) => stageState[stage.id] === 'running') || null, [stageState])
+  }, [stageProgress, stageState])
 
   const handleError = useCallback((requestError) => {
     if (requestError instanceof ApiError && requestError.status === 401) {
@@ -202,7 +209,12 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
 
     if (!snapshot || typeof snapshot !== 'object') return null
 
-    const statisticalPredictiveControlValue = snapshot?.statistical_ml_control?.id ? snapshot.statistical_ml_control : null
+    const assetStateClusteringValue = snapshot?.asset_state_clustering?.id
+      ? snapshot.asset_state_clustering
+      : snapshot?.statistical_ml_control?.asset_state_clustering?.id
+        ? snapshot.statistical_ml_control.asset_state_clustering
+        : null
+    const statisticalPredictiveControlValue = snapshot?.statistical_ml_control?.id && snapshot?.statistical_ml_control?.status !== 'asset_state_only' ? snapshot.statistical_ml_control : null
     const rocDecisionPolicyValue = snapshot?.roc_decision_policy?.id ? snapshot.roc_decision_policy : null
     const riskValue = snapshot?.risk?.id ? snapshot.risk : null
     const alternativeActionValue = snapshot?.alternative_action?.id ? snapshot.alternative_action : null
@@ -216,6 +228,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     const fragileIncumbentValue = snapshot?.fragile_incumbent || null
     const emergingTrendValue = snapshot?.emerging_trend || null
 
+    if (assetStateClusteringValue) setAssetStateClustering(assetStateClusteringValue)
     if (statisticalPredictiveControlValue) setStatisticalPredictiveControl(statisticalPredictiveControlValue)
     if (rocDecisionPolicyValue) setRocDecisionPolicy(rocDecisionPolicyValue)
     if (riskValue) setRisk(riskValue)
@@ -269,7 +282,12 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       snapshot = null
     }
 
-    const statisticalPredictiveControlValue = snapshot?.statistical_ml_control?.id ? snapshot.statistical_ml_control : null
+    const assetStateClusteringValue = snapshot?.asset_state_clustering?.id
+      ? snapshot.asset_state_clustering
+      : snapshot?.statistical_ml_control?.asset_state_clustering?.id
+        ? snapshot.statistical_ml_control.asset_state_clustering
+        : null
+    const statisticalPredictiveControlValue = snapshot?.statistical_ml_control?.id && snapshot?.statistical_ml_control?.status !== 'asset_state_only' ? snapshot.statistical_ml_control : null
     const rocDecisionPolicyValue = snapshot?.roc_decision_policy?.id ? snapshot.roc_decision_policy : null
     const riskValue = snapshot?.risk?.id ? snapshot.risk : null
     const alternativeActionValue = snapshot?.alternative_action?.id ? snapshot.alternative_action : null
@@ -292,6 +310,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
         milpValue = null
       }
     }
+    setAssetStateClustering(assetStateClusteringValue)
     setStatisticalPredictiveControl(statisticalPredictiveControlValue)
     setRocDecisionPolicy(rocDecisionPolicyValue)
     setRisk(riskValue)
@@ -306,6 +325,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     setFragileIncumbent(fragileIncumbentValue)
     setEmergingTrend(emergingTrendValue)
 
+    if (String(assetStateClusteringValue?.status || '').toLowerCase() === 'completed') nextState.asset_state_clustering = 'completed'
     if (String(statisticalPredictiveControlValue?.status || '').toLowerCase() === 'completed') nextState.statistical_ml_control = 'completed'
     if (String(rocDecisionPolicyValue?.status || '').toLowerCase() === 'completed') nextState.roc_policy = 'completed'
     if (String(clusteringValue?.status || '').toLowerCase() === 'completed') nextState.clustering = 'completed'
@@ -327,6 +347,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     const resolvedState = persisted?.stage_states && persistedStatus && persistedStatus !== 'idle'
       ? { ...nextState, ...persisted.stage_states }
       : nextState
+    if (String(assetStateClusteringValue?.status || '').toLowerCase() === 'completed') resolvedState.asset_state_clustering = 'completed'
     if (String(statisticalPredictiveControlValue?.status || '').toLowerCase() === 'completed') resolvedState.statistical_ml_control = 'completed'
     if (String(rocDecisionPolicyValue?.status || '').toLowerCase() === 'completed') resolvedState.roc_policy = 'completed'
     if (String(clusteringValue?.status || '').toLowerCase() === 'completed') resolvedState.clustering = 'completed'
@@ -709,6 +730,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
       const selectedStrategy = latestControl?.strategy_research_strategy || latestControl?.research_strategy || strategy
 
       setAnalytics(null)
+      setAssetStateClustering(null)
       setStatisticalPredictiveControl(null)
       setRocDecisionPolicy(null)
       setRisk(null)
@@ -807,6 +829,7 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
         await apiFetch(`${API}/temporal-intelligence/${encodeURIComponent(run.id)}/strategy-research/reset`, { method: 'POST' })
       }
       setAnalytics(null)
+      setAssetStateClustering(null)
       setStatisticalPredictiveControl(null)
       setRocDecisionPolicy(null)
       setRisk(null)
@@ -907,9 +930,29 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
   const effectivePipelineBusy = running || temporalActive || persistedPipelineActive
   const canStopPipeline = canStop && (effectivePipelineBusy || blockingTemporalActive)
   const stopControlPending = stopping || pipelineStatus === 'stop_requested' || (blockingTemporalActive && blockingPipelineStatus === 'stop_requested')
-  const temporalProgress = Number(run?.progress)
+  const currentStagePercent = Number(currentStageProgress?.percent)
+  const currentStageCompletedUnits = Number(currentStageProgress?.completed_units)
+  const currentStageTotalUnits = Number(currentStageProgress?.total_units)
+  const currentStageHeartbeat = Date.parse(currentStageProgress?.heartbeat_at || '')
+  const currentStageHeartbeatAgeSeconds = Number.isFinite(currentStageHeartbeat) ? Math.max(0, (Date.now() - currentStageHeartbeat) / 1000) : null
+  const currentStageHeartbeatStale = currentStage?.id === 'asset_state_clustering'
+    && persistedPipelineActive
+    && currentStageHeartbeatAgeSeconds != null
+    && currentStageHeartbeatAgeSeconds > 30
+  const currentStageDetails = currentStage
+    ? [
+        `${tr('Current stage')}: ${tr(currentStage.label)}`,
+        Number.isFinite(currentStagePercent) ? `${Math.round(Math.max(0, Math.min(100, currentStagePercent)))}%` : '',
+        currentStage.id === 'asset_state_clustering' && Number.isFinite(currentStageTotalUnits) && currentStageTotalUnits > 0
+          ? `${Number.isFinite(currentStageCompletedUnits) ? currentStageCompletedUnits : 0}/${currentStageTotalUnits} ${tr('assets')}`
+          : '',
+        currentStageProgress?.last_completed_unit ? `${tr('Last completed asset')}: ${currentStageProgress.last_completed_unit}` : '',
+        Number.isFinite(currentStageHeartbeat) ? `${tr('Last activity')}: ${new Date(currentStageHeartbeat).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : '',
+        currentStage.id === 'temporal' && run?.stage ? run.stage : '',
+      ].filter(Boolean).join(' · ')
+    : ''
   const progressDetail = currentStage
-    ? `${tr('Current stage')}: ${tr(currentStage.label)}${currentStage.id === 'temporal' && Number.isFinite(temporalProgress) ? ` · ${Math.round(Math.max(0, Math.min(100, temporalProgress)))}%${run?.stage ? ` · ${run.stage}` : ''}` : ''}`
+    ? currentStageDetails
     : pipelineStatus === 'stop_requested'
       ? tr('Stop requested. The active processing is being stopped.')
       : pipelineStatus === 'stopped'
@@ -946,16 +989,17 @@ export function StrategyResearchPage({ workspace, capabilities = {}, onSessionEx
     {!validPeriod(startMonth, endMonth) ? <div className="global-inline-message error-inline">{tr('Select a valid period.')}</div> : null}
     {blockingTemporalActive ? <div className="global-inline-message error-inline">{tr('Another Temporal Intelligence run is active for a different Strategy Research baseline.')} {blockingRun?.id || ''}</div> : null}
     {pipelineSyncWarning ? <div className="global-inline-message warning-inline">{pipelineSyncWarning}</div> : null}
+    {currentStageHeartbeatStale ? <div className="global-inline-message warning-inline">{tr('Daily Asset State Clustering has not reported activity for more than 30 seconds. The worker may have stopped.')}</div> : null}
     {error ? <div className="global-inline-message error-inline">{error}</div> : null}
     {notice ? <div className="global-inline-message success-inline">{notice}</div> : null}
 
     <div className="strategy-research-workspace">
-      <StrategyResearchPipeline stageState={stageState} selectedStage={selectedStage} onSelect={handleStageSelect} pipelineProgress={pipelineProgress} />
+      <StrategyResearchPipeline stageState={stageState} stageProgress={stageProgress} selectedStage={selectedStage} onSelect={handleStageSelect} />
 
       <section className="strategy-research-stage-content data-panel">
         <div className="strategy-research-stage-content-heading"><div><span className="panel-kicker">{tr('SELECTED STAGE')}</span><h3>{tr(STRATEGY_RESEARCH_STAGES.find((stage) => stage.id === selectedStage)?.label || 'Research Pipeline')}</h3></div></div>
         {selectedStageFailure ? <div className="strategy-research-stage-failure"><strong>{tr('Stage failure')}</strong><span>{selectedStageFailure}</span></div> : null}
-        {selectedStage !== 'milp' ? <StrategyResearchVisuals selectedStage={selectedStage} stageState={stageState} pipelineProgress={pipelineProgress} run={run} analytics={analytics} statisticalPredictiveControl={statisticalPredictiveControl} rocDecisionPolicy={rocDecisionPolicy} risk={risk} alternativeAction={alternativeAction} operationalQualification={operationalQualification} intervention={intervention} confidence={confidence} stateful={stateful} leadershipRegime={leadershipRegime} clustering={clustering} opportunityDrought={opportunityDrought} fragileIncumbent={fragileIncumbent} emergingTrend={emergingTrend} pipelineError={error} /> : null}
+        {selectedStage !== 'milp' ? <StrategyResearchVisuals selectedStage={selectedStage} stageState={stageState} pipelineProgress={pipelineProgress} run={run} analytics={analytics} assetStateClustering={assetStateClustering} statisticalPredictiveControl={statisticalPredictiveControl} rocDecisionPolicy={rocDecisionPolicy} risk={risk} alternativeAction={alternativeAction} operationalQualification={operationalQualification} intervention={intervention} confidence={confidence} stateful={stateful} leadershipRegime={leadershipRegime} clustering={clustering} opportunityDrought={opportunityDrought} fragileIncumbent={fragileIncumbent} emergingTrend={emergingTrend} pipelineError={error} /> : null}
         {selectedStage === 'milp' ? <DecisionCandidates stateful={stateful} milp={milpResult} selectedCandidate={selectedCandidate} onCandidateSelect={setSelectedCandidate} /> : null}
         {selectedStage === 'validation' ? <FinalValidation control={analytics} stateful={stateful} milp={milpResult} selectedCandidate={selectedCandidate} onCandidateSelect={setSelectedCandidate} /> : null}
       </section>

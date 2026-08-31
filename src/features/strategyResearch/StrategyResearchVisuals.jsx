@@ -3,7 +3,7 @@ import { StrategyResearchVisuals as BaseStrategyResearchVisuals } from './Strate
 
 export function StrategyResearchVisuals(props) {
   if (props?.selectedStage === 'asset_state_clustering') {
-    return <AssetStateClusteringPanel analysis={props?.statisticalPredictiveControl?.asset_state_clustering} />
+    return <AssetStateClusteringPanel analysis={props?.assetStateClustering} />
   }
   return <BaseStrategyResearchVisuals {...props} />
 }

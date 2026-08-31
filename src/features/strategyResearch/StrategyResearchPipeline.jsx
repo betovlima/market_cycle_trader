@@ -34,7 +34,7 @@ function resolveStageState(stage, stageState) {
   return stageState[stage.id] || 'waiting'
 }
 
-export function StrategyResearchPipeline({ stageState = {}, selectedStage = 'reference', onSelect, pipelineProgress = null }) {
+export function StrategyResearchPipeline({ stageState = {}, stageProgress = {}, selectedStage = 'reference', onSelect }) {
   const completed = STAGES.filter((stage) => ['completed', 'skipped'].includes(resolveStageState(stage, stageState))).length
   return (
     <aside className="strategy-research-pipeline-shell" aria-label={tr('Research Pipeline')}>
@@ -45,6 +45,7 @@ export function StrategyResearchPipeline({ stageState = {}, selectedStage = 'ref
       <div className="strategy-research-pipeline-track" role="list">
         {STAGES.map((stage, index) => {
           const state = resolveStageState(stage, stageState)
+          const progress = Number(stageProgress?.[stage.id]?.percent)
           return (
             <button
               type="button"
@@ -57,7 +58,7 @@ export function StrategyResearchPipeline({ stageState = {}, selectedStage = 'ref
               <span className="strategy-research-stage-index">{String(index + 1).padStart(2, '0')}</span>
               <span className="strategy-research-stage-copy">
                 <strong>{tr(stage.label)}</strong>
-                <small>{state === 'running' && Number.isFinite(Number(pipelineProgress)) ? `${stageStateLabel(state)} · ${Math.round(Math.max(0, Math.min(100, Number(pipelineProgress))))}%` : stageStateLabel(state)}</small>
+                <small>{state === 'running' && Number.isFinite(progress) ? `${stageStateLabel(state)} · ${Math.round(Math.max(0, Math.min(100, progress)))}%` : stageStateLabel(state)}</small>
               </span>
               <span className={`strategy-research-stage-status-icon ${state}`} aria-hidden="true">
                 {state === 'running' ? <span className="strategy-research-running-gear">⚙</span> : state === 'completed' ? '' : stage.icon}
