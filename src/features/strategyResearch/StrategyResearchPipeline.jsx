@@ -31,9 +31,6 @@ function stageStateLabel(value) {
 }
 
 function resolveStageState(stage, stageState) {
-  if (stage.id === 'asset_state_clustering') {
-    return stageState.asset_state_clustering || stageState.statistical_ml_control || 'waiting'
-  }
   return stageState[stage.id] || 'waiting'
 }
 
