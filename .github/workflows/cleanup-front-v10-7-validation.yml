@@ -1,0 +1,30 @@
+name: Clean Front validation artifacts
+
+on:
+  push:
+    branches:
+      - feat/10.7.0-temporal-outlook
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: ${{ !contains(github.event.head_commit.message, '[front artifacts cleaned]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/10.7.0-temporal-outlook
+          fetch-depth: 0
+      - name: Remove generated build artifacts
+        run: |
+          rm -rf node_modules dist
+          rm .github/workflows/cleanup-front-v10-7-validation.yml
+      - name: Commit cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: remove Front validation artifacts [front artifacts cleaned]"
+          git push origin HEAD:feat/10.7.0-temporal-outlook
