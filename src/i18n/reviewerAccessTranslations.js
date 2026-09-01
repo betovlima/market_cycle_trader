@@ -1,5 +1,7 @@
 export const REVIEWER_ACCESS_PT_TRANSLATIONS = {
   'Guest Access': 'Acesso de convidado',
+  'Reviewer': 'Avaliador',
+  'access': 'acesso',
   'Reviewer access': 'Acessos de avaliador',
   'Reviewer name': 'Nome do avaliador',
   'Read-only reviewer': 'Avaliador somente leitura',
@@ -24,6 +26,7 @@ export const REVIEWER_ACCESS_PT_TRANSLATIONS = {
   'Reviewer access deleted.': 'Acesso do avaliador excluído.',
   'Delete reviewer access for {name}?': 'Excluir o acesso do avaliador {name}?',
   'Unable to update reviewer access.': 'Não foi possível atualizar o acesso do avaliador.',
+  'Unable to open reviewer access.': 'Não foi possível abrir o acesso do avaliador.',
   'Unable to copy access data.': 'Não foi possível copiar os dados de acesso.',
   'This profile can view Dashboard, Strategy Research, Backtest and Asset Discovery, and export available data. Execution, stop, promotion and strategy mutation actions are not granted by the backend.': 'Este perfil pode visualizar Dashboard, Strategy Research, Backtest e Asset Discovery e exportar os dados disponíveis. Ações de execução, parada, promoção e alteração de estratégias não são concedidas pelo backend.',
   'Reviewer access code': 'Código de acesso do avaliador',
@@ -41,6 +44,8 @@ export const REVIEWER_ACCESS_PT_TRANSLATIONS = {
 
 export const REVIEWER_ACCESS_ES_TRANSLATIONS = {
   'Guest Access': 'Acceso de invitado',
+  'Reviewer': 'Evaluador',
+  'access': 'acceso',
   'Reviewer access': 'Accesos de evaluador',
   'Reviewer name': 'Nombre del evaluador',
   'Read-only reviewer': 'Evaluador de solo lectura',
@@ -65,6 +70,7 @@ export const REVIEWER_ACCESS_ES_TRANSLATIONS = {
   'Reviewer access deleted.': 'Acceso del evaluador eliminado.',
   'Delete reviewer access for {name}?': '¿Eliminar el acceso del evaluador {name}?',
   'Unable to update reviewer access.': 'No se pudo actualizar el acceso del evaluador.',
+  'Unable to open reviewer access.': 'No se pudo abrir el acceso del evaluador.',
   'Unable to copy access data.': 'No se pudieron copiar los datos de acceso.',
   'This profile can view Dashboard, Strategy Research, Backtest and Asset Discovery, and export available data. Execution, stop, promotion and strategy mutation actions are not granted by the backend.': 'Este perfil puede visualizar Dashboard, Strategy Research, Backtest y Asset Discovery y exportar los datos disponibles. Las acciones de ejecución, detención, promoción y modificación de estrategias no son concedidas por el backend.',
   'Reviewer access code': 'Código de acceso del evaluador',
