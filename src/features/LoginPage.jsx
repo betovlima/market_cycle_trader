@@ -8,21 +8,24 @@ import { LanguageSelector } from '../i18n/LanguageSelector'
 import { getIntlLocale } from '../i18n/runtime'
 
 function accessFromLocation() {
-  if (typeof window === 'undefined') return { invitation_id: '', token: '' }
+  if (typeof window === 'undefined') return { invitation_id: '', token: '', reviewer_id: '' }
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
   const query = new URLSearchParams(window.location.search)
   return {
     invitation_id: hash.get('invitation') || query.get('invitation') || '',
     token: hash.get('token') || '',
+    reviewer_id: hash.get('reviewer') || query.get('reviewer') || '',
   }
 }
 
-function keepInvitationAndRemoveToken(invitationId) {
+function keepAccessLocator({ invitation_id = '', reviewer_id = '' } = {}) {
   if (typeof window === 'undefined') return
   const url = new URL(window.location.href)
   url.hash = ''
-  if (invitationId) url.searchParams.set('invitation', invitationId)
+  if (invitation_id) url.searchParams.set('invitation', invitation_id)
   else url.searchParams.delete('invitation')
+  if (reviewer_id) url.searchParams.set('reviewer', reviewer_id)
+  else url.searchParams.delete('reviewer')
   window.history.replaceState({}, document.title, `${url.pathname}${url.search}`)
 }
 
@@ -31,6 +34,7 @@ function roleLabel(role) {
     admin: 'Administrator',
     trader: 'Trader',
     viewer: 'Viewer',
+    reviewer: 'Reviewer',
   }
   return tr(labels[role] || 'Authorized')
 }
@@ -101,7 +105,7 @@ function GoogleIdentityButton({ disabled, onCredential, onError }) {
   }, [disabled])
 
   if (!GOOGLE_CLIENT_ID) {
-    return <div className="auth-error">{tr("Google access is not configured for this frontend.")}</div>
+    return <div className="auth-error">{tr('Google access is not configured for this frontend.')}</div>
   }
   return <div className={`google-identity-button ${disabled ? 'disabled' : ''}`} ref={buttonRef} />
 }
@@ -110,18 +114,18 @@ export function LoginPage({ onAuthenticated }) {
   const initialAccess = useRef(accessFromLocation())
   const [locator, setLocator] = useState(initialAccess.current)
   const [preview, setPreview] = useState(null)
-  const [checkingInvitation, setCheckingInvitation] = useState(Boolean(initialAccess.current.invitation_id || initialAccess.current.token))
+  const [reviewerPreview, setReviewerPreview] = useState(null)
+  const [reviewerCode, setReviewerCode] = useState('')
+  const [checkingInvitation, setCheckingInvitation] = useState(Boolean(initialAccess.current.invitation_id || initialAccess.current.token || initialAccess.current.reviewer_id))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  async function loadPreview(nextLocator) {
+  async function loadGooglePreview(nextLocator) {
     if (!nextLocator.invitation_id) {
       setPreview(null)
       setCheckingInvitation(false)
-      if (nextLocator.token) {
-        setError(tr('This invitation link is incomplete. Ask the administrator for a new link.'))
-      }
-      keepInvitationAndRemoveToken('')
+      if (nextLocator.token) setError(tr('This invitation link is incomplete. Ask the administrator for a new link.'))
+      keepAccessLocator({})
       return
     }
 
@@ -131,26 +135,48 @@ export function LoginPage({ onAuthenticated }) {
       const body = { invitation_id: nextLocator.invitation_id }
       if (nextLocator.token) body.token = nextLocator.token
       const value = await apiFetch(`${API}/auth/access/preview`, { method: 'POST', body })
-      const normalized = {
-        invitation_id: value.invitation_id,
-        token: nextLocator.token || '',
-      }
+      const normalized = { invitation_id: value.invitation_id, token: nextLocator.token || '', reviewer_id: '' }
       setLocator(normalized)
       setPreview(value)
-      keepInvitationAndRemoveToken(value.invitation_id)
+      setReviewerPreview(null)
+      keepAccessLocator({ invitation_id: value.invitation_id })
     } catch (requestError) {
       setPreview(null)
       setError(tr(requestError.message || 'Unable to open this invitation.'))
-      keepInvitationAndRemoveToken(nextLocator.invitation_id || '')
+      keepAccessLocator({ invitation_id: nextLocator.invitation_id || '' })
+    } finally {
+      setCheckingInvitation(false)
+    }
+  }
+
+  async function loadReviewerPreview(accessId) {
+    if (!accessId) return
+    setCheckingInvitation(true)
+    setError('')
+    try {
+      const value = await apiFetch(`${API}/auth/reviewer/preview`, { method: 'POST', body: { access_id: accessId } })
+      setLocator({ invitation_id: '', token: '', reviewer_id: value.access_id })
+      setReviewerPreview(value)
+      setPreview(null)
+      keepAccessLocator({ reviewer_id: value.access_id })
+    } catch (requestError) {
+      setReviewerPreview(null)
+      setError(tr(requestError.message || 'Unable to open reviewer access.'))
+      keepAccessLocator({ reviewer_id: accessId })
     } finally {
       setCheckingInvitation(false)
     }
   }
 
   useEffect(() => {
+    if (initialAccess.current.reviewer_id) {
+      keepAccessLocator({ reviewer_id: initialAccess.current.reviewer_id })
+      loadReviewerPreview(initialAccess.current.reviewer_id)
+      return
+    }
     if (initialAccess.current.invitation_id || initialAccess.current.token) {
-      keepInvitationAndRemoveToken(initialAccess.current.invitation_id)
-      loadPreview(initialAccess.current)
+      keepAccessLocator({ invitation_id: initialAccess.current.invitation_id })
+      loadGooglePreview(initialAccess.current)
     }
   }, [])
 
@@ -162,12 +188,34 @@ export function LoginPage({ onAuthenticated }) {
       if (locator.invitation_id) body.invitation_id = locator.invitation_id
       if (locator.token) body.token = locator.token
       const session = await apiFetch(`${API}/auth/access`, { method: 'POST', body })
-      setLocator({ invitation_id: '', token: '' })
+      setLocator({ invitation_id: '', token: '', reviewer_id: '' })
       setPreview(null)
-      keepInvitationAndRemoveToken('')
+      keepAccessLocator({})
       onAuthenticated(session)
     } catch (requestError) {
       setError(tr(requestError.message || 'Unable to verify the Google account.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function authenticateReviewer(event) {
+    event.preventDefault()
+    if (!locator.reviewer_id || !reviewerCode.trim()) return
+    setBusy(true)
+    setError('')
+    try {
+      const session = await apiFetch(`${API}/auth/reviewer/access`, {
+        method: 'POST',
+        body: { access_id: locator.reviewer_id, code: reviewerCode.trim() },
+      })
+      setLocator({ invitation_id: '', token: '', reviewer_id: '' })
+      setReviewerPreview(null)
+      setReviewerCode('')
+      keepAccessLocator({})
+      onAuthenticated(session)
+    } catch (requestError) {
+      setError(tr(requestError.message || 'Unable to open reviewer access.'))
     } finally {
       setBusy(false)
     }
@@ -182,34 +230,63 @@ export function LoginPage({ onAuthenticated }) {
         <div className="auth-brand">
           <img src={appLogoUrl} alt="" />
           <div>
-            <span>{tr("PRIVATE SIMULATION")}</span>
-            <h1>{tr("Market Cycle Trader")}</h1>
-            <p>{tr("Sign in with an authorized Google account.")}</p>
+            <span>{tr('PRIVATE SIMULATION')}</span>
+            <h1>{tr('Market Cycle Trader')}</h1>
+            <p>{tr(reviewerPreview ? 'Temporary read-only access' : 'Sign in with an authorized Google account.')}</p>
           </div>
         </div>
 
-        {preview ? (
+        {reviewerPreview ? (
           <div className="verified-access-panel">
             <div className="verified-access-heading">
-              <span>{roleLabel(preview.role)} {tr("invitation")}</span>
+              <span>{roleLabel(reviewerPreview.role)} {tr('access')}</span>
+              <strong>{reviewerPreview.guest_name}</strong>
+            </div>
+            <dl className="verified-access-details">
+              <div><dt>{tr('Access profile')}</dt><dd>{roleLabel(reviewerPreview.role)}</dd></div>
+              <div><dt>{tr('Invitation status')}</dt><dd>{tr('Active')}</dd></div>
+              <div><dt>{tr('Expires')}</dt><dd>{new Date(reviewerPreview.expires_at).toLocaleString(getIntlLocale())}</dd></div>
+              <div><dt>{tr('Maximum active sessions')}</dt><dd>{reviewerPreview.max_active_sessions}</dd></div>
+            </dl>
+            <p className="verified-access-note">{tr('No Google account is required for this reviewer access.')}</p>
+            <form onSubmit={authenticateReviewer}>
+              <label>
+                <span>{tr('Reviewer access code')}</span>
+                <input
+                  type="text"
+                  value={reviewerCode}
+                  onChange={(event) => setReviewerCode(event.target.value.toUpperCase())}
+                  placeholder="MCT-XXXX-XXXX"
+                  autoComplete="one-time-code"
+                  maxLength={128}
+                  disabled={disabled}
+                  required
+                />
+              </label>
+              <p className="verified-access-note">{tr('Enter the temporary access code.')}</p>
+              <button type="submit" className="admin-primary-button" disabled={disabled || !reviewerCode.trim()}>{tr('Continue as reviewer')}</button>
+            </form>
+          </div>
+        ) : preview ? (
+          <div className="verified-access-panel">
+            <div className="verified-access-heading">
+              <span>{roleLabel(preview.role)} {tr('invitation')}</span>
               <strong>{preview.guest_name}</strong>
             </div>
             <dl className="verified-access-details">
-              <div><dt>{tr("Authorized Google email")}</dt><dd>{preview.masked_email}</dd></div>
-              <div><dt>{tr("Access profile")}</dt><dd>{roleLabel(preview.role)}</dd></div>
-              <div><dt>{tr("Invitation status")}</dt><dd>{tr(preview.status.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()))}</dd></div>
-              <div><dt>{tr("Expires")}</dt><dd>{new Date(preview.expires_at).toLocaleString(getIntlLocale())}</dd></div>
+              <div><dt>{tr('Authorized Google email')}</dt><dd>{preview.masked_email}</dd></div>
+              <div><dt>{tr('Access profile')}</dt><dd>{roleLabel(preview.role)}</dd></div>
+              <div><dt>{tr('Invitation status')}</dt><dd>{tr(preview.status.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()))}</dd></div>
+              <div><dt>{tr('Expires')}</dt><dd>{new Date(preview.expires_at).toLocaleString(getIntlLocale())}</dd></div>
             </dl>
-            <p className="verified-access-note">
-              {tr("Continue with the Google account that owns the authorized email. A different account will be rejected.")}</p>
+            <p className="verified-access-note">{tr('Continue with the Google account that owns the authorized email. A different account will be rejected.')}</p>
           </div>
         ) : null}
 
         {error ? <div className="auth-error">{tr(error)}</div> : null}
-        <GoogleIdentityButton disabled={disabled} onCredential={authenticateGoogle} onError={setError} />
-        {checkingInvitation ? <div className="google-verification-progress"><span className="loading-ring" />{tr("Checking invitation…")}</div> : null}
-        {busy ? <div className="google-verification-progress"><span className="loading-ring" />{tr("Verifying identity…")}</div> : null}
-
+        {!reviewerPreview ? <GoogleIdentityButton disabled={disabled} onCredential={authenticateGoogle} onError={setError} /> : null}
+        {checkingInvitation ? <div className="google-verification-progress"><span className="loading-ring" />{tr(initialAccess.current.reviewer_id ? 'Checking reviewer access…' : 'Checking invitation…')}</div> : null}
+        {busy ? <div className="google-verification-progress"><span className="loading-ring" />{tr(reviewerPreview ? 'Opening reviewer session…' : 'Verifying identity…')}</div> : null}
       </section>
     </main>
   )
