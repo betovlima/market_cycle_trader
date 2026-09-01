@@ -10,21 +10,24 @@ import { BacktestPage } from './features/backtest/components/BacktestPage'
 import { StrategyResearchPage } from './features/strategyResearch/StrategyResearchPage'
 import { useBacktestWorkspace } from './features/backtest/hooks/useBacktestWorkspace'
 import { AdministrationPage } from './features/AdministrationPage'
+import { ReviewerAccessPage } from './features/ReviewerAccessPage'
 import { SystemSettingsPage } from './features/SystemSettingsPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { DecisionSciencePage } from './features/decisionScience/DecisionSciencePage'
 import { LoginPage } from './features/LoginPage'
 import { PaperPortfolioDashboard } from './features/paperPortfolio/PaperPortfolioDashboard'
 import { AssetDiscoveryPage } from './features/assetDiscovery/AssetDiscoveryPage'
+import './reviewerAccess.css'
 
 const TAB_CAPABILITIES = {
   dashboard: 'dashboard.view',
   research: 'backtest.view',
-  'decision-science': 'backtest.view',
+  'decision-science': 'decision_science.view',
   backtest: 'backtest.view',
   'asset-discovery': 'asset_discovery.view',
   portfolio: 'portfolio.view',
   administration: 'administration.view',
+  'reviewer-access': 'admin.manage',
   'system-settings': 'settings.view',
 }
 
@@ -45,6 +48,8 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
     () => Object.entries(TAB_CAPABILITIES).filter(([, capability]) => hasCapability(capabilities, capability)).map(([tab]) => tab),
     [capabilities],
   )
+  const canExecuteAssetDiscovery = hasCapability(capabilities, 'asset_discovery.start') || hasCapability(capabilities, 'asset_discovery.stop')
+  const canMutateAssetDiscovery = hasCapability(capabilities, 'asset_discovery.create_strategy')
 
   useEffect(() => {
     const openDashboardProcessing = (event) => {
@@ -81,25 +86,30 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
     setActiveTab(allowedTabs.includes('dashboard') ? 'dashboard' : (allowedTabs[0] || 'dashboard'))
   }, [activeTab, allowedTabs])
 
-  return <div className="app-frame">
+  return <div
+    className="app-frame"
+    data-asset-discovery-execute={canExecuteAssetDiscovery ? 'true' : 'false'}
+    data-asset-discovery-mutate={canMutateAssetDiscovery ? 'true' : 'false'}
+  >
     <AppHeader activeTab={activeTab} onTabChange={setActiveTab} session={session} capabilities={capabilities} onLogout={onLogout} />
-    {idleRemaining !== null && idleRemaining <= 300 ? <div className="session-expiration-warning">{tr("Your session will expire soon.")}</div> : null}
-    {workspace.error && !isPermissionDeniedMessage(workspace.error) ? <div className="global-error"><strong>{tr("Unable to load data")}</strong><span>{tr(workspace.error)}</span><button type="button" onClick={() => workspace.setError('')}>×</button></div> : null}
+    {idleRemaining !== null && idleRemaining <= 300 ? <div className="session-expiration-warning">{tr('Your session will expire soon.')}</div> : null}
+    {workspace.error && !isPermissionDeniedMessage(workspace.error) ? <div className="global-error"><strong>{tr('Unable to load data')}</strong><span>{tr(workspace.error)}</span><button type="button" onClick={() => workspace.setError('')}>×</button></div> : null}
     <main className="workspace-main">
       {activeTab === 'dashboard' && hasCapability(capabilities, 'dashboard.view') ? <DashboardPage workspace={workspace} capabilities={capabilities} onOpenBacktest={() => setActiveTab('backtest')} initialProcessingId={dashboardProcessingId} /> : null}
       {activeTab === 'research' && hasCapability(capabilities, 'backtest.view') ? <StrategyResearchPage workspace={workspace} capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
-      {activeTab === 'decision-science' && hasCapability(capabilities, 'backtest.view') ? <DecisionSciencePage capabilities={capabilities} /> : null}
+      {activeTab === 'decision-science' && hasCapability(capabilities, 'decision_science.view') ? <DecisionSciencePage capabilities={capabilities} /> : null}
       {activeTab === 'backtest' && hasCapability(capabilities, 'backtest.view') ? <BacktestPage workspace={workspace} capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'asset-discovery' && hasCapability(capabilities, 'asset_discovery.view') ? <AssetDiscoveryPage capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'portfolio' && hasCapability(capabilities, 'portfolio.view') ? <PaperPortfolioDashboard /> : null}
       {activeTab === 'administration' && hasCapability(capabilities, 'administration.view') ? <AdministrationPage onSessionExpired={onSessionExpired} /> : null}
+      {activeTab === 'reviewer-access' && hasCapability(capabilities, 'admin.manage') ? <ReviewerAccessPage onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'system-settings' && hasCapability(capabilities, 'settings.view') ? <SystemSettingsPage onSessionExpired={onSessionExpired} /> : null}
     </main>
     <footer className="app-footer">
       <span className="app-footer-divider" aria-hidden="true">•</span>
       <span className="app-footer-versions">
-        <span>{tr("API v")}{workspace.apiVersion}</span>
-        <span>{tr("Front v")}{FRONT_VERSION}</span>
+        <span>{tr('API v')}{workspace.apiVersion}</span>
+        <span>{tr('Front v')}{FRONT_VERSION}</span>
       </span>
     </footer>
   </div>
@@ -140,7 +150,7 @@ export default function App() {
     setState('authenticated')
   }, [])
 
-  if (state === 'checking') return <div className="app-loading">{tr("Checking private session…")}</div>
+  if (state === 'checking') return <div className="app-loading">{tr('Checking private session…')}</div>
   if (state !== 'authenticated' || !session) return <><LoginPage onAuthenticated={authenticated} />{error ? <div className="startup-error">{tr(error)}</div> : null}</>
   return <AuthenticatedApp session={session} onLogout={logout} onSessionExpired={expired} onSessionRefresh={setSession} />
 }
