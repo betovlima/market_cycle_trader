@@ -1,0 +1,9 @@
+.app-frame[data-asset-discovery-execute='false'] .asset-discovery-actions .primary-action,
+.app-frame[data-asset-discovery-execute='false'] .asset-discovery-actions .danger-soft,
+.app-frame[data-asset-discovery-execute='false'] .asset-discovery-marginal .asset-discovery-result-actions button {
+  display: none;
+}
+
+.app-frame[data-asset-discovery-mutate='false'] .asset-discovery-selection-bar {
+  display: none;
+}
