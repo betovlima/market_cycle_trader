@@ -5,7 +5,6 @@ import appLogoUrl from '../../../assets/market-cycle-trader-logo.png'
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', Icon: DashboardIcon, capability: 'dashboard.view' },
-  { id: 'research', label: 'Strategy Research', Icon: AnalyticsIcon, capability: 'backtest.view' },
   { id: 'decision-science', label: 'Decision Science', Icon: AnalyticsIcon, capability: 'decision_science.view' },
   { id: 'backtest', label: 'Backtest', Icon: BacktestIcon, capability: 'backtest.view' },
   { id: 'asset-discovery', label: 'Asset Discovery', Icon: SearchIcon, capability: 'asset_discovery.view' },

@@ -7,7 +7,6 @@ import { API, FRONT_VERSION } from './config/env'
 import { useI18n } from './i18n/I18nProvider'
 import { AppHeader } from './features/backtest/components/AppHeader'
 import { BacktestPage } from './features/backtest/components/BacktestPage'
-import { StrategyResearchPage } from './features/strategyResearch/StrategyResearchPage'
 import { useBacktestWorkspace } from './features/backtest/hooks/useBacktestWorkspace'
 import { AdministrationPage } from './features/AdministrationPage'
 import { ReviewerAccessPage } from './features/ReviewerAccessPage'
@@ -21,7 +20,6 @@ import './reviewerAccess.css'
 
 const TAB_CAPABILITIES = {
   dashboard: 'dashboard.view',
-  research: 'backtest.view',
   'decision-science': 'decision_science.view',
   backtest: 'backtest.view',
   'asset-discovery': 'asset_discovery.view',
@@ -96,7 +94,6 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
     {workspace.error && !isPermissionDeniedMessage(workspace.error) ? <div className="global-error"><strong>{tr('Unable to load data')}</strong><span>{tr(workspace.error)}</span><button type="button" onClick={() => workspace.setError('')}>×</button></div> : null}
     <main className="workspace-main">
       {activeTab === 'dashboard' && hasCapability(capabilities, 'dashboard.view') ? <DashboardPage workspace={workspace} capabilities={capabilities} onOpenBacktest={() => setActiveTab('backtest')} initialProcessingId={dashboardProcessingId} /> : null}
-      {activeTab === 'research' && hasCapability(capabilities, 'backtest.view') ? <StrategyResearchPage workspace={workspace} capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'decision-science' && hasCapability(capabilities, 'decision_science.view') ? <DecisionSciencePage capabilities={capabilities} /> : null}
       {activeTab === 'backtest' && hasCapability(capabilities, 'backtest.view') ? <BacktestPage workspace={workspace} capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'asset-discovery' && hasCapability(capabilities, 'asset_discovery.view') ? <AssetDiscoveryPage capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
