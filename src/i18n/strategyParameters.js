@@ -69,6 +69,19 @@ const PT_LABELS = {
   mongo_write_batch_size: 'Tamanho do lote de gravação MongoDB',
 }
 
+const EN_LABELS = {
+  rotation_xgb_n_estimators: 'LightGBM estimators',
+  rotation_xgb_learning_rate: 'LightGBM learning rate',
+  rotation_xgb_max_depth: 'LightGBM maximum depth',
+  rotation_xgb_repetitions: 'LightGBM repetitions',
+  xgb_min_child_weight: 'LightGBM minimum child weight',
+  xgb_subsample: 'LightGBM row subsample',
+  xgb_colsample_bytree: 'LightGBM feature fraction',
+  xgb_reg_alpha: 'LightGBM L1 regularization',
+  xgb_reg_lambda: 'LightGBM L2 regularization',
+  xgb_n_jobs: 'LightGBM CPU workers',
+}
+
 const ES_LABELS = {
   assets: 'Activos',
   strategy_mode: 'Modo de estrategia',
@@ -142,5 +155,5 @@ export function strategyParameterLabel(name, fallback) {
   const language = getCurrentLanguage()
   if (language === 'pt') return PT_LABELS[name] || fallback
   if (language === 'es') return ES_LABELS[name] || fallback
-  return fallback
+  return EN_LABELS[name] || fallback
 }
