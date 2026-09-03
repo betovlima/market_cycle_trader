@@ -310,12 +310,15 @@ function MarginalReplayPanel({
 }) {
   const replay = campaign?.marginal_replay || {}
   const validation = campaign?.full_strategy_validation || {}
-  const rows = [...(replay.results || [])].filter(marginalSelectable).sort((left, right) => {
-    const leftRank = Number(left?.marginal_rank || 999)
-    const rightRank = Number(right?.marginal_rank || 999)
-    return leftRank - rightRank
-  })
   const currentCampaignSet = new Set((currentCampaignSymbols || []).map((symbol) => String(symbol || '').trim().toUpperCase()).filter(Boolean))
+  const rows = [...(replay.results || [])]
+    .filter(marginalSelectable)
+    .filter((row) => currentCampaignSet.has(String(row?.symbol || '').trim().toUpperCase()))
+    .sort((left, right) => {
+      const leftRank = Number(left?.marginal_rank || 999)
+      const rightRank = Number(right?.marginal_rank || 999)
+      return leftRank - rightRank
+    })
   const selectableSymbols = rows
     .map((row) => String(row.symbol || '').trim().toUpperCase())
     .filter((symbol) => symbol && currentCampaignSet.has(symbol))
@@ -547,7 +550,16 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
   const [selectedSymbols, setSelectedSymbols] = useState([])
   const campaign = discovery.campaign
   const catalogAssets = discovery.catalog?.assets || []
-  const results = useMemo(() => (campaign?.results || []).filter(visibleDiscoveryResult), [campaign?.results])
+  const baseStrategyAssets = useMemo(() => normalizedSelection([
+    ...(campaign?.baseline?.assets || []),
+    ...(discovery.status?.baseline?.assets || []),
+  ]), [campaign?.baseline?.assets, discovery.status?.baseline?.assets])
+  const baseStrategyAssetKey = baseStrategyAssets.join('|')
+  const baseStrategyAssetSet = useMemo(() => new Set(baseStrategyAssets), [baseStrategyAssetKey])
+  const results = useMemo(() => (campaign?.results || [])
+    .filter(visibleDiscoveryResult)
+    .filter((item) => !baseStrategyAssetSet.has(String(item?.symbol || '').trim().toUpperCase())),
+  [campaign?.results, baseStrategyAssetKey])
   const orderedResults = useMemo(() => [...results].sort((left, right) => {
     const leftMarginalRank = marginalRankValue(left)
     const rightMarginalRank = marginalRankValue(right)
@@ -559,7 +571,8 @@ export function AssetDiscoveryPage({ capabilities = {}, onSessionExpired }) {
   const currentCampaignSymbols = useMemo(() => normalizedSelection([
     ...(campaign?.results || []).filter(visibleDiscoveryResult).map((item) => item?.symbol),
     ...(campaign?.marginal_replay?.results || []).filter(marginalSelectable).map((item) => item?.symbol),
-  ]), [campaign?.results, campaign?.marginal_replay?.results])
+  ]).filter((symbol) => !baseStrategyAssetSet.has(symbol)),
+  [campaign?.results, campaign?.marginal_replay?.results, baseStrategyAssetKey])
   const currentCampaignSymbolKey = currentCampaignSymbols.join('|')
   const canStart = hasCapability(capabilities, 'asset_discovery.start')
   const canStop = hasCapability(capabilities, 'asset_discovery.stop')
