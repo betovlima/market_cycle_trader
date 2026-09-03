@@ -5,6 +5,17 @@ import { memo } from 'react'
 import { ParameterHint } from '../../../shared/components/ParameterHint'
 import { parameterRelationship, titleFromName } from '../strategySettingsUtils'
 
+function canonicalEnumLabel(name, option) {
+  const normalized = String(option)
+  if (name === 'strategy_mode' && normalized === 'COMPOUND_ROTATION_SWING_XGBOOST') {
+    return 'COMPOUND_ROTATION_SWING_LIGHTGBM'
+  }
+  if (name === 'rotation_models' && normalized === 'xgboost_utility') {
+    return 'lightgbm_utility'
+  }
+  return normalized
+}
+
 export function StrategyFieldLabel({ id, label, hint, align = 'left' }) {
   return (
     <span className="strategy-field-label-with-hint">
@@ -34,7 +45,7 @@ export const ParameterField = memo(function ParameterField({ name, value, refere
       <label>
         {fieldHeading}
         <select value={value ?? ''} disabled={disabled} onChange={(event) => onChange(name, event.target.value)}>
-          {enumValues.map((option) => <option key={String(option)} value={option}>{String(option)}</option>)}
+          {enumValues.map((option) => <option key={String(option)} value={option}>{canonicalEnumLabel(name, option)}</option>)}
         </select>
       </label>
     )
