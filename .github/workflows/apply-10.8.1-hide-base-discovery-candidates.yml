@@ -1,0 +1,86 @@
+name: Apply Front v10.8.1 Asset Discovery base exclusion
+
+on:
+  push:
+    branches:
+      - fix/10.8.1-hide-base-assets-from-discovery-candidates
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0'
+          cache: pnpm
+      - name: Hide base Strategy assets from candidate selection
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('src/features/assetDiscovery/AssetDiscoveryPage.jsx')
+          text = path.read_text(encoding='utf-8')
+
+          old_campaign = """  const campaign = discovery.campaign\n  const catalogAssets = discovery.catalog?.assets || []\n  const results = useMemo(() => (campaign?.results || []).filter(visibleDiscoveryResult), [campaign?.results])\n  const orderedResults = useMemo(() => [...results].sort((left, right) => {\n    const leftMarginalRank = marginalRankValue(left)\n    const rightMarginalRank = marginalRankValue(right)\n    if (leftMarginalRank != null && rightMarginalRank != null) return leftMarginalRank - rightMarginalRank\n    if (leftMarginalRank != null) return -1\n    if (rightMarginalRank != null) return 1\n    return Number(left?.rank || 999) - Number(right?.rank || 999)\n  }), [results])\n  const currentCampaignSymbols = useMemo(() => normalizedSelection([\n    ...(campaign?.results || []).filter(visibleDiscoveryResult).map((item) => item?.symbol),\n    ...(campaign?.marginal_replay?.results || []).filter(marginalSelectable).map((item) => item?.symbol),\n  ]), [campaign?.results, campaign?.marginal_replay?.results])\n"""
+          new_campaign = """  const campaign = discovery.campaign\n  const catalogAssets = discovery.catalog?.assets || []\n  const baseStrategyAssets = useMemo(() => normalizedSelection([\n    ...(campaign?.baseline?.assets || []),\n    ...(discovery.status?.baseline?.assets || []),\n  ]), [campaign?.baseline?.assets, discovery.status?.baseline?.assets])\n  const baseStrategyAssetKey = baseStrategyAssets.join('|')\n  const baseStrategyAssetSet = useMemo(() => new Set(baseStrategyAssets), [baseStrategyAssetKey])\n  const results = useMemo(() => (campaign?.results || [])\n    .filter(visibleDiscoveryResult)\n    .filter((item) => !baseStrategyAssetSet.has(String(item?.symbol || '').trim().toUpperCase())),\n  [campaign?.results, baseStrategyAssetKey])\n  const orderedResults = useMemo(() => [...results].sort((left, right) => {\n    const leftMarginalRank = marginalRankValue(left)\n    const rightMarginalRank = marginalRankValue(right)\n    if (leftMarginalRank != null && rightMarginalRank != null) return leftMarginalRank - rightMarginalRank\n    if (leftMarginalRank != null) return -1\n    if (rightMarginalRank != null) return 1\n    return Number(left?.rank || 999) - Number(right?.rank || 999)\n  }), [results])\n  const currentCampaignSymbols = useMemo(() => normalizedSelection([\n    ...(campaign?.results || []).filter(visibleDiscoveryResult).map((item) => item?.symbol),\n    ...(campaign?.marginal_replay?.results || []).filter(marginalSelectable).map((item) => item?.symbol),\n  ]).filter((symbol) => !baseStrategyAssetSet.has(symbol)),\n  [campaign?.results, campaign?.marginal_replay?.results, baseStrategyAssetKey])\n"""
+          if text.count(old_campaign) != 1:
+              raise SystemExit(f'Expected one campaign candidate block, found {text.count(old_campaign)}.')
+          text = text.replace(old_campaign, new_campaign, 1)
+
+          old_rows = """  const replay = campaign?.marginal_replay || {}\n  const validation = campaign?.full_strategy_validation || {}\n  const rows = [...(replay.results || [])].filter(marginalSelectable).sort((left, right) => {\n    const leftRank = Number(left?.marginal_rank || 999)\n    const rightRank = Number(right?.marginal_rank || 999)\n    return leftRank - rightRank\n  })\n  const currentCampaignSet = new Set((currentCampaignSymbols || []).map((symbol) => String(symbol || '').trim().toUpperCase()).filter(Boolean))\n"""
+          new_rows = """  const replay = campaign?.marginal_replay || {}\n  const validation = campaign?.full_strategy_validation || {}\n  const currentCampaignSet = new Set((currentCampaignSymbols || []).map((symbol) => String(symbol || '').trim().toUpperCase()).filter(Boolean))\n  const rows = [...(replay.results || [])]\n    .filter(marginalSelectable)\n    .filter((row) => currentCampaignSet.has(String(row?.symbol || '').trim().toUpperCase()))\n    .sort((left, right) => {\n      const leftRank = Number(left?.marginal_rank || 999)\n      const rightRank = Number(right?.marginal_rank || 999)\n      return leftRank - rightRank\n    })\n"""
+          if text.count(old_rows) != 1:
+              raise SystemExit(f'Expected one marginal rows block, found {text.count(old_rows)}.')
+          text = text.replace(old_rows, new_rows, 1)
+          path.write_text(text, encoding='utf-8')
+
+          version_file = Path('VERSION')
+          version_text = version_file.read_text(encoding='utf-8')
+          if version_text.strip() != '10.8.0':
+              raise SystemExit(f'Expected VERSION 10.8.0, got {version_text.strip()}.')
+          version_file.write_text('10.8.1\n', encoding='utf-8')
+
+          package = Path('package.json')
+          ptext = package.read_text(encoding='utf-8')
+          if '"version": "10.8.0"' not in ptext:
+              raise SystemExit('Expected package version 10.8.0.')
+          package.write_text(ptext.replace('"version": "10.8.0"', '"version": "10.8.1"', 1), encoding='utf-8')
+
+          env = Path('src/config/env.js')
+          etext = env.read_text(encoding='utf-8')
+          if "FRONT_VERSION = '10.8.0'" in etext:
+              etext = etext.replace("FRONT_VERSION = '10.8.0'", "FRONT_VERSION = '10.8.1'", 1)
+          elif 'FRONT_VERSION = "10.8.0"' in etext:
+              etext = etext.replace('FRONT_VERSION = "10.8.0"', 'FRONT_VERSION = "10.8.1"', 1)
+          else:
+              raise SystemExit('Expected FRONT_VERSION 10.8.0.')
+          env.write_text(etext, encoding='utf-8')
+      - name: Build frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+          node - <<'NODE'
+          const fs = require('fs')
+          const source = fs.readFileSync('src/features/assetDiscovery/AssetDiscoveryPage.jsx', 'utf8')
+          if (!source.includes('baseStrategyAssetSet')) throw new Error('Base Strategy candidate filter missing')
+          if (!source.includes(".filter((symbol) => !baseStrategyAssetSet.has(symbol))")) throw new Error('Selectable symbol filter missing')
+          if (fs.readFileSync('VERSION', 'utf8').trim() !== '10.8.1') throw new Error('VERSION mismatch')
+          NODE
+      - name: Commit Front v10.8.1
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/apply-10.8.1-hide-base-discovery-candidates.yml
+          git add VERSION package.json src/config/env.js src/features/assetDiscovery/AssetDiscoveryPage.jsx
+          git commit -m "fix: hide base Strategy assets from Asset Discovery selection [Front v10.8.1]"
+          git push
