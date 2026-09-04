@@ -68,7 +68,7 @@ export function useAssetDiscovery({ onSessionExpired }) {
         method: 'POST',
         body: { research_size: Number(researchSize) },
       })
-      setNotice(tr('Asset Discovery research started.'))
+      setNotice(tr('Predictive Asset Discovery started.'))
       await load({ silent: true })
     } catch (requestError) {
       handleError(requestError)
@@ -83,7 +83,7 @@ export function useAssetDiscovery({ onSessionExpired }) {
     setNotice('')
     try {
       await apiFetch(`${API}/asset-discovery/marginal-replay`, { method: 'POST' })
-      setNotice(tr('Marginal Capital Replay started for the current shortlist.'))
+      setNotice(tr('Optional Marginal Capital Replay started for the current predictive shortlist.'))
       await load({ silent: true })
     } catch (requestError) {
       handleError(requestError)
@@ -165,13 +165,13 @@ export function useAssetDiscovery({ onSessionExpired }) {
       const added = response?.added_assets?.length || 0
       const total = response?.asset_count_after
       setNotice(sequence
-        ? tr('{count} selected assets added to Research Strategy #{sequence}. Total assets: {total}.', { count: added, sequence, total: total ?? '—' })
-        : tr('Selected assets added to the Research Strategy.'))
+        ? tr('{count} selected assets added to Strategy #{sequence}. Total assets: {total}.', { count: added, sequence, total: total ?? '—' })
+        : tr('Selected assets added to the Strategy.'))
       setUpdatedResearchStrategy(response)
       await load({ silent: true })
       return response
     } catch (requestError) {
-      const message = tr(requestError?.message || 'Unable to add selected assets to the Research Strategy.')
+      const message = tr(requestError?.message || 'Unable to add selected assets to the Strategy.')
       setCreateError(message)
       handleError(requestError)
       return null
