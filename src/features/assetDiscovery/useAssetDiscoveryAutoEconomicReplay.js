@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
 
-import { ASSET_DISCOVERY_ECONOMIC_REPLAY_STORAGE_KEY } from './AssetDiscoveryExecutionPage'
+export const ASSET_DISCOVERY_ECONOMIC_REPLAY_STORAGE_KEY = 'mct.assetDiscovery.runEconomicContribution'
 
-function economicReplayRequested() {
+export function economicReplayRequested() {
   try {
     return window.sessionStorage.getItem(ASSET_DISCOVERY_ECONOMIC_REPLAY_STORAGE_KEY) === 'true'
   } catch {
