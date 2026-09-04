@@ -15,7 +15,7 @@ import { DashboardPage } from './features/dashboard/DashboardPage'
 import { DecisionSciencePage } from './features/decisionScience/DecisionSciencePage'
 import { LoginPage } from './features/LoginPage'
 import { PaperPortfolioDashboard } from './features/paperPortfolio/PaperPortfolioDashboard'
-import { PredictiveAssetDiscoveryPage } from './features/assetDiscovery/PredictiveAssetDiscoveryPage'
+import { AssetDiscoveryExecutionPage } from './features/assetDiscovery/AssetDiscoveryExecutionPage'
 import './reviewerAccess.css'
 
 const TAB_CAPABILITIES = {
@@ -96,7 +96,7 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
       {activeTab === 'dashboard' && hasCapability(capabilities, 'dashboard.view') ? <DashboardPage workspace={workspace} capabilities={capabilities} onOpenBacktest={() => setActiveTab('backtest')} initialProcessingId={dashboardProcessingId} /> : null}
       {activeTab === 'decision-science' && hasCapability(capabilities, 'decision_science.view') ? <DecisionSciencePage capabilities={capabilities} /> : null}
       {activeTab === 'backtest' && hasCapability(capabilities, 'backtest.view') ? <BacktestPage workspace={workspace} capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
-      {activeTab === 'asset-discovery' && hasCapability(capabilities, 'asset_discovery.view') ? <PredictiveAssetDiscoveryPage capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
+      {activeTab === 'asset-discovery' && hasCapability(capabilities, 'asset_discovery.view') ? <AssetDiscoveryExecutionPage capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'portfolio' && hasCapability(capabilities, 'portfolio.view') ? <PaperPortfolioDashboard /> : null}
       {activeTab === 'administration' && hasCapability(capabilities, 'administration.view') ? <AdministrationPage onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'reviewer-access' && hasCapability(capabilities, 'admin.manage') ? <ReviewerAccessPage onSessionExpired={onSessionExpired} /> : null}
