@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, apiFetch, downloadFile } from '../../api/http'
 import { API, FRONT_VERSION } from '../../config/env'
 import { tr } from '../../i18n/runtime'
+import { useAssetDiscoveryAutoEconomicReplay } from './useAssetDiscoveryAutoEconomicReplay'
 
 const ACTIVE_STATUSES = new Set(['queued', 'running', 'stopping'])
 
@@ -59,38 +60,47 @@ export function useAssetDiscovery({ onSessionExpired }) {
     return () => window.clearInterval(interval)
   }, [active, load])
 
-  const start = useCallback(async (researchSize) => {
-    setBusy('start')
-    setError('')
-    setNotice('')
-    try {
-      await apiFetch(`${API}/asset-discovery/start`, {
-        method: 'POST',
-        body: { research_size: Number(researchSize) },
-      })
-      setNotice(tr('Predictive Asset Discovery started.'))
-      await load({ silent: true })
-    } catch (requestError) {
-      handleError(requestError)
-    } finally {
-      if (mountedRef.current) setBusy('')
-    }
-  }, [handleError, load])
-
   const runMarginalReplay = useCallback(async () => {
     setBusy('marginal-replay')
     setError('')
     setNotice('')
     try {
-      await apiFetch(`${API}/asset-discovery/marginal-replay`, { method: 'POST' })
+      const response = await apiFetch(`${API}/asset-discovery/marginal-replay`, { method: 'POST' })
+      if (mountedRef.current && response) setStatus(response)
       setNotice(tr('Optional Marginal Capital Replay started for the current predictive shortlist.'))
       await load({ silent: true })
+      return response
     } catch (requestError) {
       handleError(requestError)
+      return null
     } finally {
       if (mountedRef.current) setBusy('')
     }
   }, [handleError, load])
+
+  const autoEconomicReplay = useAssetDiscoveryAutoEconomicReplay({ campaign, runMarginalReplay })
+
+  const start = useCallback(async (researchSize) => {
+    setBusy('start')
+    setError('')
+    setNotice('')
+    try {
+      const response = await apiFetch(`${API}/asset-discovery/start`, {
+        method: 'POST',
+        body: { research_size: Number(researchSize) },
+      })
+      if (mountedRef.current && response) setStatus(response)
+      autoEconomicReplay.markRequestedRun(response?.campaign?.run_id)
+      setNotice(tr('Predictive Asset Discovery started.'))
+      await load({ silent: true })
+      return response
+    } catch (requestError) {
+      handleError(requestError)
+      return null
+    } finally {
+      if (mountedRef.current) setBusy('')
+    }
+  }, [autoEconomicReplay, handleError, load])
 
   const stop = useCallback(async () => {
     setBusy('stop')
