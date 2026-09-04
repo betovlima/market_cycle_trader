@@ -3,8 +3,7 @@ import { useEffect, useState } from 'react'
 import { tr } from '../../i18n/runtime'
 import { AssetDiscoveryPage } from './AssetDiscoveryPage'
 import { PredictiveAssetDiscoveryPage } from './PredictiveAssetDiscoveryPage'
-
-export const ASSET_DISCOVERY_ECONOMIC_REPLAY_STORAGE_KEY = 'mct.assetDiscovery.runEconomicContribution'
+import { ASSET_DISCOVERY_ECONOMIC_REPLAY_STORAGE_KEY } from './useAssetDiscoveryAutoEconomicReplay'
 
 function initialEconomicReplayPreference() {
   try {
@@ -24,8 +23,9 @@ export function AssetDiscoveryExecutionPage({ capabilities = {}, onSessionExpire
         runEconomicContribution ? 'true' : 'false',
       )
     } catch {
-      // Session storage is only a convenience for preserving the execution choice.
+      return undefined
     }
+    return undefined
   }, [runEconomicContribution])
 
   return <>
