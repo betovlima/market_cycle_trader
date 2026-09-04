@@ -15,15 +15,11 @@ export function useAssetDiscoveryAutoEconomicReplay({ campaign, runMarginalRepla
   const startedRunIdRef = useRef('')
 
   useEffect(() => {
+    const requestedRunId = requestedRunIdRef.current
     const runId = String(campaign?.run_id || '')
     const status = String(campaign?.status || '').toLowerCase()
-    if (!runId || status !== 'completed') return
-
-    if (!requestedRunIdRef.current) {
-      if (!economicReplayRequested()) return
-      requestedRunIdRef.current = runId
-    }
-    if (requestedRunIdRef.current !== runId || startedRunIdRef.current === runId) return
+    if (!requestedRunId || !runId || requestedRunId !== runId || status !== 'completed') return
+    if (startedRunIdRef.current === runId) return
 
     const replayStatus = String(campaign?.marginal_replay?.status || '').toLowerCase()
     const replayCompleted = Number(campaign?.marginal_replay?.completed_count || 0)
