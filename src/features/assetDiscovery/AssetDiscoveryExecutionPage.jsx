@@ -1,32 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { tr } from '../../i18n/runtime'
 import { AssetDiscoveryPage } from './AssetDiscoveryPage'
 import { PredictiveAssetDiscoveryPage } from './PredictiveAssetDiscoveryPage'
-import { ASSET_DISCOVERY_ECONOMIC_REPLAY_STORAGE_KEY } from './useAssetDiscoveryAutoEconomicReplay'
-
-function initialEconomicReplayPreference() {
-  try {
-    return window.sessionStorage.getItem(ASSET_DISCOVERY_ECONOMIC_REPLAY_STORAGE_KEY) === 'true'
-  } catch {
-    return false
-  }
-}
+import './assetDiscoveryExecution.css'
 
 export function AssetDiscoveryExecutionPage({ capabilities = {}, onSessionExpired }) {
-  const [runEconomicContribution, setRunEconomicContribution] = useState(initialEconomicReplayPreference)
-
-  useEffect(() => {
-    try {
-      window.sessionStorage.setItem(
-        ASSET_DISCOVERY_ECONOMIC_REPLAY_STORAGE_KEY,
-        runEconomicContribution ? 'true' : 'false',
-      )
-    } catch {
-      return undefined
-    }
-    return undefined
-  }, [runEconomicContribution])
+  const [runEconomicContribution, setRunEconomicContribution] = useState(false)
 
   return <>
     <section className="asset-discovery-page asset-discovery-execution-choice">
@@ -51,6 +31,6 @@ export function AssetDiscoveryExecutionPage({ capabilities = {}, onSessionExpire
 
     {runEconomicContribution
       ? <AssetDiscoveryPage capabilities={capabilities} onSessionExpired={onSessionExpired} />
-      : <PredictiveAssetDiscoveryPage capabilities={capabilities} onSessionExpired={onSessionExpired} />}
+      : <div className="asset-discovery-predictive-workflow"><PredictiveAssetDiscoveryPage capabilities={capabilities} onSessionExpired={onSessionExpired} /></div>}
   </>
 }
