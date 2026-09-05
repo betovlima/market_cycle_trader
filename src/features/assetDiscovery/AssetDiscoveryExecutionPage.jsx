@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import { tr } from '../../i18n/runtime'
 import { AssetDiscoveryPage } from './AssetDiscoveryPage'
+import { CompletionNotificationToggle } from './CompletionNotificationToggle'
 import { PredictiveAssetDiscoveryPage } from './PredictiveAssetDiscoveryPage'
 import './assetDiscoveryExecution.css'
 
@@ -25,6 +26,7 @@ export function AssetDiscoveryExecutionPage({ capabilities = {}, onSessionExpire
             <strong>{runEconomicContribution ? tr('Enabled') : tr('Disabled')}</strong>
             <small>{tr('This replay is manual and expensive. It is not part of the normal discovery flow.')}</small>
           </div>
+          <CompletionNotificationToggle />
         </section>
       </div>
     </section>

@@ -1,3 +1,13 @@
 .asset-discovery-predictive-workflow .asset-discovery-marginal + .asset-discovery-marginal {
   display: none;
 }
+
+.asset-discovery-completion-notifier {
+  display: grid;
+  gap: 0.35rem;
+  align-content: center;
+}
+
+.asset-discovery-completion-notifier > small {
+  max-width: 34rem;
+}
