@@ -22,9 +22,10 @@ function effectiveCampaign(rawCampaign) {
 
   const operation = replayActive ? replay : validation
   const phase = replayActive ? 'marginal_replay' : 'full_strategy_validation'
+  const operationStatus = replayActive ? replayStatus : validationStatus
   return {
     ...rawCampaign,
-    status: 'running',
+    status: operationStatus === 'stopping' ? 'stopping' : 'running',
     phase,
     progress_step: phase,
     stage_progress_percent: operation?.progress_percent ?? rawCampaign?.stage_progress_percent,
