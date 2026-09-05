@@ -4,10 +4,30 @@ import { tr } from '../../i18n/runtime'
 import { AssetDiscoveryPage } from './AssetDiscoveryPage'
 import { CompletionNotificationToggle } from './CompletionNotificationToggle'
 import { PredictiveAssetDiscoveryPage } from './PredictiveAssetDiscoveryPage'
+import { ASSET_DISCOVERY_ECONOMIC_REPLAY_STORAGE_KEY } from './useAssetDiscoveryAutoEconomicReplay'
 import './assetDiscoveryExecution.css'
 
+function resetEconomicReplayPreference() {
+  try {
+    window.sessionStorage.setItem(ASSET_DISCOVERY_ECONOMIC_REPLAY_STORAGE_KEY, 'false')
+  } catch {
+    // Keep the explicit UI state even when session storage is unavailable.
+  }
+  return false
+}
+
 export function AssetDiscoveryExecutionPage({ capabilities = {}, onSessionExpired }) {
-  const [runEconomicContribution, setRunEconomicContribution] = useState(false)
+  const [runEconomicContribution, setRunEconomicContribution] = useState(resetEconomicReplayPreference)
+
+  const handleEconomicContributionChange = (event) => {
+    const next = event.target.checked
+    try {
+      window.sessionStorage.setItem(ASSET_DISCOVERY_ECONOMIC_REPLAY_STORAGE_KEY, next ? 'true' : 'false')
+    } catch {
+      // The current render still remains the source of truth.
+    }
+    setRunEconomicContribution(next)
+  }
 
   return <>
     <section className="asset-discovery-page asset-discovery-execution-choice">
@@ -17,7 +37,7 @@ export function AssetDiscoveryExecutionPage({ capabilities = {}, onSessionExpire
             <input
               type="checkbox"
               checked={runEconomicContribution}
-              onChange={(event) => setRunEconomicContribution(event.target.checked)}
+              onChange={handleEconomicContributionChange}
             />
             <span>{tr('Economic contribution over the complete Strategy history')}</span>
           </label>
