@@ -7,6 +7,33 @@ import { useAssetDiscoveryAutoEconomicReplay } from './useAssetDiscoveryAutoEcon
 
 const ACTIVE_STATUSES = new Set(['queued', 'running', 'stopping'])
 
+function effectiveCampaign(rawCampaign) {
+  if (!rawCampaign) return null
+
+  const campaignStatus = String(rawCampaign?.status || '').toLowerCase()
+  const replay = rawCampaign?.marginal_replay || {}
+  const validation = rawCampaign?.full_strategy_validation || {}
+  const replayStatus = String(replay?.status || '').toLowerCase()
+  const validationStatus = String(validation?.status || '').toLowerCase()
+  const replayActive = ACTIVE_STATUSES.has(replayStatus)
+  const validationActive = ACTIVE_STATUSES.has(validationStatus)
+
+  if (ACTIVE_STATUSES.has(campaignStatus) || (!replayActive && !validationActive)) return rawCampaign
+
+  const operation = replayActive ? replay : validation
+  const phase = replayActive ? 'marginal_replay' : 'full_strategy_validation'
+  return {
+    ...rawCampaign,
+    status: 'running',
+    phase,
+    progress_step: phase,
+    stage_progress_percent: operation?.progress_percent ?? rawCampaign?.stage_progress_percent,
+    current_stage: operation?.current_stage || rawCampaign?.current_stage,
+    stage_current: operation?.current_index ?? rawCampaign?.stage_current,
+    stage_total: operation?.total_count ?? rawCampaign?.stage_total,
+  }
+}
+
 export function useAssetDiscovery({ onSessionExpired }) {
   const [status, setStatus] = useState(null)
   const [catalog, setCatalog] = useState({ count: 0, assets: [] })
@@ -51,9 +78,11 @@ export function useAssetDiscovery({ onSessionExpired }) {
     return () => { mountedRef.current = false }
   }, [load])
 
-  const campaign = status?.campaign || null
+  const campaign = effectiveCampaign(status?.campaign || null)
+  const campaignStatus = String(campaign?.status || '').toLowerCase()
+  const replayStatus = String(campaign?.marginal_replay?.status || '').toLowerCase()
   const validationStatus = String(campaign?.full_strategy_validation?.status || '').toLowerCase()
-  const active = ACTIVE_STATUSES.has(String(campaign?.status || '').toLowerCase()) || ['queued', 'running'].includes(validationStatus)
+  const active = ACTIVE_STATUSES.has(campaignStatus) || ACTIVE_STATUSES.has(replayStatus) || ACTIVE_STATUSES.has(validationStatus)
 
   useEffect(() => {
     const interval = window.setInterval(() => load({ silent: true }), active ? 2500 : 30000)
