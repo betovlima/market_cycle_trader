@@ -13,7 +13,6 @@ const PHASES = [
   ['training_ranker', 'Learning-to-Rank'],
   ['scanning', 'External scan'],
   ['predictive_selection', 'Predictive selection'],
-  ['marginal_replay', 'Economic qualification'],
   ['full_strategy_validation', 'Selected-universe validation'],
 ]
 
@@ -62,7 +61,7 @@ function executionStageLabel(campaign) {
       : label
   }
   if (step === 'predictive_selection') return tr('Finalizing predictive candidates')
-  if (step === 'marginal_replay') return tr('Economic qualification')
+  if (step === 'marginal_replay') return tr('Marginal Capital Replay')
   if (step === 'completed') return tr('Asset Discovery completed')
   if (step === 'stopped') return tr('STOPPED')
   if (step === 'failed') return tr('FAILED')
@@ -224,6 +223,9 @@ export function PredictiveAssetDiscoveryPage({ capabilities = {}, onSessionExpir
   const validationMatches = validationMatchesSelection(validation, selectedSymbols)
   const validationPassed = validationStatus === 'completed' && String(validation.decision || '').toUpperCase() === 'PASS' && validationMatches
   const validationFailed = validationStatus === 'completed' && String(validation.decision || '').toUpperCase() === 'FAIL' && validationMatches
+  const replay = campaign?.marginal_replay || {}
+  const replayStatus = String(replay.status || '').toLowerCase()
+  const replayActive = ['queued', 'running'].includes(replayStatus) || (String(campaign?.phase || '').toLowerCase() === 'marginal_replay' && discovery.active)
 
   useEffect(() => {
     setSelectedSymbols([])
@@ -271,7 +273,7 @@ export function PredictiveAssetDiscoveryPage({ capabilities = {}, onSessionExpir
         <div className="asset-discovery-baseline"><span>{tr('Strategy baseline')}</span><strong>{baseline.strategy_sequence ? `Strategy #${baseline.strategy_sequence}` : tr('Selected Strategy')}</strong><small>{baseline.asset_count ? tr('{count} assets', { count: baseline.asset_count }) : '—'}{baseline.market_snapshot_end ? ` · ${baseline.market_snapshot_end}` : ''}</small></div>
         <label><span>{tr('Assets to research')}</span><input type="number" min="1" step="1" value={researchSize} disabled={discovery.active} onChange={(event) => setResearchSize(Math.max(1, Number(event.target.value) || 1))} /></label>
         <div className="asset-discovery-fixed-config"><span>{tr('Model')}</span><strong>Learning-to-Rank</strong><small>{tr('Ranking model')}</small></div>
-        <div className="asset-discovery-fixed-config"><span>{tr('Automatic economic qualification')}</span><strong>{tr('Enabled')}</strong><small>{tr('Full-history capital lift')}</small></div>
+        <div className="asset-discovery-fixed-config"><span>{tr('Automatic economic replay')}</span><strong>{tr('Disabled')}</strong><small>{tr('Predictive-first mode')}</small></div>
         <div className="asset-discovery-actions">
           {!discovery.active ? <button type="button" className="primary-action" disabled={!canStart || discovery.busy === 'start'} onClick={() => discovery.start(researchSize)}>{discovery.busy === 'start' ? tr('Starting…') : tr('Start research')}</button> : null}
           {discovery.active ? <button type="button" className="secondary-action danger-soft" disabled={!canStop || discovery.busy === 'stop'} onClick={discovery.stop}>{discovery.busy === 'stop' ? tr('Stopping…') : tr('Stop')}</button> : null}
@@ -285,7 +287,7 @@ export function PredictiveAssetDiscoveryPage({ capabilities = {}, onSessionExpir
             <div><span>{tr('Campaign')}</span><strong>{campaign.run_id}</strong></div>
             <div><span>{tr('Status')}</span><strong>{tr(String(campaign.status || '').toUpperCase())}</strong></div>
             <div><span>{tr('Scanned')}</span><strong>{campaign.attempted_count || 0}</strong></div>
-            <div><span>{tr('Qualified candidates')}</span><strong>{results.length}</strong></div>
+            <div><span>{tr('Predictive candidates')}</span><strong>{results.length}</strong></div>
           </div>
           <ExecutionStatusBar campaign={campaign} />
           <Pipeline campaign={campaign} />
@@ -293,15 +295,15 @@ export function PredictiveAssetDiscoveryPage({ capabilities = {}, onSessionExpir
 
         {completed ? <section className="asset-discovery-campaign-outcome found">
           <div className="asset-discovery-campaign-outcome-copy">
-            <span className="eyebrow">{tr('Economic qualification completed')}</span>
-            <h3>{tr('{count} economically qualified candidates found', { count: results.length })}</h3>
-            <p>{tr('Only candidates that increased full-history Strategy capital individually are available for selection.')}</p>
+            <span className="eyebrow">{tr('Predictive screening completed')}</span>
+            <h3>{tr('{count} predictive candidates found', { count: results.length })}</h3>
+            <p>{tr('The search stopped after predictive ranking. Economic contribution over the complete Strategy history was not run automatically.')}</p>
           </div>
           <div className="asset-discovery-campaign-funnel">
             <div><span>{tr('Scanned')}</span><strong>{campaign.attempted_count || 0}</strong></div>
             <div><span>{tr('Evaluated')}</span><strong>{campaign.evaluated_count || 0}</strong></div>
-            <div><span>{tr('Qualified candidates')}</span><strong>{results.length}</strong></div>
-            <div><span>{tr('Automatic economic qualification')}</span><strong>{tr('Enabled')}</strong></div>
+            <div><span>{tr('Predictive candidates')}</span><strong>{results.length}</strong></div>
+            <div><span>{tr('Automatic economic replay')}</span><strong>{tr('Disabled')}</strong></div>
           </div>
         </section> : null}
 
@@ -310,7 +312,7 @@ export function PredictiveAssetDiscoveryPage({ capabilities = {}, onSessionExpir
           <div><span>{tr('Evaluated')}</span><strong>{campaign.evaluated_count || 0}</strong></div>
           <div><span>{tr('Rejected')}</span><strong>{campaign.rejected_count || 0}</strong></div>
           <div><span>{tr('Technical failures')}</span><strong>{campaign.technical_failure_count || 0}</strong></div>
-          <div><span>{tr('Qualified candidates')}</span><strong>{results.length}</strong></div>
+          <div><span>{tr('Predictive candidates')}</span><strong>{results.length}</strong></div>
           <div><span>{tr('Median NDCG@5')}</span><strong>{model?.validation_summary?.ranker_median_ndcg_at_5 == null ? '—' : number(model.validation_summary.ranker_median_ndcg_at_5, 3)}</strong></div>
         </section>
 
@@ -318,7 +320,7 @@ export function PredictiveAssetDiscoveryPage({ capabilities = {}, onSessionExpir
 
         <section className="asset-discovery-results">
           <div className="asset-discovery-section-heading asset-discovery-result-heading">
-            <div><span className="eyebrow">{tr('State novelty study')}</span><h3>{tr('Economically qualified candidates')}</h3><small>{tr('Predictive ranking is followed by full-history economic qualification. Only candidates with positive individual capital contribution are shown.')}</small></div>
+            <div><span className="eyebrow">{tr('State novelty study')}</span><h3>{tr('Predictive candidates')}</h3><small>{tr('Predictive candidates are selected from learned temporal states. Full Strategy validation runs only for the exact selection you choose.')}</small></div>
             <div className="asset-discovery-result-actions">
               {campaign.completed_at ? <span>{shortDateTime(campaign.completed_at)}</span> : null}
               <label className="asset-discovery-select-asset asset-discovery-select-all"><input type="checkbox" checked={allSelected} disabled={!results.length || validationActive} onChange={() => setSelectedSymbols(allSelected ? [] : currentSymbols)} /><span>{tr('Select all')}</span></label>
@@ -342,10 +344,10 @@ export function PredictiveAssetDiscoveryPage({ capabilities = {}, onSessionExpir
                   <span>{tr('Nearest baseline state')} <strong>{item.state_nearest_baseline_symbol || '—'}</strong></span>
                 </div>
                 <div className="asset-discovery-result-values">
-                  <div><span>{tr('Capital Δ')}</span><strong>{item?.marginal_replay?.ending_capital_delta_rate == null ? '—' : percent(item.marginal_replay.ending_capital_delta_rate, 2)}</strong></div>
                   <div><span>{tr('State similarity')}</span><strong>{Number.isFinite(similarity) ? percent(similarity, 1) : '—'}</strong></div>
                   <div><span>{tr('20d return at snapshot')}</span><strong>{item.return_20 == null ? '—' : percent(item.return_20, 2)}</strong></div>
                   <div><span>{tr('60d drawdown at snapshot')}</span><strong>{item.drawdown_60 == null ? '—' : percent(item.drawdown_60, 2)}</strong></div>
+                  <div><span>{tr('Max correlation at snapshot')}</span><strong>{item.max_baseline_correlation_60 == null ? '—' : number(item.max_baseline_correlation_60, 2)}</strong></div>
                 </div>
                 <button type="button" className="secondary-action" onClick={() => setDetail(item)}>{tr('View analysis')}</button>
               </article>
@@ -368,9 +370,20 @@ export function PredictiveAssetDiscoveryPage({ capabilities = {}, onSessionExpir
           <FullStrategyValidation campaign={campaign} selectedSymbols={selectedSymbols} validationPassed={validationPassed} validationFailed={validationFailed} />
         </section> : null}
 
+        <section className="asset-discovery-marginal">
+          <div className="asset-discovery-section-heading asset-discovery-result-heading">
+            <div><span className="eyebrow">{tr('Optional economic contribution study')}</span><h3>{replayActive ? tr('Economic replay running') : replayStatus === 'completed' ? tr('Economic replay completed') : tr('Economic replay not run')}</h3><small>{tr('This replay is manual and expensive. It is not part of the normal discovery flow.')}</small></div>
+            <div className="asset-discovery-result-actions"><button type="button" className="secondary-action" disabled={!canStart || !results.length || discovery.active || discovery.busy === 'marginal-replay'} onClick={discovery.runMarginalReplay}>{discovery.busy === 'marginal-replay' ? tr('Starting optional replay…') : tr('Run optional Marginal Capital Replay')}</button></div>
+          </div>
+          {replayActive ? <>
+            <div className="asset-discovery-progress-copy"><span>{tr(replay.current_stage || 'Marginal Capital Replay')}</span><strong>{number(Number(replay.progress_percent || 0), 1)}%</strong></div>
+            <div className="asset-discovery-progress"><span style={{ width: `${Math.max(0, Math.min(100, Number(replay.progress_percent || 0)))}%` }} /></div>
+          </> : null}
+        </section>
+
         <section className="asset-discovery-catalog">
           <div className="asset-discovery-section-heading asset-discovery-result-heading">
-            <div><span className="eyebrow">{tr('Predictive discovery catalog')}</span><h3>{tr('Catalog assets')}</h3><small>{tr('This catalog stores only candidates with positive individual full-history capital contribution.')}</small></div>
+            <div><span className="eyebrow">{tr('Predictive discovery catalog')}</span><h3>{tr('Catalog assets')}</h3><small>{tr('This catalog stores predictive discoveries; economic validation may be absent until explicitly requested.')}</small></div>
             <span>{catalogAssets.length}</span>
           </div>
           {catalogAssets.length ? <div className="asset-discovery-catalog-grid">
@@ -379,8 +392,8 @@ export function PredictiveAssetDiscoveryPage({ capabilities = {}, onSessionExpir
               const novelty = Number(metrics.state_novelty_score)
               return <article className="asset-discovery-catalog-card" key={item.symbol}>
                 <div className="asset-discovery-result-head"><strong><AssetSymbolTooltip symbol={item.symbol} companyName={item.company_name}>{item.symbol}</AssetSymbolTooltip></strong>{String(item.latest_run_id || '') === String(campaign.run_id || '') ? <span className="asset-discovery-current-run-badge">{tr('Current campaign')}</span> : null}</div>
-                <div className="asset-discovery-catalog-meta"><span>{tr('Best rank')} <strong>#{item.best_rank || '—'}</strong><span>{tr('Last seen')} <strong>{item.last_seen_at ? shortDateTime(item.last_seen_at) : '—'}</strong></span></span></div>
-                <div className="asset-discovery-result-values"><div><span>{tr('Predictive score')}</span><strong>{item.latest_model_score == null ? '—' : number(item.latest_model_score, 4)}</strong></div><div><span>{tr('State novelty')}</span><strong>{Number.isFinite(novelty) ? percent(novelty, 1) : '—'}</strong></div><div><span>{tr('Economic validation')}</span><strong>{tr(String(item.economic_validation_status || 'completed'))}</strong></div></div>
+                <div className="asset-discovery-catalog-meta"><span>{tr('Best rank')} <strong>#{item.best_rank || '—'}</strong></span><span>{tr('Last seen')} <strong>{item.last_seen_at ? shortDateTime(item.last_seen_at) : '—'}</strong></span></div>
+                <div className="asset-discovery-result-values"><div><span>{tr('Predictive score')}</span><strong>{item.latest_model_score == null ? '—' : number(item.latest_model_score, 4)}</strong></div><div><span>{tr('State novelty')}</span><strong>{Number.isFinite(novelty) ? percent(novelty, 1) : '—'}</strong></div><div><span>{tr('Economic validation')}</span><strong>{item.economic_validation_status === 'not_run' ? tr('Not run') : tr(String(item.economic_validation_status || 'Not run'))}</strong></div></div>
               </article>
             })}
           </div> : <div className="asset-discovery-empty">{tr('No predictive candidate is available yet.')}</div>}
