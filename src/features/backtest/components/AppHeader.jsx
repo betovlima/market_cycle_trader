@@ -11,7 +11,7 @@ const NAV_ITEMS = [
   { id: 'portfolio', label: 'Portfolio', Icon: PortfolioIcon, capability: 'portfolio.view' },
   { id: 'administration', label: 'Administration', Icon: DashboardIcon, capability: 'administration.view' },
   { id: 'reviewer-access', label: 'Guest Access', Icon: DashboardIcon, capability: 'admin.manage' },
-  { id: 'system-settings', label: 'Settings', Icon: SettingsIcon, capability: 'settings.view' },
+  { id: 'system-settings', label: 'Strategies & Operations', Icon: SettingsIcon, capability: 'settings.view' },
 ]
 
 export function AppHeader({ activeTab, onTabChange, session, capabilities = {}, onLogout }) {
