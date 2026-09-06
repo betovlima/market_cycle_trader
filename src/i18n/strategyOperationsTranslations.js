@@ -1,7 +1,7 @@
-export const PT_STRATEGY_OPERATIONS_TRANSLATIONS = {
+export const STRATEGY_OPERATIONS_PT_TRANSLATIONS = {
   'Strategies & Operations': 'Estratégias e Operação',
 }
 
-export const ES_STRATEGY_OPERATIONS_TRANSLATIONS = {
+export const STRATEGY_OPERATIONS_ES_TRANSLATIONS = {
   'Strategies & Operations': 'Estrategias y Operación',
 }
