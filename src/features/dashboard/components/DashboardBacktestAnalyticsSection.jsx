@@ -7,6 +7,7 @@ import { shortDateTime } from '../../../shared/formatters'
 import { ParameterHint } from '../../../shared/components/ParameterHint'
 import { MonthlyCapitalMovementHeatmap } from '../../backtest/components/RotationPanel'
 import { DashboardMonthlyReturnConsistencySection } from './DashboardMonthlyReturnConsistencySection'
+import { PeakExitAnalysis } from '../../analytics/components/PeakExitAnalysis'
 
 function completedRows(rows) {
   return (Array.isArray(rows) ? rows : [])
@@ -117,6 +118,7 @@ export function DashboardBacktestAnalyticsSection({ fallbackJobs = [], initialPr
         <div className="dashboard-analytics-charts">
           <MonthlyCapitalMovementHeatmap jobId={jobId} processingId={jobId} rotations={data.rotations || []} equity={data.equity || []} allowDrilldown />
           <DashboardMonthlyReturnConsistencySection data={data} />
+          <PeakExitAnalysis data={data} />
         </div>
       ) : null}
     </section>
