@@ -25,6 +25,7 @@ import {
 } from './AnalyticsPrimitives'
 import { MonthlyReturnHeatmap } from './MonthlyReturnHeatmap'
 import { PerformanceDifferenceHint } from './PerformanceDifferenceHint'
+import { PeakExitAnalysis } from './PeakExitAnalysis'
 
 const PERFORMANCE_LAYOUT_STORAGE_KEY = 'market-cycle-trader.analytics.performance-layout.v1'
 const DEFAULT_PERFORMANCE_LAYOUT = ['performance', 'heatmap']
@@ -253,7 +254,8 @@ export function BacktestPerformanceExplorer({ data, jobId }) {
     </ChartCell>,
   }
 
-  return <section className="analytics-workspace-section analytics-performance-explorer-section">
+  return <>
+    <section className="analytics-workspace-section analytics-performance-explorer-section">
     <SectionHeading
       kicker={tr("PERFORMANCE")}
       title={tr("Return and consistency")}
@@ -282,5 +284,7 @@ export function BacktestPerformanceExplorer({ data, jobId }) {
         {...reorderable.dropZoneProps(cardId)}
       >{performanceCards[cardId]}</div>)}
     </div>
-  </section>
+    </section>
+    <PeakExitAnalysis data={data} />
+  </>
 }

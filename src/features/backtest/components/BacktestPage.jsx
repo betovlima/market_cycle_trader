@@ -23,6 +23,7 @@ import { HISTORY_HINTS, HISTORY_PAGE_SIZE, METRIC_HINTS } from '../backtestConfi
 import { sortRows, toggleSort } from '../backtestUtils'
 import { FilterButton, ListToolbar, Metric, MetricLabel, Pagination, SortableHeader, StatusBadge } from './BacktestPrimitives'
 import { RotationPanel } from './RotationPanel'
+import { PeakExitAnalysis } from '../../analytics/components/PeakExitAnalysis'
 
 export function BacktestPage({ workspace, capabilities = {}, onSessionExpired }) {
   const canExportResults = hasCapability(capabilities, 'backtest.export')
@@ -343,6 +344,7 @@ export function BacktestPage({ workspace, capabilities = {}, onSessionExpired })
             </section>
 
             <RotationPanel jobId={detail.id} payload={rotationPayload} loading={rotationLoading} error={rotationError} />
+            {rotationPayload ? <PeakExitAnalysis data={rotationPayload} /> : null}
           </>
         ) : (
           <section className="backtest-workspace-section empty-result backtest-empty-result">
