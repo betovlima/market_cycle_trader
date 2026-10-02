@@ -114,7 +114,10 @@ export function PeakExitAnalysis({ data }) {
     && Number.isFinite(Number(row.post_exit_peak_10d_pct))
   )), [assetTrades])
 
+  const supportsAnalysis = Object.prototype.hasOwnProperty.call(data || {}, 'peak_exit_analysis')
   const hasDiagnostics = Number(analysis?.schema_version || 0) >= 1 && trades.length > 0
+
+  if (!supportsAnalysis) return null
 
   return <section className="analytics-workspace-section peak-exit-analysis-section">
     <SectionHeading
