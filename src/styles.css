@@ -9083,12 +9083,34 @@ a { color: inherit; }
 .peak-exit-asset-select select {
   width: 100%;
   min-height: 38px;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(84, 139, 210, .42);
   border-radius: 9px;
-  background: var(--surface);
-  color: var(--text);
+  background: #0b1d31;
+  color: #eaf3ff;
   padding: 7px 10px;
   font: inherit;
+  color-scheme: dark;
+  outline: none;
+}
+
+.peak-exit-asset-select select:hover {
+  border-color: rgba(91, 140, 255, .72);
+  background: #102843;
+}
+
+.peak-exit-asset-select select:focus {
+  border-color: #5b8cff;
+  box-shadow: 0 0 0 2px rgba(91, 140, 255, .18);
+}
+
+.peak-exit-asset-select select option {
+  background: #0b1d31;
+  color: #eaf3ff;
+}
+
+.peak-exit-asset-select select option:checked {
+  background: #254f86;
+  color: #ffffff;
 }
 
 @media (max-width: 1050px) {
