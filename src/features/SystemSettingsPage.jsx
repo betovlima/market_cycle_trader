@@ -131,8 +131,8 @@ export function SystemSettingsPage({ onSessionExpired }) {
       const [settingsResponse, historyResponse, traderResponse, traderHistoryResponse] = await Promise.all([
         apiFetch(`${API}/admin/system-settings`),
         apiFetch(`${API}/admin/system-settings/history?limit=20`),
-        apiFetch(`${API}/admin/trader-control/status`),
-        apiFetch(`${API}/admin/trader-control/history?limit=20`),
+        apiFetch(`${API}/admin/trader-control/status`, { cache: 'no-store' }),
+        apiFetch(`${API}/admin/trader-control/history?limit=20`, { cache: 'no-store' }),
       ])
       const training = settingsResponse.training || {}
       setSettings(settingsResponse)
@@ -163,8 +163,8 @@ export function SystemSettingsPage({ onSessionExpired }) {
   const refreshTraderControl = useCallback(async () => {
     try {
       const [traderResponse, traderHistoryResponse] = await Promise.all([
-        apiFetch(`${API}/admin/trader-control/status`),
-        apiFetch(`${API}/admin/trader-control/history?limit=20`),
+        apiFetch(`${API}/admin/trader-control/status`, { cache: 'no-store' }),
+        apiFetch(`${API}/admin/trader-control/history?limit=20`, { cache: 'no-store' }),
       ])
       setTraderControl(traderResponse)
       setTraderHistory(traderHistoryResponse.items || [])
@@ -253,6 +253,12 @@ export function SystemSettingsPage({ onSessionExpired }) {
         method: 'POST',
       })
       const plan = response?.plan || {}
+      if (response?.manual_recovery) {
+        setTraderControl((current) => ({
+          ...(current || {}),
+          manual_recovery: response.manual_recovery,
+        }))
+      }
       setNotice(tr("Today's Paper analysis was recalculated. Prepared action: {current} → {target} ({action}).", {
         current: plan.current_asset || '—',
         target: plan.target_asset || '—',
@@ -414,13 +420,24 @@ export function SystemSettingsPage({ onSessionExpired }) {
                 {traderControl?.manual_recovery?.failure_code === 'SELL_FILLED_BUY_FAILED'
                   ? tr("The sell completed but the target buy did not. Execute contingency to reconcile Alpaca and complete only the missing buy leg.")
                   : traderControl?.manual_recovery?.plan_id
-                    ? tr("Plan {plan} · {current} → {target} · {status}", {
-                        plan: traderControl.manual_recovery.plan_id,
-                        current: traderControl.manual_recovery.current_asset || '—',
-                        target: traderControl.manual_recovery.target_asset || '—',
-                        status: modeLabel(traderControl.manual_recovery.plan_status || 'unknown'),
-                      })
-                    : tr("Recalculate from the latest completed daily session, then explicitly execute the prepared Paper plan.")}
+                    ? traderControl?.manual_recovery?.analysis_mode === 'current_session_intraday'
+                      ? tr("Plan {plan} · {current} → {target} · {status} · Live {session} as of {time} · {feed}/{timeframe}", {
+                          plan: traderControl.manual_recovery.plan_id,
+                          current: traderControl.manual_recovery.current_asset || '—',
+                          target: traderControl.manual_recovery.target_asset || '—',
+                          status: modeLabel(traderControl.manual_recovery.plan_status || 'unknown'),
+                          session: traderControl.manual_recovery.live_session || traderControl.manual_recovery.current_session || '—',
+                          time: dateTime(traderControl.manual_recovery.analysis_timestamp_utc),
+                          feed: String(traderControl.manual_recovery.current_session_live_feed || '—').toUpperCase(),
+                          timeframe: traderControl.manual_recovery.current_session_live_timeframe || '—',
+                        })
+                      : tr("Plan {plan} · {current} → {target} · {status}", {
+                          plan: traderControl.manual_recovery.plan_id,
+                          current: traderControl.manual_recovery.current_asset || '—',
+                          target: traderControl.manual_recovery.target_asset || '—',
+                          status: modeLabel(traderControl.manual_recovery.plan_status || 'unknown'),
+                        })
+                    : tr("Recalculate the Winner with completed history plus today's market movement, then explicitly execute the prepared Paper plan while the market is open.")}
               </small>
             </div>
             <div className="trader-manual-recovery-actions">
@@ -428,18 +445,18 @@ export function SystemSettingsPage({ onSessionExpired }) {
                 type="button"
                 onClick={prepareManualRecovery}
                 disabled={Boolean(manualRecoveryBusy) || !traderControl?.manual_recovery?.can_prepare}
-                title={tr(traderControl?.manual_recovery?.prepare_reason || "Recalculate today's Winner decision using only completed daily data and prepare a new current-session Paper plan.")}
+                title={tr(traderControl?.manual_recovery?.prepare_reason || "Recalculate the Winner using completed daily history plus the current open session and prepare a same-session Paper plan.")}
               >
-                {tr(manualRecoveryBusy === 'prepare' ? 'Reanalyzing…' : 'Reanalyze Winner for today')}
+                {tr(manualRecoveryBusy === 'prepare' ? 'Reanalyzing…' : 'Reanalyze Winner now')}
               </button>
               <button
                 type="button"
                 className="manual-execute"
                 onClick={executeManualRecovery}
                 disabled={Boolean(manualRecoveryBusy) || !traderControl?.manual_recovery?.can_execute}
-                title={tr(traderControl?.manual_recovery?.execute_reason || "Retry the prepared current-session plan through Alpaca Paper.")}
+                title={tr(traderControl?.manual_recovery?.execute_reason || "Execute the prepared current-session plan now through Alpaca Paper.")}
               >
-                {tr(manualRecoveryBusy === 'execute' ? 'Executing…' : traderControl?.manual_recovery?.recoverable_contingency ? 'Execute contingency' : 'Retry plan on Alpaca')}
+                {tr(manualRecoveryBusy === 'execute' ? 'Executing…' : traderControl?.manual_recovery?.recoverable_contingency ? 'Execute contingency' : 'Execute current plan on Alpaca')}
               </button>
             </div>
           </div>
