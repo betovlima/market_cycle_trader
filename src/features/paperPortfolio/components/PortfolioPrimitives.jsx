@@ -83,17 +83,22 @@ export function PortfolioMetric({ label, value, detail, tone = '' }) {
   )
 }
 
-export function PortfolioMetricsStrip({ data, position }) {
-  const activePositions = position ? 1 : 0
+export function PortfolioMetricsStrip({ data, position, auditSummary = {} }) {
   const returnTone = Number(data.total_return) >= 0 ? 'positive' : 'negative'
+  const realizedTone = Number(data.realized_pnl) >= 0 ? 'positive' : 'negative'
+  const unrealizedTone = Number(data.unrealized_pnl) >= 0 ? 'positive' : 'negative'
+  const distanceTone = Number(auditSummary.distance_to_peak) >= 0 ? 'positive' : 'negative'
 
   return (
-    <div className="portfolio-workspace-metrics" aria-label={tr("Portfolio summary")}>
-      <PortfolioMetric label={tr("Starting Capital")} value={money(data.initial_capital)} tone="blue" />
-      <PortfolioMetric label={tr("Portfolio Value")} value={money(data.portfolio_value)} tone="blue" />
+    <div className="portfolio-workspace-metrics portfolio-workspace-metrics-audit" aria-label={tr("Portfolio summary")}>
+      <PortfolioMetric label={tr("Portfolio Value")} value={money(data.portfolio_value)} detail={percent(data.total_return)} tone="blue" />
+      <PortfolioMetric label={tr("Realized P/L")} value={money(data.realized_pnl)} tone={realizedTone} />
+      <PortfolioMetric label={tr("Unrealized P/L")} value={money(data.unrealized_pnl)} tone={unrealizedTone} />
       <PortfolioMetric label={tr("Total P/L")} value={money(data.total_pnl)} detail={percent(data.total_return)} tone={returnTone} />
       <PortfolioMetric label={tr("Cash")} value={money(data.strategy_cash)} tone="purple" />
-      <PortfolioMetric label={tr("Position")} value={String(activePositions)} detail={position ? position.symbol : tr('Cash')} tone="gold" />
+      <PortfolioMetric label={tr("Position")} value={position ? position.symbol : tr('Cash')} detail={position ? `${number(position.quantity, 4)} ${tr('shares')}` : tr('No open position.')} tone="gold" />
+      <PortfolioMetric label={tr("Distance to peak")} value={percent(auditSummary.distance_to_peak)} detail={auditSummary.peak_portfolio_value == null ? '' : money(auditSummary.peak_portfolio_value)} tone={distanceTone} />
+      <PortfolioMetric label={tr("Max drawdown")} value={percent(auditSummary.maximum_drawdown)} tone="negative" />
     </div>
   )
 }
