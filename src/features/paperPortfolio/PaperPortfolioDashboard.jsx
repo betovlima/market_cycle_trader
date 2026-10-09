@@ -282,7 +282,7 @@ function OperationAuditTable({ operations, onDecision }) {
       </div>
       <div className="table-wrap portfolio-orders-table-wrap compact-order-scroll">
         <table className="dashboard-table portfolio-orders-table portfolio-audit-operations-table">
-          <thead><tr><th>{tr('Created')}</th><th>{tr('Asset')}</th><th>{tr('Side')}</th><th>{tr('Status')}</th><th>{tr('Filled')}</th><th>{tr('Average Fill')}</th><th>{tr('Value')}</th><th>{tr('Origin')}</th><th>{tr('Decision')}</th></tr></thead>
+          <thead><tr><th>{tr('Created')}</th><th>{tr('Asset')}</th><th>{tr('Side')}</th><th>{tr('Status')}</th><th>{tr('Filled')}</th><th>{tr('Average Fill')}</th><th>{tr('Value')}</th><th>{tr('Realized P/L')}</th><th>{tr('Origin')}</th><th>{tr('Decision')}</th></tr></thead>
           <tbody>
             {rows.length ? rows.map((order, index) => (
               <tr key={`${order.client_order_id || order.created_at || 'order'}-${index}`} className={order.economic_fill ? 'portfolio-economic-fill-row' : ''}>
@@ -293,10 +293,11 @@ function OperationAuditTable({ operations, onDecision }) {
                 <td>{order.filled_quantity ?? '—'}</td>
                 <td>{order.filled_average_price ? money(order.filled_average_price) : '—'}</td>
                 <td>{order.filled_value == null ? '—' : money(order.filled_value)}</td>
+                <td className={Number(order.realized_pnl) >= 0 ? 'positive' : 'negative'}>{order.realized_pnl == null ? '—' : money(order.realized_pnl)}</td>
                 <td>{executionOriginLabel(order.execution_origin)}</td>
                 <td>{order.decision_audit ? <button type="button" className="portfolio-decision-button" onClick={() => onDecision(order.decision_audit)}>{tr('View decision')}</button> : '—'}</td>
               </tr>
-            )) : <tr><td colSpan="9" className="empty-cell">{tr('No paper orders have been submitted yet.')}</td></tr>}
+            )) : <tr><td colSpan="10" className="empty-cell">{tr('No paper orders have been submitted yet.')}</td></tr>}
           </tbody>
         </table>
       </div>
