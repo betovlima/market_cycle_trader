@@ -6,7 +6,6 @@ import {
   CartesianGrid,
   Line,
   LineChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -14,6 +13,7 @@ import {
 import { apiFetch, downloadFile } from '../../api/http'
 import { API } from '../../config/env'
 import { PortfolioIcon } from '../../shared/components/Icons'
+import { AnalyticsResponsiveContainer } from '../analytics/components/AnalyticsPrimitives'
 import { money, number, percent, shortDateTime } from '../../shared/formatters'
 import { POLL_MS, ROBOT_POLL_MS } from './portfolioConfig'
 import { CurrentPosition, PortfolioMetricsStrip, TradingSessionStrip } from './components/PortfolioPrimitives'
@@ -185,7 +185,7 @@ function PortfolioEvolutionChart({ history }) {
       </div>
       <div className="portfolio-audit-chart">
         {points.length ? (
-          <ResponsiveContainer width="100%" height="100%">
+          <AnalyticsResponsiveContainer fallbackHeight={300}>
             <LineChart data={points} margin={{ top: 8, right: 18, left: 0, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(96, 139, 180, .14)" />
               <XAxis dataKey="recorded_at_label" minTickGap={32} tick={{ fontSize: 10, fill: '#8096ad' }} />
@@ -194,7 +194,7 @@ function PortfolioEvolutionChart({ history }) {
               <Line type="monotone" dataKey="peak_portfolio_value" dot={false} stroke="#7a8ca0" strokeDasharray="5 5" strokeWidth={1.4} />
               <Line type="monotone" dataKey="portfolio_value" dot={false} stroke="#65dbe8" strokeWidth={2.1} />
             </LineChart>
-          </ResponsiveContainer>
+          </AnalyticsResponsiveContainer>
         ) : <div className="portfolio-audit-empty">{tr('No portfolio history is available yet.')}</div>}
       </div>
     </section>
@@ -210,7 +210,7 @@ function AssetPnlChart({ rows }) {
       </div>
       <div className="portfolio-audit-chart">
         {data.length ? (
-          <ResponsiveContainer width="100%" height="100%">
+          <AnalyticsResponsiveContainer fallbackHeight={300}>
             <BarChart data={data} layout="vertical" margin={{ top: 8, right: 18, left: 8, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(96, 139, 180, .14)" />
               <XAxis type="number" tickFormatter={(value) => money(value)} tick={{ fontSize: 9, fill: '#8096ad' }} />
@@ -219,7 +219,7 @@ function AssetPnlChart({ rows }) {
               <Bar dataKey="realized_pnl" stackId="pnl" fill="#65dbe8" />
               <Bar dataKey="unrealized_pnl" stackId="pnl" fill="#c2a7ff" />
             </BarChart>
-          </ResponsiveContainer>
+          </AnalyticsResponsiveContainer>
         ) : <div className="portfolio-audit-empty">{tr('No economic fills are available yet.')}</div>}
       </div>
     </section>
