@@ -9081,7 +9081,7 @@ a { color: inherit; }
 
 .portfolio-decision-route {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr) auto);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   margin-top: 10px;
@@ -9214,7 +9214,7 @@ a { color: inherit; }
   white-space: nowrap;
 }
 
-.portfolio-audit-operations-table td:nth-child(8) {
+.portfolio-audit-operations-table td:nth-child(9) {
   white-space: normal;
   min-width: 140px;
 }
