@@ -34,6 +34,7 @@ export function ExecutionStatus({ workspace, modelLabel = "" }) {
           <span className={`status-dot ${job.status}`} />
           <strong>{tr(job.stage || 'Preparing simulation')}</strong>
           <small>{job.completed_runs ?? 0} {tr("of")}{' '}{job.total_runs ?? 0} {tr("runs")}</small>
+          <small>{job.id ? `Job: ${job.id}` : ''}{job.strategy_profile_name ? ` · Strategy: ${job.strategy_profile_name}` : ''}</small>
         </div>
         <span>{progressLabel}%</span>
       </div>
@@ -57,6 +58,11 @@ export function ExecutionStatus({ workspace, modelLabel = "" }) {
       >
         <span style={{ width: `${progress}%` }} />
       </div>
+      {job.interruption_reason ? (
+        <div className="global-inline-message error-inline" role="status">
+          {job.interruption_reason}
+        </div>
+      ) : null}
       <div className="execution-log">
         <div className="execution-log-title">{tr("Execution log")}</div>
         <pre ref={logRef}>{logs.length ? logs.slice(-120).join('\n') : tr('Waiting for execution messages…')}</pre>
