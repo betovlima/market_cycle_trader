@@ -60,7 +60,15 @@ export function BacktestPage({ workspace, capabilities = {}, onSessionExpired })
   const [researchExecutionModels, setResearchExecutionModels] = useState({})
   const researchWorkspaceActive = researchWorkspaceMode === 'research'
   const selectedStrategyName = dashboard?.selected_strategy_research_name || dashboard?.selected_backtest_strategy_name || tr('Not selected')
-  const activeStrategyName = (running ? job?.strategy_profile_name : null) || selectedStrategyName
+  const displayedJob = Boolean(
+    job && ['queued', 'running', 'failed', 'interrupted', 'cancelled'].includes(String(job.status || '')),
+  )
+  const activeStrategyName = (displayedJob ? job?.strategy_profile_name : null) || selectedStrategyName
+  const strategyContextTitle = job?.status === 'interrupted' || job?.status === 'cancelled'
+    ? 'Interrupted'
+    : job?.status === 'failed'
+      ? 'Backtest failed'
+      : running ? 'Evaluating' : 'Selected test'
 
   useEffect(() => {
     if (researchLabMode === 'tuning' && !canViewTuning && canViewTemporalIntelligence) setResearchLabMode('temporal')
@@ -177,7 +185,9 @@ export function BacktestPage({ workspace, capabilities = {}, onSessionExpired })
   useEffect(() => { setHistoryPage(1) }, [historyQuery, historySort, historyStatus])
 
   const savedResearchModelLabel = canViewResearchModels ? (selectedStrategyModel?.label || '') : ''
-  const activeResearchModelLabel = canViewResearchModels && job?.id ? (researchExecutionModels[job.id]?.model_label || savedResearchModelLabel) : ''
+  const activeResearchModelLabel = canViewResearchModels && job?.id
+    ? (job.research_model_label || researchExecutionModels[job.id]?.model_label || savedResearchModelLabel)
+    : ''
   const displayedResearchModelLabel = canViewResearchModels && detail?.id ? (researchExecutionModels[detail.id]?.model_label || '') : ''
   const historyColumnCount = canViewResearchModels ? 9 : 8
 
@@ -210,11 +220,11 @@ export function BacktestPage({ workspace, capabilities = {}, onSessionExpired })
                   <span>{tr('Tuning target')}:</span>
                   <strong title={temporalTuningStrategy.name || ''}>{temporalTuningStrategy.name || '—'}</strong>
                 </> : <>
-                  <span>{tr(running ? 'Evaluating' : 'Selected test')}:</span>
+                  <span>{tr(strategyContextTitle)}:</span>
                   <strong title={activeStrategyName}>{activeStrategyName}</strong>
-                  {!running && savedResearchModelLabel ? <><i>·</i><span>{tr('Saved model')}:</span><strong>{savedResearchModelLabel}</strong></> : null}
-                  {running && activeResearchModelLabel ? <><i>·</i><span>{tr('Model')}:</span><strong>{activeResearchModelLabel}</strong></> : null}
-                  {!running && detail?.strategy_profile_name ? <><i>·</i><span>{tr("Displayed:")}</span><strong title={detail.strategy_profile_name}>{detail.strategy_profile_name}</strong>{displayedResearchModelLabel ? <><i>·</i><span>{tr('Model')}:</span><strong>{displayedResearchModelLabel}</strong></> : null}</> : null}
+                  {!displayedJob && savedResearchModelLabel ? <><i>·</i><span>{tr('Saved model')}:</span><strong>{savedResearchModelLabel}</strong></> : null}
+                  {displayedJob && activeResearchModelLabel ? <><i>·</i><span>{tr('Model')}:</span><strong>{activeResearchModelLabel}</strong></> : null}
+                  {!displayedJob && detail?.strategy_profile_name ? <><i>·</i><span>{tr("Displayed:")}</span><strong title={detail.strategy_profile_name}>{detail.strategy_profile_name}</strong>{displayedResearchModelLabel ? <><i>·</i><span>{tr('Model')}:</span><strong>{displayedResearchModelLabel}</strong></> : null}</> : null}
                 </>}
               </div>
             </div>
