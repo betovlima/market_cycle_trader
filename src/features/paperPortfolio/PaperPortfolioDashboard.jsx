@@ -201,7 +201,7 @@ function PortfolioEvolutionChart({ history }) {
   )
 }
 
-function PositionExcursionPanel({ excursion }) {
+function PositionExcursionPanel({ excursion, observer }) {
   if (!excursion) return null
   const observations = Array.isArray(excursion.observations) ? excursion.observations : []
   let runningPeak = Number.NEGATIVE_INFINITY
@@ -227,6 +227,7 @@ function PositionExcursionPanel({ excursion }) {
         <div>
           <span className="panel-kicker">{tr('Position excursion · observed samples')}</span>
           <h2>{tr('Position peak and profit giveback')} · {excursion.symbol || '—'}</h2>
+          <small>{tr('Position observer')}: {observer?.position_observer_alive ? tr('Active') : tr('Unavailable')} · {tr('Last automatic sample')}: {observer?.last_position_observation_at ? shortDateTime(observer.last_position_observation_at) : '—'} · {observer?.position_observation_seconds ? `${Math.round(Number(observer.position_observation_seconds) / 60)} min` : '—'}</small>
         </div>
       </div>
       {available ? (
@@ -515,7 +516,7 @@ export function PaperPortfolioDashboard() {
             <DecisionOfDay decision={latestDecision} onOpen={setSelectedDecision} />
           </div>
 
-          <PositionExcursionPanel excursion={audit?.position_excursion} />
+          <PositionExcursionPanel excursion={audit?.position_excursion} observer={robot} />
 
           <div className="portfolio-audit-charts-grid">
             <PortfolioEvolutionChart history={audit?.history || data?.history} />
