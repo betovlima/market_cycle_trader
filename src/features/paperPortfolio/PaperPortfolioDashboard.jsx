@@ -201,6 +201,69 @@ function PortfolioEvolutionChart({ history }) {
   )
 }
 
+function PositionExcursionPanel({ excursion }) {
+  if (!excursion) return null
+  const observations = Array.isArray(excursion.observations) ? excursion.observations : []
+  let runningPeak = Number.NEGATIVE_INFINITY
+  const points = observations.map((row) => {
+    const value = Number(row.unrealized_return)
+    if (Number.isFinite(value)) runningPeak = Math.max(runningPeak, value)
+    return {
+      ...row,
+      time_label: shortDateTime(row.recorded_at),
+      unrealized_pct: Number.isFinite(value) ? value * 100 : null,
+      observed_peak_pct: Number.isFinite(runningPeak) ? runningPeak * 100 : null,
+    }
+  })
+  const available = excursion.status === 'observed'
+  const unknown = '—'
+  const peakDate = excursion.observed_peak_at ? shortDateTime(excursion.observed_peak_at) : unknown
+  const recorded = excursion.recorded_holding_sessions
+  const elapsed = excursion.observed_completed_sessions_since_entry
+
+  return (
+    <section className="portfolio-audit-card portfolio-chart-card" aria-label={tr('Position peak and profit giveback')}>
+      <div className="portfolio-section-heading compact">
+        <div>
+          <span className="panel-kicker">{tr('Position excursion · observed samples')}</span>
+          <h2>{tr('Position peak and profit giveback')} · {excursion.symbol || '—'}</h2>
+        </div>
+      </div>
+      {available ? (
+        <>
+          <div className="portfolio-decision-rule-grid">
+            <div><span>{tr('Peak unrealized return')}</span><strong>{percent(excursion.observed_peak_return)}</strong><small>{peakDate}</small></div>
+            <div><span>{tr('Current unrealized return')}</span><strong>{percent(excursion.current_return)}</strong></div>
+            <div><span>{tr('Peak unrealized profit')}</span><strong>{money(excursion.observed_peak_profit)}</strong></div>
+            <div><span>{tr('Profit given back since peak')}</span><strong>{money(excursion.profit_given_back)}</strong><small>{excursion.fraction_of_peak_profit_given_back == null ? unknown : percent(excursion.fraction_of_peak_profit_given_back)} {tr('of observed peak profit')}</small></div>
+            <div><span>{tr('Portfolio given back while held')}</span><strong>{money(excursion.account_value_given_back)}</strong></div>
+            <div><span>{tr('Holding: recorded / elapsed')}</span><strong>{recorded ?? unknown} / {elapsed ?? unknown}</strong><small>{excursion.holding_discrepancy === true ? tr('Holding counters differ; audit required') : tr('Calendar-based diagnostic')}</small></div>
+            <div><span>{tr('Holding at last decision: recorded / elapsed')}</span><strong>{excursion.plan_holding_sessions ?? unknown} / {excursion.observed_sessions_at_decision ?? unknown}</strong><small>{excursion.decision_date || unknown}</small></div>
+            <div><span>{tr('Observed samples')}</span><strong>{excursion.observation_count ?? observations.length}</strong><small>{tr('Historical gaps may hide intraday peaks')}</small></div>
+          </div>
+          <div className="portfolio-audit-chart">
+            {points.length ? (
+              <AnalyticsResponsiveContainer fallbackHeight={285}>
+                <LineChart data={points} margin={{ top: 8, right: 20, left: 0, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(96,139,180,.14)" />
+                  <XAxis dataKey="time_label" minTickGap={36} tick={{ fontSize: 10, fill: '#8096ad' }} />
+                  <YAxis width={68} tickFormatter={(value) => `${Number(value).toFixed(1)}%`} tick={{ fontSize: 10, fill: '#8096ad' }} />
+                  <Tooltip formatter={(value, key) => [`${Number(value).toFixed(2)}%`, tr(key === 'observed_peak_pct' ? 'Highest observed return to date' : 'Unrealized return')]} />
+                  <Line type="monotone" dataKey="observed_peak_pct" dot={false} stroke="#7a8ca0" strokeDasharray="5 5" strokeWidth={1.6} />
+                  <Line type="monotone" dataKey="unrealized_pct" dot={false} stroke="#65dbe8" strokeWidth={2.1} />
+                </LineChart>
+              </AnalyticsResponsiveContainer>
+            ) : <div className="portfolio-audit-empty">{tr('No position observations are available.')}</div>}
+          </div>
+          <p className="portfolio-audit-empty">{tr('The recorded peak is based on saved observations, not necessarily the exchange intraday high. Diagnostic only: no trading action is changed.')}</p>
+        </>
+      ) : (
+        <div className="portfolio-audit-empty">{tr('Opening fill or position basis is unavailable; no peak is inferred.')}</div>
+      )}
+    </section>
+  )
+}
+
 function AssetPnlChart({ rows }) {
   const data = useMemo(() => (Array.isArray(rows) ? rows : []).slice(0, 12), [rows])
   return (
@@ -451,6 +514,8 @@ export function PaperPortfolioDashboard() {
             <CurrentPosition position={position} cash={data.strategy_cash} />
             <DecisionOfDay decision={latestDecision} onOpen={setSelectedDecision} />
           </div>
+
+          <PositionExcursionPanel excursion={audit?.position_excursion} />
 
           <div className="portfolio-audit-charts-grid">
             <PortfolioEvolutionChart history={audit?.history || data?.history} />
