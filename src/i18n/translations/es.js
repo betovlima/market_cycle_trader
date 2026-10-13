@@ -3956,4 +3956,6 @@ export const ES_TRANSLATIONS = {
   "No position observations are available.": "Todavía no hay observaciones de esta posición.",
   "The recorded peak is based on saved observations, not necessarily the exchange intraday high. Diagnostic only: no trading action is changed.": "El máximo se calcula a partir de observaciones guardadas, no necesariamente del máximo intradiario. Solo diagnóstico: no se modifica ninguna operación ni decisión.",
   "Opening fill or position basis is unavailable; no peak is inferred.": "No está disponible la compra inicial o el coste de la posición; no se infiere ningún máximo.",
+  "Position observer": "Monitor de posición",
+  "Last automatic sample": "Última muestra automática",
 }
