@@ -30,6 +30,18 @@ const DECISION_REASON_LABELS = {
   stateful_intervention: 'The stateful policy changed the control decision.',
 }
 
+const MANUAL_REANALYSIS_STAGES = {
+  validating: 'Checking Winner and broker state',
+  download: 'Downloading completed daily history',
+  excluded: 'Checking structural exclusions',
+  intraday_iex: 'Collecting current-session IEX bars',
+  intraday_sip: 'Retrying full universe with SIP bars',
+  training: 'Training and calibrating LightGBM',
+  saving_plan: 'Saving the approved Paper plan',
+  completed: 'Manual Winner analysis completed',
+  failed: 'Manual Winner analysis failed',
+}
+
 const EXECUTION_ORIGIN_LABELS = {
   scheduled_automatic: 'Scheduled automatic execution',
   manual_recovery: 'Manual recovery execution',
@@ -469,6 +481,19 @@ export function PaperPortfolioDashboard() {
   const auditSummary = audit?.summary || {}
   const latestDecision = audit?.latest_decision || null
   const operations = Array.isArray(audit?.operations) && audit.operations.length ? audit.operations : (data?.recent_orders || [])
+  const manualProgress = robot?.manual_reanalysis
+  const manualProgressAge = manualProgress?.updated_at
+    ? Date.now() - new Date(manualProgress.updated_at).getTime()
+    : null
+  const showManualProgress = Boolean(
+    manualProgress && (
+      manualProgress.status === 'running'
+      || (manualProgressAge != null && manualProgressAge >= 0 && manualProgressAge <= 24 * 60 * 60 * 1000)
+    )
+  )
+  const progressCount = Number(manualProgress?.total) > 1
+    ? `${Number(manualProgress?.completed || 0)} / ${Number(manualProgress?.total)}`
+    : ''
 
   return (
     <section className="page-stack portfolio-page portfolio-single-workspace" aria-busy={refreshing}>
@@ -499,6 +524,21 @@ export function PaperPortfolioDashboard() {
               </button>
             </div>
           </header>
+
+          {showManualProgress ? (
+            <div
+              className={`global-inline-message ${manualProgress.status === 'failed' ? 'error-inline' : manualProgress.status === 'prepared' ? 'success-inline' : 'warning-inline'}`}
+              role="status"
+              aria-live="polite"
+            >
+              {manualProgress.status === 'running' ? <span className="portfolio-button-spinner" aria-hidden="true" /> : null}
+              <strong>{tr(MANUAL_REANALYSIS_STAGES[manualProgress.phase] || 'Reanalyzing Winner…')}</strong>
+              {progressCount ? <span>{progressCount}</span> : null}
+              {manualProgress.symbol && manualProgress.status === 'running' ? <span>{tr('Asset')}: {manualProgress.symbol}</span> : null}
+              {manualProgress.status === 'failed' && manualProgress.error ? <span>{manualProgress.error}</span> : null}
+              {manualProgress.status === 'prepared' ? <span>{tr('Check the prepared plan in Trader before executing on Alpaca.')}</span> : null}
+            </div>
+          ) : null}
 
           <PortfolioMetricsStrip data={data} position={position} auditSummary={auditSummary} />
 
