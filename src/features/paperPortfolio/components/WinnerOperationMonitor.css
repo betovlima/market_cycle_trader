@@ -150,3 +150,9 @@
 .winner-operation-dot.failed,
 .winner-operation-dot.review_required { background: var(--negative); }
 .winner-operations-log-scroll p { color: var(--muted); font-size: .8rem; }
+
+.winner-operations-live .winner-operations-delayed {
+  color: var(--warning);
+  font-weight: 650;
+  line-height: 1.45;
+}

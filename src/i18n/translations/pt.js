@@ -4077,4 +4077,6 @@ export const PT_TRANSLATIONS = {
   "Updating": "Atualizando",
   "Waiting for a manual Winner operation": "Aguardando operação manual da Winner",
   "Analysis and Alpaca execution events will appear here automatically.": "Eventos de reanálise e de execução na Alpaca aparecerão aqui automaticamente.",
+  "Collecting SIP bars with a historical cutoff": "Coletando barras SIP com horário de corte histórico",
+  "Attention: the approved Winner plan uses SIP data delayed by {minutes} minutes, with market cutoff {cutoff}. Review this delay before executing in Alpaca.": "Atenção: o plano aprovado da Winner usa dados SIP com atraso de {minutes} minutos, com horário de corte {cutoff}. Confira esse atraso antes de executar na Alpaca.",
 }
