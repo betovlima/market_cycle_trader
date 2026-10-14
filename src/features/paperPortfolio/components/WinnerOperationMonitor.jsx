@@ -59,7 +59,6 @@ export function WinnerOperationMonitor({ robot }) {
   const events = Array.isArray(robot?.manual_operation_log)
     ? robot.manual_operation_log.slice(-30).reverse()
     : []
-  if (!current && !events.length) return null
 
   const total = Number(current?.total)
   const completed = Number(current?.completed)
@@ -71,7 +70,7 @@ export function WinnerOperationMonitor({ robot }) {
   const percent = countKnown ? Math.min(100, Math.max(0, completed / total * 100)) : null
   const active = current?.status === 'running'
   const label = tr(PHASE_LABELS[current?.phase] || STATUS_LABELS[current?.status] || 'Awaiting update')
-  const status = tr(STATUS_LABELS[current?.status] || 'Awaiting update')
+  const status = tr(STATUS_LABELS[current?.status] || 'Waiting')
 
   return (
     <section className="winner-operations-monitor" aria-label={tr('Winner manual operations')}>
@@ -103,7 +102,7 @@ export function WinnerOperationMonitor({ robot }) {
             aria-label={label}
             aria-valuemin={0}
             aria-valuemax={countKnown ? total : 100}
-            aria-valuenow={countKnown ? completed : current.status === 'prepared' || current.status === 'completed' ? 100 : 0}
+            aria-valuenow={countKnown ? completed : current.status === 'prepared' || current.status === 'completed' ? 100 : undefined}
             aria-valuetext={countKnown ? `${completed} / ${total}` : status}
           >
             <span style={countKnown ? { width: `${percent}%` } : undefined} />
@@ -117,7 +116,13 @@ export function WinnerOperationMonitor({ robot }) {
           ) : null}
           <small>{tr('Progress is based on real processing stages; training has no estimated percentage.')}</small>
         </div>
-      ) : null}
+      ) : (
+        <div className="winner-operations-live" role="status">
+          <strong>{tr('Waiting for a manual Winner operation')}</strong>
+          <div className="winner-operations-progress" aria-hidden="true"><span /></div>
+          <small>{tr('Analysis and Alpaca execution events will appear here automatically.')}</small>
+        </div>
+      )}
 
       <details className="winner-operations-log" open>
         <summary>{tr('Execution log')} ({events.length})</summary>
