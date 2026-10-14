@@ -1,4 +1,5 @@
 import { getIntlLocale, tr } from '../../../i18n/runtime'
+import './WinnerOperationMonitor.css'
 
 const PHASE_LABELS = {
   validating: 'Validating Winner and broker state',
