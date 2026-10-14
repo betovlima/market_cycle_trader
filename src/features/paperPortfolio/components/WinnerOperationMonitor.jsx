@@ -7,6 +7,7 @@ const PHASE_LABELS = {
   excluded: 'Checking structural exclusions',
   intraday_iex: 'Collecting intraday IEX bars',
   intraday_sip: 'Collecting intraday SIP bars',
+  intraday_sip_delayed: 'Collecting SIP bars with a historical cutoff',
   training: 'Training and calibrating LightGBM',
   saving_plan: 'Saving the proposed Paper plan',
   broker_execution: 'Validating and executing the approved Alpaca plan',
@@ -71,6 +72,16 @@ export function WinnerOperationMonitor({ robot }) {
   const active = current?.status === 'running'
   const label = tr(PHASE_LABELS[current?.phase] || STATUS_LABELS[current?.status] || 'Awaiting update')
   const status = tr(STATUS_LABELS[current?.status] || 'Waiting')
+  const approvedAnalysis = robot?.manual_reanalysis
+  const delayMinutes = Number(approvedAnalysis?.data_delay_minutes || 0)
+  const delayedCutoff = approvedAnalysis?.data_cutoff_utc
+    ? new Date(approvedAnalysis.data_cutoff_utc)
+    : null
+  const cutoffLabel = delayedCutoff && !Number.isNaN(delayedCutoff.getTime())
+    ? delayedCutoff.toLocaleString(getIntlLocale())
+    : '—'
+  const showDelayedApproval = approvedAnalysis?.status === 'prepared'
+    && delayMinutes > 0
 
   return (
     <section className="winner-operations-monitor" aria-label={tr('Winner manual operations')}>
@@ -113,6 +124,13 @@ export function WinnerOperationMonitor({ robot }) {
             <p>{tr('Review the new plan before any order is sent to Alpaca.')}</p>
           ) : current.status === 'review_required' ? (
             <p>{tr('Reconcile Alpaca orders before attempting another execution.')}</p>
+          ) : null}
+          {showDelayedApproval ? (
+            <p className="winner-operations-delayed">
+              {tr('Attention: the approved Winner plan uses SIP data delayed by {minutes} minutes, with market cutoff {cutoff}. Review this delay before executing in Alpaca.', {
+                minutes: delayMinutes, cutoff: cutoffLabel,
+              })}
+            </p>
           ) : null}
           <small>{tr('Progress is based on real processing stages; training has no estimated percentage.')}</small>
         </div>
