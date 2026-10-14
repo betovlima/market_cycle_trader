@@ -1,6 +1,6 @@
 export const POLL_MS = 5 * 60 * 1000
 
-export const ROBOT_POLL_MS = 30 * 1000
+export const ROBOT_POLL_MS = 10 * 1000
 
 export const ZOOM_STEP = 0.84
 
