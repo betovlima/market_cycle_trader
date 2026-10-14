@@ -4075,4 +4075,6 @@ export const PT_TRANSLATIONS = {
   "Progress is based on real processing stages; training has no estimated percentage.": "Andamento baseado em etapas reais; o treinamento não possui percentual estimado.",
   "No manual operation events have been recorded.": "Nenhum evento de operação manual foi registrado.",
   "Updating": "Atualizando",
+  "Waiting for a manual Winner operation": "Aguardando operação manual da Winner",
+  "Analysis and Alpaca execution events will appear here automatically.": "Eventos de reanálise e de execução na Alpaca aparecerão aqui automaticamente.",
 }
