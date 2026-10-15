@@ -431,7 +431,11 @@ function PortfolioMarketView({ market }) {
   const changeLiveMode = useCallback(async (mode) => {
     if (!live || changingLiveMode || !robot || !Number.isInteger(robot.revision)) return
     const names = { active: 'iniciar o monitoramento', paused: 'pausar o monitoramento', exit_only: 'ativar somente saída (sem executar vendas)', stopped: 'parar o monitoramento' }
-    if (!window.confirm(`Confirma ${names[mode]} da conta Live? Nenhuma ordem real será enviada.`)) return
+    const realOrdersArmed = Boolean(robot?.real_orders_armed)
+    const confirmation = realOrdersArmed
+      ? `Confirma ${names[mode]} da conta Live? ATENÇÃO: com execução Live autorizada no servidor, Iniciar poderá enviar ORDENS REAIS à Alpaca.`
+      : `Confirma ${names[mode]} da conta Live? Nenhuma ordem real será enviada enquanto a execução Live estiver desabilitada.`
+    if (!window.confirm(confirmation)) return
     setChangingLiveMode(true)
     setLiveModeMessage('')
     try {
@@ -445,7 +449,9 @@ function PortfolioMarketView({ market }) {
         },
       })
       await loadRobotStatus()
-      setLiveModeMessage('Modo de monitoramento Live atualizado. Ordens reais continuam desabilitadas.')
+      setLiveModeMessage(robot?.real_orders_armed
+        ? 'Controle Live atualizado. A execução real está autorizada no servidor, sujeita às verificações de risco.'
+        : 'Controle Live atualizado. Ordens reais continuam desabilitadas.')
     } catch (requestError) {
       setError(requestError.message)
       await loadRobotStatus({ silent: true })
@@ -570,7 +576,9 @@ function PortfolioMarketView({ market }) {
           {live ? (
             <section className="portfolio-live-safety-note" aria-label="Operação do Trader · Live">
               <strong>Operação do Trader · Live</strong>
-              <p>Controle exclusivo do monitoramento Live. Iniciar, Pausar, Somente saída e Parar não enviam ordens reais à Alpaca.</p>
+              <p>{robot?.real_orders_armed
+                ? "Operação real habilitada no servidor. Iniciar poderá executar as decisões verificadas da Winner na Alpaca Live; Pausar e Parar impedem novas ordens."
+                : "Ciclo Winner Live com execução real desabilitada. Iniciar acompanha e prepara decisões, mas não envia ordens à Alpaca."}</p>\n              <p>Próximo pregão: <strong>{robot?.next_execution_session || "não programado"}</strong> · Decisão: <strong>{robot?.active_run?.target_asset || "ainda não calculada"}</strong> · Etapa: <strong>{robot?.active_run?.phase || robot?.phase || "—"}</strong></p>
               <p>Estado atual: <strong>{robot?.control_mode || 'indisponível'}</strong> · Revisão: {Number.isInteger(robot?.revision) ? robot.revision : '—'}</p>
               <div className="portfolio-workspace-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
                 {[
@@ -593,7 +601,7 @@ function PortfolioMarketView({ market }) {
           {live ? (
             <section className="portfolio-live-safety-note" aria-label={tr('Live monitoring')}>
               <strong>{tr('Live monitoring')}</strong> · {tr(robot?.control_mode || 'stopped')} ·
-              {' '}{tr('Real orders disabled')} ·
+              {' '}{robot?.real_orders_armed ? 'Ordens reais autorizadas' : tr('Real orders disabled')} ·
               {' '}{tr(data?.market_clock?.is_open ? 'Market open' : 'Market closed')}
             </section>
           ) : <TradingSessionStrip
