@@ -6,6 +6,7 @@ import { API } from '../config/env'
 import { SettingsIcon } from '../shared/components/Icons'
 import { ParameterHint } from '../shared/components/ParameterHint'
 import { StrategySettingsPanel } from './StrategySettingsPanel'
+import { LiveTraderControl } from './liveTrader/LiveTraderControl'
 
 const DEFAULT_FORM = {
   enabled: true,
@@ -473,6 +474,8 @@ export function SystemSettingsPage({ onSessionExpired }) {
             </div>
           ) : null}
         </section>
+
+        <LiveTraderControl />
 
         <section className="settings-workspace-section settings-history-section">
           <div className="settings-section-heading">
