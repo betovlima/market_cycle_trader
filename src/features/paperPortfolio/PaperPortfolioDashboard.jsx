@@ -333,7 +333,7 @@ function CandidateRanking({ decision }) {
   )
 }
 
-function OperationAuditTable({ operations, onDecision }) {
+function OperationAuditTable({ operations, onDecision, market = 'trading' }) {
   const rows = Array.isArray(operations) ? operations : []
   return (
     <section className="portfolio-orders-section">
@@ -362,7 +362,7 @@ function OperationAuditTable({ operations, onDecision }) {
                 <td>{executionOriginLabel(order.execution_origin)}</td>
                 <td>{order.decision_audit ? <button type="button" className="portfolio-decision-button" onClick={() => onDecision(order.decision_audit)}>{tr('View decision')}</button> : '—'}</td>
               </tr>
-            )) : <tr><td colSpan="10" className="empty-cell">{tr('No paper orders have been submitted yet.')}</td></tr>}
+            )) : <tr><td colSpan="10" className="empty-cell">{tr(market === 'live' ? 'No Live broker orders are available yet.' : 'No paper orders have been submitted yet.')}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -370,7 +370,9 @@ function OperationAuditTable({ operations, onDecision }) {
   )
 }
 
-export function PaperPortfolioDashboard() {
+function PortfolioMarketView({ market }) {
+  const live = market === 'live'
+  const marketApi = live ? 'live-market' : 'paper-market'
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [refreshing, setRefreshing] = useState(false)
@@ -387,21 +389,21 @@ export function PaperPortfolioDashboard() {
 
   const loadRobotStatus = useCallback(async ({ silent = false } = {}) => {
     try {
-      const response = await apiFetch(`${API}/paper-market/public-robot-status`)
+      const response = await apiFetch(`${API}/${marketApi}/${live ? 'robot/status' : 'public-robot-status'}`)
       if (mountedRef.current) setRobot(response)
     } catch {
       if (mountedRef.current) {
         setRobot((current) => current ? { ...current, scheduler_alive: false, status: 'unavailable' } : { enabled: false, scheduler_alive: false, status: 'unavailable' })
       }
     }
-  }, [])
+  }, [live, marketApi])
 
   const loadPortfolio = useCallback(async ({ silent = false } = {}) => {
     if (portfolioRequestRef.current) return
     portfolioRequestRef.current = true
     if (mountedRef.current) setRefreshing(true)
     try {
-      const response = await apiFetch(`${API}/paper-market/public-portfolio`)
+      const response = await apiFetch(`${API}/${marketApi}/${live ? 'portfolio' : 'public-portfolio'}`)
       if (!mountedRef.current) return
       const checkedAt = new Date()
       setData(response)
@@ -416,7 +418,7 @@ export function PaperPortfolioDashboard() {
       portfolioRequestRef.current = false
       if (mountedRef.current) setRefreshing(false)
     }
-  }, [])
+  }, [live, marketApi])
 
   const scheduleNextPortfolioRefresh = useCallback(function scheduleNextPortfolioRefresh() {
     if (!mountedRef.current) return
@@ -434,14 +436,14 @@ export function PaperPortfolioDashboard() {
   const exportTransactionAudit = useCallback(async () => {
     setExporting(true)
     try {
-      await downloadFile(`${API}/paper-market/public-portfolio/export.zip`, 'mct_paper_transaction_audit.zip')
+      await downloadFile(`${API}/${marketApi}/${live ? 'portfolio/export.zip' : 'public-portfolio/export.zip'}`, live ? 'mct_live_transaction_audit.zip' : 'mct_paper_transaction_audit.zip')
       if (mountedRef.current) setError('')
     } catch (requestError) {
       if (mountedRef.current) setError(requestError.message)
     } finally {
       if (mountedRef.current) setExporting(false)
     }
-  }, [])
+  }, [live, marketApi])
 
   const refreshPortfolio = useCallback(async ({ silent = false, includeRobot = false } = {}) => {
     if (portfolioTimerRef.current) window.clearTimeout(portfolioTimerRef.current)
@@ -472,21 +474,23 @@ export function PaperPortfolioDashboard() {
   const operations = Array.isArray(audit?.operations) && audit.operations.length ? audit.operations : (data?.recent_orders || [])
 
   return (
-    <section className="page-stack portfolio-page portfolio-single-workspace" aria-busy={refreshing}>
+    <section className="portfolio-single-workspace" aria-busy={refreshing} data-portfolio-market={market}>
       {error ? <div className="inline-error"><strong>{tr('Portfolio unavailable')}</strong><span>{tr(error)}</span><button type="button" onClick={() => setError('')}>×</button></div> : null}
 
-      {!data ? (
+      {!data && !error ? (
         <section className="data-panel portfolio-locked portfolio-tab-loader" role="status" aria-live="polite">
           <div className="portfolio-tab-loader-visual"><span className="loading-ring" aria-hidden="true" /></div>
-          <h2>{tr('Loading simulated portfolio')}</h2>
-          <p>{tr('Connecting to Alpaca Paper and requesting the latest read-only portfolio snapshot.')}</p>
+          <h2>{tr(live ? 'Loading Live portfolio' : 'Loading simulated portfolio')}</h2>
+          <p>{tr(live ? 'Connecting to Alpaca Live in read-only mode.' : 'Connecting to Alpaca Paper and requesting the latest read-only portfolio snapshot.')}</p>
         </section>
+      ) : !data ? (
+        <section className="data-panel portfolio-locked"><p>{tr('Portfolio unavailable')}</p></section>
       ) : (
         <section className="data-panel portfolio-workspace-panel">
           <header className="portfolio-workspace-header">
             <div className="portfolio-workspace-title">
               <div className="page-title-icon"><PortfolioIcon size={18} /></div>
-              <div><h2>{tr('Portfolio')}</h2></div>
+              <div><h2>{tr('Portfolio')} · {tr(live ? 'Live' : 'Trading (Paper)')}</h2></div>
             </div>
             <div className="portfolio-workspace-actions">
               <span>{lastUpdated ? tr('Updated {time}', { time: lastUpdated.toLocaleTimeString(getIntlLocale()) }) : tr('Read-only snapshot')}</span>
@@ -501,7 +505,7 @@ export function PaperPortfolioDashboard() {
             </div>
           </header>
 
-          <WinnerOperationMonitor robot={robot} />
+          {live ? <p className="portfolio-live-safety-note" role="status">{tr('Alpaca Live connected for read-only monitoring. Real order execution is disabled; Paper data is isolated.')}</p> : <WinnerOperationMonitor robot={robot} />}
 
           <PortfolioMetricsStrip data={data} position={position} auditSummary={auditSummary} />
 
@@ -528,10 +532,32 @@ export function PaperPortfolioDashboard() {
 
           <CandidateRanking decision={latestDecision} />
 
-          <OperationAuditTable operations={operations} onDecision={setSelectedDecision} />
+          {live && Array.isArray(data?.positions) && data.positions.length > 1 ? <p className="portfolio-live-safety-note">{tr('Live account holds multiple positions; portfolio summary includes all positions. Single-position detail is not shown.')}</p> : null}
+           <OperationAuditTable operations={operations} market={market} onDecision={setSelectedDecision} />
         </section>
       )}
       <DecisionAuditDialog audit={selectedDecision} onClose={() => setSelectedDecision(null)} />
+    </section>
+  )
+}
+
+
+export function PaperPortfolioDashboard({ capabilities = {} }) {
+  const canViewLive = capabilities?.['admin.manage'] === true
+  const [market, setMarket] = useState('trading')
+  return (
+    <section className="page-stack portfolio-page" aria-label={tr('Portfolio environment')}>
+      <nav className="portfolio-market-tabs" role="tablist" aria-label={tr('Portfolio environment')}>
+        <button type="button" role="tab" aria-selected={market === 'trading'}
+          className={market === 'trading' ? 'selected' : ''}
+          onClick={() => setMarket('trading')}>{tr('Trading (Paper)')}</button>
+        {canViewLive ? (
+          <button type="button" role="tab" aria-selected={market === 'live'}
+            className={market === 'live' ? 'selected' : ''}
+            onClick={() => setMarket('live')}>{tr('Live')}</button>
+        ) : null}
+      </nav>
+      <PortfolioMarketView key={market} market={market} />
     </section>
   )
 }
