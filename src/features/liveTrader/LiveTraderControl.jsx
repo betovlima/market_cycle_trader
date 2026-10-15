@@ -56,8 +56,8 @@ export function LiveTraderControl() {
       setState((previous) => ({ ...(previous || {}), ...updated }))
       setNotice(tr('Live monitoring mode updated. Real order submission remains disabled.'))
     } catch (exc) {
-      setError(exc.message)
       await refresh()
+      setError(exc.message)
     } finally {
       setBusy(false)
     }
