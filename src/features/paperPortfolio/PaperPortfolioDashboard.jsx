@@ -399,6 +399,8 @@ function PortfolioMarketView({ market }) {
   const [clockNow, setClockNow] = useState(() => Date.now())
   const [selectedDecision, setSelectedDecision] = useState(null)
   const [exporting, setExporting] = useState(false)
+  const [changingLiveMode, setChangingLiveMode] = useState(false)
+  const [liveModeMessage, setLiveModeMessage] = useState('')
   const mountedRef = useRef(false)
   const portfolioTimerRef = useRef(null)
   const portfolioRequestRef = useRef(false)
@@ -425,6 +427,32 @@ function PortfolioMarketView({ market }) {
       }
     }
   }, [live, marketApi])
+
+  const changeLiveMode = useCallback(async (mode) => {
+    if (!live || changingLiveMode || !robot || !Number.isInteger(robot.revision)) return
+    const names = { active: 'iniciar o monitoramento', paused: 'pausar o monitoramento', exit_only: 'ativar somente saída (sem executar vendas)', stopped: 'parar o monitoramento' }
+    if (!window.confirm(`Confirma ${names[mode]} da conta Live? Nenhuma ordem real será enviada.`)) return
+    setChangingLiveMode(true)
+    setLiveModeMessage('')
+    try {
+      await apiFetch(`${API}/live-market/robot/mode`, {
+        method: 'POST',
+        body: {
+          mode,
+          expected_revision: robot.revision,
+          reason: `Operator requested Live monitoring mode: ${mode}`,
+          confirm: 'LIVE_MONITORING_ONLY',
+        },
+      })
+      await loadRobotStatus()
+      setLiveModeMessage('Modo de monitoramento Live atualizado. Ordens reais continuam desabilitadas.')
+    } catch (requestError) {
+      setError(requestError.message)
+      await loadRobotStatus({ silent: true })
+    } finally {
+      setChangingLiveMode(false)
+    }
+  }, [live, changingLiveMode, robot, loadRobotStatus])
 
   const loadPortfolio = useCallback(async ({ silent = false } = {}) => {
     if (portfolioRequestRef.current) return
@@ -539,7 +567,26 @@ function PortfolioMarketView({ market }) {
             </div>
           </header>
 
-          {live ? <p className="portfolio-live-safety-note" role="status">{tr('Alpaca Live connected for read-only monitoring. Real order execution is disabled; Paper data is isolated.')}</p> : <WinnerOperationMonitor robot={robot} />}
+          {live ? (
+            <section className="portfolio-live-safety-note" aria-label="Operação do Trader · Live">
+              <strong>Operação do Trader · Live</strong>
+              <p>Controle exclusivo do monitoramento Live. Iniciar, Pausar, Somente saída e Parar não enviam ordens reais à Alpaca.</p>
+              <p>Estado atual: <strong>{robot?.control_mode || 'indisponível'}</strong> · Revisão: {Number.isInteger(robot?.revision) ? robot.revision : '—'}</p>
+              <div className="portfolio-workspace-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+                {[
+                  ['active', 'Iniciar'],
+                  ['paused', 'Pausar'],
+                  ['exit_only', 'Somente saída'],
+                  ['stopped', 'Parar'],
+                ].map(([mode, label]) => (
+                  <button key={mode} type="button" className="secondary-action compact"
+                    disabled={changingLiveMode || !Number.isInteger(robot?.revision) || robot?.control_mode === mode}
+                    onClick={() => changeLiveMode(mode)}>{changingLiveMode ? 'Aguarde…' : label}</button>
+                ))}
+              </div>
+              {liveModeMessage ? <p role="status">{liveModeMessage}</p> : null}
+            </section>
+          ) : <WinnerOperationMonitor robot={robot} />}
 
           <PortfolioMetricsStrip data={data} position={position} auditSummary={auditSummary} />
 
