@@ -36,9 +36,9 @@ export function LiveTraderControl() {
   async function changeLiveMode(mode) {
     if (!state || busy) return
     // Explicitly distinguish monitoring modes from the future Live execution engine.
-    const confirmation = tr(
-      'Change Live monitoring mode to {mode}? No real orders will be sent. Paper Trading is unaffected.',
-    ).replace('{mode}', tr(mode))
+    const confirmation = state?.real_orders_armed
+      ? `Confirma a mudança do Live para ${tr(mode)}? ATENÇÃO: quando ativo, o Trader poderá enviar ORDENS REAIS à Alpaca.`
+      : tr('Change Live monitoring mode to {mode}? No real orders will be sent. Paper Trading is unaffected.').replace('{mode}', tr(mode))
     if (!window.confirm(confirmation)) return
     setBusy(true)
     setError('')
@@ -54,7 +54,9 @@ export function LiveTraderControl() {
         },
       })
       setState((previous) => ({ ...(previous || {}), ...updated }))
-      setNotice(tr('Live monitoring mode updated. Real order submission remains disabled.'))
+      setNotice(state?.real_orders_armed
+        ? 'Estado Live alterado. Operações reais seguem os bloqueios e limites definidos na API.'
+        : tr('Live monitoring mode updated. Real order submission remains disabled.'))
     } catch (exc) {
       await refresh()
       setError(exc.message)
@@ -78,16 +80,18 @@ export function LiveTraderControl() {
       <div className="trader-control-grid settings-trader-grid">
         <div className="trader-control-status">
           <div><span>{tr('Status')}</span><strong>{tr(state?.status || 'Unavailable')}</strong></div>
-          <div><span>{tr('Phase')}</span><strong>{tr('Monitoring only')}</strong></div>
-          <div><span>{tr('Order execution')}</span><strong>{tr('Disabled')}</strong></div>
-          <div><span>{tr('Scheduler')}</span><strong>{tr('Not installed')}</strong></div>
+          <div><span>{tr('Phase')}</span><strong>{state?.active_run?.phase || state?.phase || '—'}</strong></div>
+          <div><span>{tr('Order execution')}</span><strong>{state?.real_orders_armed ? 'AUTORIZADA · REAL' : tr('Disabled')}</strong></div>
+          <div><span>{tr('Scheduler')}</span><strong>{state?.scheduler_alive ? 'Ativo' : tr('Not installed')}</strong></div>
           <div><span>{tr('Trader winner')}</span><strong>{state?.trader_winner?.name || '—'}</strong></div>
+          <div><span>Próximo pregão</span><strong>{state?.next_execution_session || '—'}</strong></div>
+          <div><span>Ativo selecionado</span><strong>{state?.active_run?.target_asset || '—'}</strong></div>
         </div>
         <div className="trader-control-actions">
           {MODES.map(([mode, label]) => (
             <button key={mode} type="button"
               className={mode === 'stopped' ? 'danger' : ''}
-              title={tr('Change Live monitoring mode only. Real orders are disabled.')}
+              title={state?.real_orders_armed ? 'Atenção: modo Live com operações reais autorizadas' : tr('Change Live monitoring mode only. Real orders are disabled.')}
               onClick={() => changeLiveMode(mode)}
               disabled={!state || busy || state.control_mode === mode}>
               {tr(label)}
@@ -96,7 +100,9 @@ export function LiveTraderControl() {
         </div>
       </div>
       <p className="portfolio-live-safety-note" role="status">
-        {tr('Live controls now save independent monitoring modes, not trades. In particular, Exit only records the future policy but cannot sell assets until a Live executor is deployed. Paper is unaffected.')}
+        {state?.real_orders_armed
+          ? 'Ordens reais autorizadas no servidor. Verifique os limites de risco, a Winner e o pregão antes de iniciar.'
+          : 'Monitoramento, preparação e recalibração Live independentes. Ordens reais permanecem desabilitadas. Paper não é afetado.'}
       </p>
       {notice ? <p className="global-inline-message">{notice}</p> : null}
       {error ? <p className="inline-error">{tr(error)}</p> : null}
