@@ -37,6 +37,7 @@ const EXECUTION_ORIGIN_LABELS = {
   manual_contingency: 'Manual contingency execution',
   historical_unknown: 'Historical execution origin not recorded',
   unknown: 'Execution origin not available',
+  live_broker_history: 'Live broker history',
 }
 
 function decisionReasonLabel(reason) {
@@ -266,6 +267,21 @@ function PositionExcursionPanel({ excursion, observer }) {
   )
 }
 
+function LiveMultiplePositions({ positions = [] }) {
+  return (
+    <section className="portfolio-audit-card">
+      <div className="portfolio-section-heading compact"><div><span className="panel-kicker">{tr('Live')}</span><h2>{tr('Current Positions')}</h2></div></div>
+      <div className="table-wrap"><table className="dashboard-table">
+        <thead><tr><th>{tr('Asset')}</th><th>{tr('Quantity')}</th><th>{tr('Entry')}</th><th>{tr('Market value')}</th></tr></thead>
+        <tbody>{positions.map((item) => (
+          <tr key={item.symbol}><td>{item.symbol}</td><td>{number(item.quantity, 6)}</td>
+            <td>{money(item.average_entry_price)}</td><td>{money(item.market_value)}</td></tr>
+        ))}</tbody>
+      </table></div>
+    </section>
+  )
+}
+
 function AssetPnlChart({ rows }) {
   const data = useMemo(() => (Array.isArray(rows) ? rows : []).slice(0, 12), [rows])
   return (
@@ -333,7 +349,7 @@ function CandidateRanking({ decision }) {
   )
 }
 
-function OperationAuditTable({ operations, onDecision }) {
+function OperationAuditTable({ operations, onDecision, market = 'trading' }) {
   const rows = Array.isArray(operations) ? operations : []
   return (
     <section className="portfolio-orders-section">
@@ -362,7 +378,7 @@ function OperationAuditTable({ operations, onDecision }) {
                 <td>{executionOriginLabel(order.execution_origin)}</td>
                 <td>{order.decision_audit ? <button type="button" className="portfolio-decision-button" onClick={() => onDecision(order.decision_audit)}>{tr('View decision')}</button> : '—'}</td>
               </tr>
-            )) : <tr><td colSpan="10" className="empty-cell">{tr('No paper orders have been submitted yet.')}</td></tr>}
+            )) : <tr><td colSpan="10" className="empty-cell">{tr(market === 'live' ? 'No Live broker orders are available yet.' : 'No paper orders have been submitted yet.')}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -370,7 +386,9 @@ function OperationAuditTable({ operations, onDecision }) {
   )
 }
 
-export function PaperPortfolioDashboard() {
+function PortfolioMarketView({ market }) {
+  const live = market === 'live'
+  const marketApi = live ? 'live-market' : 'paper-market'
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [refreshing, setRefreshing] = useState(false)
@@ -381,27 +399,67 @@ export function PaperPortfolioDashboard() {
   const [clockNow, setClockNow] = useState(() => Date.now())
   const [selectedDecision, setSelectedDecision] = useState(null)
   const [exporting, setExporting] = useState(false)
+  const [changingLiveMode, setChangingLiveMode] = useState(false)
+  const [liveModeMessage, setLiveModeMessage] = useState('')
   const mountedRef = useRef(false)
   const portfolioTimerRef = useRef(null)
   const portfolioRequestRef = useRef(false)
+  const autoRefreshEnabledRef = useRef(!live)
+  const scheduleNextRefreshRef = useRef(null)
 
   const loadRobotStatus = useCallback(async ({ silent = false } = {}) => {
     try {
-      const response = await apiFetch(`${API}/paper-market/public-robot-status`)
-      if (mountedRef.current) setRobot(response)
+      const response = await apiFetch(`${API}/${marketApi}/${live ? 'robot/status' : 'public-robot-status'}`)
+      if (mountedRef.current) {
+        setRobot(response)
+        autoRefreshEnabledRef.current = !live || Boolean(response?.monitoring_enabled)
+        if (!autoRefreshEnabledRef.current) {
+          if (portfolioTimerRef.current) window.clearTimeout(portfolioTimerRef.current)
+          portfolioTimerRef.current = null
+          setNextRefreshAt(null)
+        } else if (!portfolioTimerRef.current) {
+          scheduleNextRefreshRef.current?.()
+        }
+      }
     } catch {
       if (mountedRef.current) {
         setRobot((current) => current ? { ...current, scheduler_alive: false, status: 'unavailable' } : { enabled: false, scheduler_alive: false, status: 'unavailable' })
       }
     }
-  }, [])
+  }, [live, marketApi])
+
+  const changeLiveMode = useCallback(async (mode) => {
+    if (!live || changingLiveMode || !robot || !Number.isInteger(robot.revision)) return
+    const names = { active: 'iniciar o monitoramento', paused: 'pausar o monitoramento', exit_only: 'ativar somente saída (sem executar vendas)', stopped: 'parar o monitoramento' }
+    if (!window.confirm(`Confirma ${names[mode]} da conta Live? Nenhuma ordem real será enviada.`)) return
+    setChangingLiveMode(true)
+    setLiveModeMessage('')
+    try {
+      await apiFetch(`${API}/live-market/robot/mode`, {
+        method: 'POST',
+        body: {
+          mode,
+          expected_revision: robot.revision,
+          reason: `Operator requested Live monitoring mode: ${mode}`,
+          confirm: 'LIVE_MONITORING_ONLY',
+        },
+      })
+      await loadRobotStatus()
+      setLiveModeMessage('Modo de monitoramento Live atualizado. Ordens reais continuam desabilitadas.')
+    } catch (requestError) {
+      setError(requestError.message)
+      await loadRobotStatus({ silent: true })
+    } finally {
+      setChangingLiveMode(false)
+    }
+  }, [live, changingLiveMode, robot, loadRobotStatus])
 
   const loadPortfolio = useCallback(async ({ silent = false } = {}) => {
     if (portfolioRequestRef.current) return
     portfolioRequestRef.current = true
     if (mountedRef.current) setRefreshing(true)
     try {
-      const response = await apiFetch(`${API}/paper-market/public-portfolio`)
+      const response = await apiFetch(`${API}/${marketApi}/${live ? 'portfolio' : 'public-portfolio'}`)
       if (!mountedRef.current) return
       const checkedAt = new Date()
       setData(response)
@@ -416,11 +474,16 @@ export function PaperPortfolioDashboard() {
       portfolioRequestRef.current = false
       if (mountedRef.current) setRefreshing(false)
     }
-  }, [])
+  }, [live, marketApi])
 
   const scheduleNextPortfolioRefresh = useCallback(function scheduleNextPortfolioRefresh() {
     if (!mountedRef.current) return
     if (portfolioTimerRef.current) window.clearTimeout(portfolioTimerRef.current)
+    portfolioTimerRef.current = null
+    if (live && !autoRefreshEnabledRef.current) {
+      setNextRefreshAt(null)
+      return
+    }
     const nextAt = Date.now() + POLL_MS
     setNextRefreshAt(nextAt)
     portfolioTimerRef.current = window.setTimeout(async () => {
@@ -429,19 +492,20 @@ export function PaperPortfolioDashboard() {
       await loadPortfolio({ silent: true })
       if (mountedRef.current) scheduleNextPortfolioRefresh()
     }, POLL_MS)
-  }, [loadPortfolio])
+  }, [live, loadPortfolio])
+  scheduleNextRefreshRef.current = scheduleNextPortfolioRefresh
 
   const exportTransactionAudit = useCallback(async () => {
     setExporting(true)
     try {
-      await downloadFile(`${API}/paper-market/public-portfolio/export.zip`, 'mct_paper_transaction_audit.zip')
+      await downloadFile(`${API}/${marketApi}/${live ? 'portfolio/export.zip' : 'public-portfolio/export.zip'}`, live ? 'mct_live_transaction_audit.zip' : 'mct_paper_transaction_audit.zip')
       if (mountedRef.current) setError('')
     } catch (requestError) {
       if (mountedRef.current) setError(requestError.message)
     } finally {
       if (mountedRef.current) setExporting(false)
     }
-  }, [])
+  }, [live, marketApi])
 
   const refreshPortfolio = useCallback(async ({ silent = false, includeRobot = false } = {}) => {
     if (portfolioTimerRef.current) window.clearTimeout(portfolioTimerRef.current)
@@ -472,21 +536,23 @@ export function PaperPortfolioDashboard() {
   const operations = Array.isArray(audit?.operations) && audit.operations.length ? audit.operations : (data?.recent_orders || [])
 
   return (
-    <section className="page-stack portfolio-page portfolio-single-workspace" aria-busy={refreshing}>
+    <section className="portfolio-single-workspace" aria-busy={refreshing} data-portfolio-market={market}>
       {error ? <div className="inline-error"><strong>{tr('Portfolio unavailable')}</strong><span>{tr(error)}</span><button type="button" onClick={() => setError('')}>×</button></div> : null}
 
-      {!data ? (
+      {!data && !error ? (
         <section className="data-panel portfolio-locked portfolio-tab-loader" role="status" aria-live="polite">
           <div className="portfolio-tab-loader-visual"><span className="loading-ring" aria-hidden="true" /></div>
-          <h2>{tr('Loading simulated portfolio')}</h2>
-          <p>{tr('Connecting to Alpaca Paper and requesting the latest read-only portfolio snapshot.')}</p>
+          <h2>{tr(live ? 'Loading Live portfolio' : 'Loading simulated portfolio')}</h2>
+          <p>{tr(live ? 'Connecting to Alpaca Live in read-only mode.' : 'Connecting to Alpaca Paper and requesting the latest read-only portfolio snapshot.')}</p>
         </section>
+      ) : !data ? (
+        <section className="data-panel portfolio-locked"><p>{tr('Portfolio unavailable')}</p></section>
       ) : (
         <section className="data-panel portfolio-workspace-panel">
           <header className="portfolio-workspace-header">
             <div className="portfolio-workspace-title">
               <div className="page-title-icon"><PortfolioIcon size={18} /></div>
-              <div><h2>{tr('Portfolio')}</h2></div>
+              <div><h2>{tr('Portfolio')} · {tr(live ? 'Live' : 'Trading (Paper)')}</h2></div>
             </div>
             <div className="portfolio-workspace-actions">
               <span>{lastUpdated ? tr('Updated {time}', { time: lastUpdated.toLocaleTimeString(getIntlLocale()) }) : tr('Read-only snapshot')}</span>
@@ -501,21 +567,46 @@ export function PaperPortfolioDashboard() {
             </div>
           </header>
 
-          <WinnerOperationMonitor robot={robot} />
+          {live ? (
+            <section className="portfolio-live-safety-note" aria-label="Operação do Trader · Live">
+              <strong>Operação do Trader · Live</strong>
+              <p>Controle exclusivo do monitoramento Live. Iniciar, Pausar, Somente saída e Parar não enviam ordens reais à Alpaca.</p>
+              <p>Estado atual: <strong>{robot?.control_mode || 'indisponível'}</strong> · Revisão: {Number.isInteger(robot?.revision) ? robot.revision : '—'}</p>
+              <div className="portfolio-workspace-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+                {[
+                  ['active', 'Iniciar'],
+                  ['paused', 'Pausar'],
+                  ['exit_only', 'Somente saída'],
+                  ['stopped', 'Parar'],
+                ].map(([mode, label]) => (
+                  <button key={mode} type="button" className="secondary-action compact"
+                    disabled={changingLiveMode || !Number.isInteger(robot?.revision) || robot?.control_mode === mode}
+                    onClick={() => changeLiveMode(mode)}>{changingLiveMode ? 'Aguarde…' : label}</button>
+                ))}
+              </div>
+              {liveModeMessage ? <p role="status">{liveModeMessage}</p> : null}
+            </section>
+          ) : <WinnerOperationMonitor robot={robot} />}
 
           <PortfolioMetricsStrip data={data} position={position} auditSummary={auditSummary} />
 
-          <TradingSessionStrip
+          {live ? (
+            <section className="portfolio-live-safety-note" aria-label={tr('Live monitoring')}>
+              <strong>{tr('Live monitoring')}</strong> · {tr(robot?.control_mode || 'stopped')} ·
+              {' '}{tr('Real orders disabled')} ·
+              {' '}{tr(data?.market_clock?.is_open ? 'Market open' : 'Market closed')}
+            </section>
+          ) : <TradingSessionStrip
             connection={connection}
             marketClock={data?.market_clock}
             robot={robot}
             now={clockNow}
             refreshing={refreshing}
             nextRefreshAt={nextRefreshAt}
-          />
+          />}
 
           <div className="portfolio-audit-top-grid">
-            <CurrentPosition position={position} cash={data.strategy_cash} />
+            {live && Array.isArray(data?.positions) && data.positions.length > 1 ? <LiveMultiplePositions positions={data.positions} /> : <CurrentPosition position={position} cash={data.strategy_cash} />}
             <DecisionOfDay decision={latestDecision} onOpen={setSelectedDecision} />
           </div>
 
@@ -528,10 +619,32 @@ export function PaperPortfolioDashboard() {
 
           <CandidateRanking decision={latestDecision} />
 
-          <OperationAuditTable operations={operations} onDecision={setSelectedDecision} />
+          
+           <OperationAuditTable operations={operations} market={market} onDecision={setSelectedDecision} />
         </section>
       )}
       <DecisionAuditDialog audit={selectedDecision} onClose={() => setSelectedDecision(null)} />
+    </section>
+  )
+}
+
+
+export function PaperPortfolioDashboard({ capabilities = {} }) {
+  const canViewLive = capabilities?.['admin.manage'] === true
+  const [market, setMarket] = useState('trading')
+  return (
+    <section className="page-stack portfolio-page" aria-label={tr('Portfolio environment')}>
+      <nav className="portfolio-market-tabs" role="tablist" aria-label={tr('Portfolio environment')}>
+        <button type="button" role="tab" aria-selected={market === 'trading'}
+          className={market === 'trading' ? 'selected' : ''}
+          onClick={() => setMarket('trading')}>{tr('Trading (Paper)')}</button>
+        {canViewLive ? (
+          <button type="button" role="tab" aria-selected={market === 'live'}
+            className={market === 'live' ? 'selected' : ''}
+            onClick={() => setMarket('live')}>{tr('Live')}</button>
+        ) : null}
+      </nav>
+      <PortfolioMarketView key={market} market={market} />
     </section>
   )
 }

@@ -57,9 +57,6 @@ function operationName(value) {
 
 export function WinnerOperationMonitor({ robot }) {
   const current = latestOperation(robot)
-  const events = Array.isArray(robot?.manual_operation_log)
-    ? robot.manual_operation_log.slice(-30).reverse()
-    : []
 
   const total = Number(current?.total)
   const completed = Number(current?.completed)
@@ -142,27 +139,6 @@ export function WinnerOperationMonitor({ robot }) {
         </div>
       )}
 
-      <details className="winner-operations-log" open>
-        <summary>{tr('Execution log')} ({events.length})</summary>
-        <div className="winner-operations-log-scroll">
-          {events.length ? (
-            <ol>
-              {events.map((entry, index) => (
-                <li key={`${entry.at || index}-${entry.attempt_id || ''}-${index}`}>
-                  <time>{eventTime(entry.at)}</time>
-                  <span className={`winner-operation-dot ${entry.status || 'running'}`} aria-hidden="true" />
-                  <span>
-                    <strong>{operationName(entry.operation)}</strong>
-                    {' · '}{tr(PHASE_LABELS[entry.phase] || STATUS_LABELS[entry.status] || 'Updating')}
-                    {Number(entry.total) > 1 ? ` · ${entry.completed || 0}/${entry.total}` : ''}
-                    {entry.symbol ? ` · ${entry.symbol}` : ''}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          ) : <p>{tr('No manual operation events have been recorded.')}</p>}
-        </div>
-      </details>
     </section>
   )
 }
