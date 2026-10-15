@@ -4006,4 +4006,12 @@ export const ES_TRANSLATIONS = {
   "Live account monitoring is read-only. Independent Live start, pause, exit-only and stop controls require a validated Live executor before activation. Paper Trader is unaffected.": "La cuenta real está disponible solo para lectura. Iniciar, pausar, solo salida y detener en Live requieren un ejecutor validado. La simulación no se modifica.",
   "live_readonly": "Live solo lectura",
   "Read-only": "Solo lectura",
+  "Monitoring only": "Solo monitorización",
+  "Order execution": "Ejecución de órdenes",
+  "Not installed": "No instalado",
+  "monitoring": "Monitorizando",
+  "Change Live monitoring mode to {mode}? No real orders will be sent. Paper Trading is unaffected.": "¿Cambiar el modo de monitorización Live a {mode}? No se enviarán órdenes reales. El Trading simulado no se modificará.",
+  "Live monitoring mode updated. Real order submission remains disabled.": "Modo Live actualizado. El envío de órdenes reales sigue deshabilitado.",
+  "Change Live monitoring mode only. Real orders are disabled.": "Cambia solo el modo Live. Las órdenes reales están deshabilitadas.",
+  "Live controls now save independent monitoring modes, not trades. In particular, Exit only records the future policy but cannot sell assets until a Live executor is deployed. Paper is unaffected.": "Los controles Live guardan modos de monitorización independientes, pero no operan. Solo salida registra la política futura; no vende activos hasta desplegar un ejecutor Live. Paper no se ve afectado.",
 }
