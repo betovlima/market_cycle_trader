@@ -402,11 +402,23 @@ function PortfolioMarketView({ market }) {
   const mountedRef = useRef(false)
   const portfolioTimerRef = useRef(null)
   const portfolioRequestRef = useRef(false)
+  const autoRefreshEnabledRef = useRef(!live)
+  const scheduleNextRefreshRef = useRef(null)
 
   const loadRobotStatus = useCallback(async ({ silent = false } = {}) => {
     try {
       const response = await apiFetch(`${API}/${marketApi}/${live ? 'robot/status' : 'public-robot-status'}`)
-      if (mountedRef.current) setRobot(response)
+      if (mountedRef.current) {
+        setRobot(response)
+        autoRefreshEnabledRef.current = !live || Boolean(response?.monitoring_enabled)
+        if (!autoRefreshEnabledRef.current) {
+          if (portfolioTimerRef.current) window.clearTimeout(portfolioTimerRef.current)
+          portfolioTimerRef.current = null
+          setNextRefreshAt(null)
+        } else if (!portfolioTimerRef.current) {
+          scheduleNextRefreshRef.current?.()
+        }
+      }
     } catch {
       if (mountedRef.current) {
         setRobot((current) => current ? { ...current, scheduler_alive: false, status: 'unavailable' } : { enabled: false, scheduler_alive: false, status: 'unavailable' })
@@ -439,6 +451,11 @@ function PortfolioMarketView({ market }) {
   const scheduleNextPortfolioRefresh = useCallback(function scheduleNextPortfolioRefresh() {
     if (!mountedRef.current) return
     if (portfolioTimerRef.current) window.clearTimeout(portfolioTimerRef.current)
+    portfolioTimerRef.current = null
+    if (live && !autoRefreshEnabledRef.current) {
+      setNextRefreshAt(null)
+      return
+    }
     const nextAt = Date.now() + POLL_MS
     setNextRefreshAt(nextAt)
     portfolioTimerRef.current = window.setTimeout(async () => {
@@ -447,7 +464,8 @@ function PortfolioMarketView({ market }) {
       await loadPortfolio({ silent: true })
       if (mountedRef.current) scheduleNextPortfolioRefresh()
     }, POLL_MS)
-  }, [loadPortfolio])
+  }, [live, loadPortfolio])
+  scheduleNextRefreshRef.current = scheduleNextPortfolioRefresh
 
   const exportTransactionAudit = useCallback(async () => {
     setExporting(true)
@@ -525,14 +543,20 @@ function PortfolioMarketView({ market }) {
 
           <PortfolioMetricsStrip data={data} position={position} auditSummary={auditSummary} />
 
-          <TradingSessionStrip
+          {live ? (
+            <section className="portfolio-live-safety-note" aria-label={tr('Live monitoring')}>
+              <strong>{tr('Live monitoring')}</strong> · {tr(robot?.control_mode || 'stopped')} ·
+              {' '}{tr('Real orders disabled')} ·
+              {' '}{tr(data?.market_clock?.is_open ? 'Market open' : 'Market closed')}
+            </section>
+          ) : <TradingSessionStrip
             connection={connection}
             marketClock={data?.market_clock}
             robot={robot}
             now={clockNow}
             refreshing={refreshing}
             nextRefreshAt={nextRefreshAt}
-          />
+          />}
 
           <div className="portfolio-audit-top-grid">
             {live && Array.isArray(data?.positions) && data.positions.length > 1 ? <LiveMultiplePositions positions={data.positions} /> : <CurrentPosition position={position} cash={data.strategy_cash} />}
