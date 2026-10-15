@@ -37,6 +37,7 @@ const EXECUTION_ORIGIN_LABELS = {
   manual_contingency: 'Manual contingency execution',
   historical_unknown: 'Historical execution origin not recorded',
   unknown: 'Execution origin not available',
+  live_broker_history: 'Live broker history',
 }
 
 function decisionReasonLabel(reason) {
@@ -262,6 +263,21 @@ function PositionExcursionPanel({ excursion, observer }) {
       ) : (
         <div className="portfolio-audit-empty">{tr('Opening fill or position basis is unavailable; no peak is inferred.')}</div>
       )}
+    </section>
+  )
+}
+
+function LiveMultiplePositions({ positions = [] }) {
+  return (
+    <section className="portfolio-audit-card">
+      <div className="portfolio-section-heading compact"><div><span className="panel-kicker">{tr('Live')}</span><h2>{tr('Current Positions')}</h2></div></div>
+      <div className="table-wrap"><table className="dashboard-table">
+        <thead><tr><th>{tr('Asset')}</th><th>{tr('Quantity')}</th><th>{tr('Entry')}</th><th>{tr('Market value')}</th></tr></thead>
+        <tbody>{positions.map((item) => (
+          <tr key={item.symbol}><td>{item.symbol}</td><td>{number(item.quantity, 6)}</td>
+            <td>{money(item.average_entry_price)}</td><td>{money(item.market_value)}</td></tr>
+        ))}</tbody>
+      </table></div>
     </section>
   )
 }
@@ -519,7 +535,7 @@ function PortfolioMarketView({ market }) {
           />
 
           <div className="portfolio-audit-top-grid">
-            <CurrentPosition position={position} cash={data.strategy_cash} />
+            {live && Array.isArray(data?.positions) && data.positions.length > 1 ? <LiveMultiplePositions positions={data.positions} /> : <CurrentPosition position={position} cash={data.strategy_cash} />}
             <DecisionOfDay decision={latestDecision} onOpen={setSelectedDecision} />
           </div>
 
@@ -532,7 +548,7 @@ function PortfolioMarketView({ market }) {
 
           <CandidateRanking decision={latestDecision} />
 
-          {live && Array.isArray(data?.positions) && data.positions.length > 1 ? <p className="portfolio-live-safety-note">{tr('Live account holds multiple positions; portfolio summary includes all positions. Single-position detail is not shown.')}</p> : null}
+          
            <OperationAuditTable operations={operations} market={market} onDecision={setSelectedDecision} />
         </section>
       )}
