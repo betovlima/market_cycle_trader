@@ -1,0 +1,77 @@
+.live-winner-events {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel-soft);
+  min-width: 0;
+}
+.live-winner-events-header,
+.live-winner-events-actions,
+.live-winner-events-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.live-winner-events-header { justify-content: space-between; }
+.live-winner-events-header h3 { margin: 2px 0 4px; font-size: 1rem; }
+.live-winner-events-header small,
+.live-winner-events-filters > span,
+.live-winner-events-footnote { color: var(--muted); font-size: .76rem; }
+.live-winner-events-filters { justify-content: flex-start; }
+.live-winner-events-filters > label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .8rem;
+  color: var(--muted);
+}
+.live-winner-events-filters input,
+.live-winner-events-filters select {
+  max-width: 180px;
+  min-height: 32px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  color: var(--text);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  font: inherit;
+}
+.live-winner-events-scroll {
+  overflow: auto;
+  max-height: 320px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--panel);
+}
+.live-winner-events-scroll ol { display: grid; gap: 0; list-style: none; margin: 0; padding: 0; }
+.live-winner-events-row {
+  display: grid;
+  grid-template-columns: 82px 10px minmax(0, 1fr);
+  gap: 10px;
+  padding: 11px 14px;
+  align-items: start;
+  font-size: .8rem;
+}
+.live-winner-events-row + .live-winner-events-row { border-top: 1px solid var(--border); }
+.live-winner-events-row time { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.live-winner-events-row strong { color: var(--text); font-size: .83rem; }
+.live-winner-events-row small { display: block; margin-top: 4px; color: var(--muted); overflow-wrap: anywhere; }
+.live-winner-events-dot {
+  display: block;
+  width: 8px; height: 8px;
+  margin-top: 5px;
+  border-radius: 100%;
+  background: var(--accent);
+}
+.live-winner-events-row.warning .live-winner-events-dot { background: var(--warning); }
+.live-winner-events-row.error .live-winner-events-dot { background: var(--negative); }
+.live-winner-events-error { color: var(--negative); font-size: .84rem; margin: 0; overflow-wrap: anywhere; }
+.live-winner-events-empty { padding: 16px; margin: 0; font-size: .82rem; color: var(--muted); }
+@media (max-width: 640px) {
+  .live-winner-events { padding: 12px; }
+  .live-winner-events-row { grid-template-columns: 72px 7px minmax(0, 1fr); gap: 7px; padding: 10px; }
+}
