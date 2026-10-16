@@ -18,6 +18,7 @@ import { money, number, percent, shortDateTime } from '../../shared/formatters'
 import { POLL_MS, ROBOT_POLL_MS } from './portfolioConfig'
 import { CurrentPosition, PortfolioMetricsStrip, TradingSessionStrip } from './components/PortfolioPrimitives'
 import { WinnerOperationMonitor } from './components/WinnerOperationMonitor'
+import { LiveWinnerEvents } from './components/LiveWinnerEvents'
 
 
 const DECISION_REASON_LABELS = {
@@ -595,6 +596,11 @@ function PortfolioMarketView({ market }) {
               {liveModeMessage ? <p role="status">{liveModeMessage}</p> : null}
             </section>
           ) : <WinnerOperationMonitor robot={robot} />}
+
+          {live ? <LiveWinnerEvents
+            executionSession={robot?.active_run?.execution_session || robot?.latest_run?.execution_session}
+            winnerStatus={robot?.active_run?.status || robot?.latest_run?.status}
+          /> : null}
 
           <PortfolioMetricsStrip data={data} position={position} auditSummary={auditSummary} />
 
