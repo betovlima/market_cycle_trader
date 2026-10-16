@@ -16,6 +16,7 @@ export function LiveTraderControl() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
+  const [executing, setExecuting] = useState(false)
 
   const refresh = useCallback(async () => {
     try {
@@ -65,6 +66,49 @@ export function LiveTraderControl() {
     }
   }
 
+  const canExecuteNow = Boolean(state?.real_orders_armed
+    && state?.control_mode === "active"
+    && state?.active_run?.status === "recalibrated_no_orders"
+    && state?.active_run?.target_asset
+    && state?.trader_winner?.configuration_hash)
+
+  async function executeLiveWinnerNow() {
+    if (!canExecuteNow || executing) return
+    setExecuting(true)
+    setNotice("")
+    setError("")
+    try {
+      // Re-read the current plan before asking the operator to confirm REAL money.
+      const current = await apiFetch(`${API}/live-market/robot/status`, { cache: "no-store" })
+      if (current?.control_mode !== "active" || !current?.real_orders_armed
+        || current?.active_run?.status !== "recalibrated_no_orders"
+        || !current?.active_run?.execution_session || !current?.active_run?.target_asset
+        || !current?.trader_winner?.configuration_hash) {
+        throw new Error("O plano Winner Live não está pronto para execução. Atualize o estado.")
+      }
+      const session = current.active_run.execution_session
+      const asset = current.active_run.target_asset
+      const action = current.active_run.action || "executar"
+      if (!window.confirm(`CONFIRMA OPERAÇÃO REAL NA ALPACA LIVE?\n\nWinner: ${current.trader_winner.name}\nSessão: ${session}\nAção: ${action}\nAtivo: ${asset}\n\nUma ordem real poderá ser enviada à corretora.`)) return
+      const result = await apiFetch(`${API}/live-market/winner/execute-current-plan`, {
+        method: "POST",
+        body: {
+          execution_session: session,
+          expected_target_asset: asset,
+          expected_winner_configuration_hash: current.trader_winner.configuration_hash,
+          confirm: "EXECUTE_WINNER_LIVE_REAL_ORDER",
+        },
+      })
+      setNotice(`Operação Live concluída na Alpaca: ${result.action || action} ${result.target_asset || asset}.`)
+      await refresh()
+    } catch (exc) {
+      setError(exc.message || "Não foi possível executar o plano Winner Live.")
+      await refresh()
+    } finally {
+      setExecuting(false)
+    }
+  }
+
   return (
     <section className="settings-workspace-section trader-control-panel settings-trader-section"
       aria-label={tr('Trader operation · Live')}>
@@ -97,6 +141,20 @@ export function LiveTraderControl() {
               {tr(label)}
             </button>
           ))}
+        </div>
+      </div>
+      <div className="trader-manual-recovery" aria-label="Execução manual da Winner na Alpaca Live">
+        <div className="trader-manual-recovery-copy">
+          <span className="panel-kicker">WINNER · ALPACA LIVE</span>
+          <strong>Executar plano atual na corretora real</strong>
+          <p>Plano: {state?.active_run?.execution_session || "—"} · {state?.active_run?.action || "—"} · {state?.active_run?.target_asset || "—"} · {state?.active_run?.status || "sem plano"}</p>
+        </div>
+        <div className="trader-manual-recovery-actions">
+          <button type="button" className="manual-execute" onClick={executeLiveWinnerNow}
+            disabled={!canExecuteNow || executing || busy}
+            title={canExecuteNow ? "Confirmar e executar apenas o plano elegível da sessão na Alpaca Live" : "Requer plano recalibrated_no_orders, modo ativo e autorização de ordens reais no servidor"}>
+            {executing ? "Executando na Alpaca…" : "Executar Winner na Alpaca Live"}
+          </button>
         </div>
       </div>
       <p className="portfolio-live-safety-note" role="status">
