@@ -10,7 +10,7 @@ const MODES = [
   ['stopped', 'Stop'],
 ]
 
-/** Independent Live monitoring controls — never call Paper routes or send orders. */
+/** Dedicated Alpaca Live operation. Paper UI and order API are not used. */
 export function LiveTraderControl() {
   const [state, setState] = useState(null)
   const [error, setError] = useState('')
@@ -36,10 +36,7 @@ export function LiveTraderControl() {
 
   async function changeLiveMode(mode) {
     if (!state || busy) return
-    // Explicitly distinguish monitoring modes from the future Live execution engine.
-    const confirmation = state?.real_orders_armed
-      ? `Confirma a mudança do Live para ${tr(mode)}? ATENÇÃO: quando ativo, o Trader poderá enviar ORDENS REAIS à Alpaca.`
-      : tr('Change Live monitoring mode to {mode}? No real orders will be sent. Paper Trading is unaffected.').replace('{mode}', tr(mode))
+    const confirmation = `Alterar Trader Alpaca Live para ${tr(mode)}? No modo Start, a Winner pode enviar ordens reais automaticamente.`
     if (!window.confirm(confirmation)) return
     setBusy(true)
     setError('')
@@ -50,14 +47,11 @@ export function LiveTraderControl() {
         body: {
           mode,
           expected_revision: Number(state.revision),
-          reason: `Live monitoring mode: ${mode}`,
-          confirm: 'LIVE_MONITORING_ONLY',
+          reason: `Live Trader mode: ${mode}`,
         },
       })
       setState((previous) => ({ ...(previous || {}), ...updated }))
-      setNotice(state?.real_orders_armed
-        ? 'Estado Live alterado. Operações reais seguem os bloqueios e limites definidos na API.'
-        : tr('Live monitoring mode updated. Real order submission remains disabled.'))
+      setNotice(`Modo Alpaca Live alterado para ${tr(mode)}.`)
     } catch (exc) {
       await refresh()
       setError(exc.message)
@@ -67,10 +61,11 @@ export function LiveTraderControl() {
   }
 
   const canExecuteNow = Boolean(state?.real_orders_armed
-    && state?.control_mode === "active"
+    && ["active", "exit_only"].includes(state?.control_mode)
     && state?.active_run?.status === "recalibrated_no_orders"
     && state?.active_run?.target_asset
-    && state?.trader_winner?.configuration_hash)
+    && (state?.control_mode === "active"
+      || ["hold", "stay_in_cash", "sell_to_cash"].includes(state?.active_run?.action)))
 
   async function executeLiveWinnerNow() {
     if (!canExecuteNow || executing) return
@@ -80,24 +75,20 @@ export function LiveTraderControl() {
     try {
       // Re-read the current plan before asking the operator to confirm REAL money.
       const current = await apiFetch(`${API}/live-market/robot/status`, { cache: "no-store" })
-      if (current?.control_mode !== "active" || !current?.real_orders_armed
+      if (!["active", "exit_only"].includes(current?.control_mode)
+        || !current?.real_orders_armed
         || current?.active_run?.status !== "recalibrated_no_orders"
         || !current?.active_run?.execution_session || !current?.active_run?.target_asset
-        || !current?.trader_winner?.configuration_hash) {
+        || (current.control_mode === "exit_only" &&
+          !["hold", "stay_in_cash", "sell_to_cash"].includes(current?.active_run?.action))) {
         throw new Error("O plano Winner Live não está pronto para execução. Atualize o estado.")
       }
       const session = current.active_run.execution_session
       const asset = current.active_run.target_asset
       const action = current.active_run.action || "executar"
       if (!window.confirm(`CONFIRMA OPERAÇÃO REAL NA ALPACA LIVE?\n\nWinner: ${current.trader_winner.name}\nSessão: ${session}\nAção: ${action}\nAtivo: ${asset}\n\nUma ordem real poderá ser enviada à corretora.`)) return
-      const result = await apiFetch(`${API}/live-market/winner/execute-current-plan`, {
+      const result = await apiFetch(`${API}/live-execution/winner/execute`, {
         method: "POST",
-        body: {
-          execution_session: session,
-          expected_target_asset: asset,
-          expected_winner_configuration_hash: current.trader_winner.configuration_hash,
-          confirm: "EXECUTE_WINNER_LIVE_REAL_ORDER",
-        },
       })
       setNotice(`Operação Live concluída na Alpaca: ${result.action || action} ${result.target_asset || asset}.`)
       await refresh()
@@ -135,7 +126,7 @@ export function LiveTraderControl() {
           {MODES.map(([mode, label]) => (
             <button key={mode} type="button"
               className={mode === 'stopped' ? 'danger' : ''}
-              title={state?.real_orders_armed ? 'Atenção: modo Live com operações reais autorizadas' : tr('Change Live monitoring mode only. Real orders are disabled.')}
+              title="Muda o modo operacional da Winner na Alpaca Live"
               onClick={() => changeLiveMode(mode)}
               disabled={!state || busy || state.control_mode === mode}>
               {tr(label)}
@@ -152,15 +143,13 @@ export function LiveTraderControl() {
         <div className="trader-manual-recovery-actions">
           <button type="button" className="manual-execute" onClick={executeLiveWinnerNow}
             disabled={!canExecuteNow || executing || busy}
-            title={canExecuteNow ? "Confirmar e executar apenas o plano elegível da sessão na Alpaca Live" : "Requer plano recalibrated_no_orders, modo ativo e autorização de ordens reais no servidor"}>
+            title={canExecuteNow ? "Executar a decisão atual da Winner pela API exclusiva Alpaca Live" : "Requer decisão Winner elegível e Trader Live ativo"}>
             {executing ? "Executando na Alpaca…" : "Executar Winner na Alpaca Live"}
           </button>
         </div>
       </div>
       <p className="portfolio-live-safety-note" role="status">
-        {state?.real_orders_armed
-          ? 'Ordens reais autorizadas no servidor. Verifique os limites de risco, a Winner e o pregão antes de iniciar.'
-          : 'Monitoramento, preparação e recalibração Live independentes. Ordens reais permanecem desabilitadas. Paper não é afetado.'}
+        {'O Trader Live segue a Winner e os controles Start / Pause / Exit only / Stop. O ambiente Paper é independente.'}
       </p>
       {notice ? <p className="global-inline-message">{notice}</p> : null}
       {error ? <p className="inline-error">{tr(error)}</p> : null}
