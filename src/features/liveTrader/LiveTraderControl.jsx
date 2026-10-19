@@ -24,6 +24,7 @@ const WORDS = {
     notReady: 'Verificações da conta Live não passaram: {details}.',
     scheduled: 'Ciclo Live ativado. Não existe plano pós-fechamento elegível para execução nesta sessão. O agendador aguardará o candle diário completo e preparará a próxima sessão automaticamente.',
     activeWaiting: 'O Live já está ativo. Sem plano executável para agora; o agendador continuará a preparação e a execução quando houver sinal válido.',
+    marketClosed: 'O plano pós-fechamento está pronto para a próxima sessão. Nenhuma ordem foi enviada com o mercado fechado.',
     complete: 'Plano Winner concluído no Live: {action} {asset}. Confira as ordens na Alpaca.',
     concurrent: 'O scheduler pode ter assumido a execução. Confira o estado e as ordens Live antes de repetir.',
     noState: 'Estado do Live indisponível.',
@@ -40,6 +41,7 @@ const WORDS = {
     notReady: 'Live account readiness checks failed: {details}.',
     scheduled: 'Live cycle activated. No eligible post-close plan exists for this session. The scheduler will wait for the complete daily bar and prepare the next session automatically.',
     activeWaiting: 'Live is already active. There is no executable plan now; the scheduler will continue preparing and executing when a valid plan exists.',
+    marketClosed: 'The post-close plan is ready for the next session. No order was sent while the market is closed.',
     complete: 'Live Winner plan completed: {action} {asset}. Verify Alpaca orders.',
     concurrent: 'The scheduler may have claimed execution. Check current Live state and broker orders before retrying.',
     noState: 'Live state unavailable.',
@@ -56,6 +58,7 @@ const WORDS = {
     notReady: 'Fallaron las verificaciones de la cuenta Live: {details}.',
     scheduled: 'Ciclo Live activado. No existe un plan poscierre elegible para esta sesión. El programador esperará la barra diaria completa y preparará la próxima sesión.',
     activeWaiting: 'Live ya está activo. No hay plan ejecutable ahora; el programador continuará al disponer de una señal válida.',
+    marketClosed: 'El plan poscierre está listo para la próxima sesión. No se enviaron órdenes con el mercado cerrado.',
     complete: 'Plan Winner Live completado: {action} {asset}. Verifique las órdenes Alpaca.',
     concurrent: 'El programador puede haber iniciado la ejecución. Verifique el estado Live y las órdenes antes de repetir.',
     noState: 'Estado Live no disponible.',
@@ -180,6 +183,13 @@ export function LiveTraderControl() {
       setState(current)
       if (!executablePlan(current?.active_run)) {
         setNotice(enabled ? ui.scheduled : ui.activeWaiting)
+        return
+      }
+      // A future-session plan cannot be executed just because the Live mode
+      // is active. Alpaca's market clock is authoritative, never browser time.
+      const portfolio = await apiFetch(`${API}/live-market/portfolio`, { cache: 'no-store' })
+      if (portfolio?.market_clock?.is_open !== true) {
+        setNotice(ui.marketClosed)
         return
       }
       const snapshot = current.active_run
