@@ -17,7 +17,7 @@ const WORDS = {
     label: 'Iniciar / executar ciclo Live',
     running: 'Verificando e iniciando…',
     caption: 'Uma ação: verifica a conta, ativa o Live e executa um plano elegível já preparado. Sem plano válido, acompanha o próximo fechamento.',
-    confirm: 'ATENÇÃO: CONTA REAL ALPACA LIVE.\\n\\nEsta ação poderá habilitar ordens automáticas nas próximas sessões e executar uma ordem real imediatamente SE houver plano Winner válido para o pregão atual.\\n\\nWinner: {winner}\\nModo atual: {mode}\\n\\nConfirma?',
+    confirm: 'ATENÇÃO: CONTA REAL ALPACA LIVE.\n\nEsta ação poderá habilitar ordens automáticas nas próximas sessões e executar uma ordem real imediatamente SE houver plano Winner válido para o pregão atual.\n\nWinner: {winner}\nModo atual: {mode}\n\nConfirma?',
     noScheduler: 'Agendador Live indisponível. Não habilitei novas operações.',
     noWinner: 'Nenhuma Winner selecionada para o Live.',
     disabledTraining: 'Treinamento desabilitado nas configurações do MCT. Nenhuma operação iniciada.',
@@ -33,7 +33,7 @@ const WORDS = {
     label: 'Start / execute Live cycle',
     running: 'Checking and starting…',
     caption: 'One action: check the account, activate Live, and execute an already prepared eligible plan. Otherwise wait for the next market close.',
-    confirm: 'WARNING: REAL ALPACA LIVE ACCOUNT.\\n\\nThis action may enable automatic orders on future sessions and send a real order immediately IF a valid Winner plan already exists for the current session.\\n\\nWinner: {winner}\\nCurrent mode: {mode}\\n\\nConfirm?',
+    confirm: 'WARNING: REAL ALPACA LIVE ACCOUNT.\n\nThis action may enable automatic orders on future sessions and send a real order immediately IF a valid Winner plan already exists for the current session.\n\nWinner: {winner}\nCurrent mode: {mode}\n\nConfirm?',
     noScheduler: 'Live scheduler is unavailable. No new operation was enabled.',
     noWinner: 'No selected Live Winner.',
     disabledTraining: 'MCT training is disabled. No operation started.',
@@ -49,7 +49,7 @@ const WORDS = {
     label: 'Iniciar / ejecutar ciclo Live',
     running: 'Verificando e iniciando…',
     caption: 'Una acción: verifica la cuenta, activa Live y ejecuta un plan elegible ya preparado. De lo contrario espera al próximo cierre.',
-    confirm: 'ATENCIÓN: CUENTA REAL ALPACA LIVE.\\n\\nEsta acción puede habilitar órdenes automáticas en próximas sesiones y enviar una orden real inmediatamente SI existe un plan Winner válido para la sesión actual.\\n\\nWinner: {winner}\\nModo actual: {mode}\\n\\n¿Confirmar?',
+    confirm: 'ATENCIÓN: CUENTA REAL ALPACA LIVE.\n\nEsta acción puede habilitar órdenes automáticas en próximas sesiones y enviar una orden real inmediatamente SI existe un plan Winner válido para la sesión actual.\n\nWinner: {winner}\nModo actual: {mode}\n\n¿Confirmar?',
     noScheduler: 'Programador Live no disponible. No se habilitaron operaciones nuevas.',
     noWinner: 'No hay Winner seleccionada para Live.',
     disabledTraining: 'Entrenamiento deshabilitado. No se inició ninguna operación.',
@@ -68,7 +68,7 @@ function words() {
 }
 
 function substitute(text, values) {
-  return String(text).replace(/\\{(\\w+)\\}/g, (_, key) => String(values[key] ?? '—'))
+  return String(text).replace(/\{(\w+)\}/g, (_, key) => String(values[key] ?? '—'))
 }
 
 function executablePlan(run) {
@@ -151,7 +151,10 @@ export function LiveTraderControl() {
       if (settings?.training?.enabled !== true) throw new Error(ui.disabledTraining)
       // A stopped/paused operating mode is expected before activation.
       // All *other* broker and strategy prerequisites must be healthy first.
-      const failing = (readiness?.checks || [])
+      if (!Array.isArray(readiness?.checks) || readiness.checks.length === 0) {
+        throw new Error(ui.notReady.replace('{details}', 'readiness unavailable'))
+      }
+      const failing = readiness.checks
         .filter((check) => check?.name !== 'live_control' && check?.passed !== true)
       if (failing.length) {
         throw new Error(substitute(ui.notReady, {
