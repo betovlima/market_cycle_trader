@@ -213,7 +213,14 @@ export function LiveTraderControl() {
     } catch (exc) {
       setError(exc?.message || ui.noState)
     } finally {
-      await refresh()
+      // Refresh the plan without erasing the failure reason from the
+      // single-click workflow. The periodic refresh may clear it later.
+      try {
+        const latest = await apiFetch(`${API}/live-market/robot/status`, { cache: 'no-store' })
+        setState(latest)
+      } catch {
+        // Keep the original error; do not mask it with a status refresh error.
+      }
       setExecuting(false)
     }
   }
