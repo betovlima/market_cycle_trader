@@ -31,3 +31,20 @@
   color: #ffcf86;
   border-color: rgba(255, 207, 134, .45);
 }
+
+.live-reconciliation-session {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: .78rem;
+}
+.live-reconciliation-session input {
+  padding: 5px 8px;
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+}
