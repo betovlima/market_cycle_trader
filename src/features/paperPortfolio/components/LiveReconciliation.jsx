@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { apiFetch } from '../../../api/http'
 import { API } from '../../../config/env'
+import { tr } from '../../../i18n/runtime'
 import './LiveReconciliation.css'
 
 /** Two-step broker-backed reconciliation; never invokes an order endpoint. */
@@ -85,16 +86,16 @@ export function LiveReconciliation({ executionSession, onReconciled }) {
   return (
     <div className="live-reconciliation">
       <label className="live-reconciliation-session">
-        Pregão
-        <input type="date" aria-label="Pregão a reconciliar"
+        {tr("Trading session")}
+        <input type="date" aria-label={tr("Session to reconcile")}
           value={manualSession || executionSession || ''}
           onChange={(event) => setManualSession(event.target.value)}
           disabled={loading} />
       </label>
       <button type="button" className="secondary-action compact live-reconciliation-action"
         onClick={reconcile} disabled={loading}
-        title="Conferir Alpaca, ordens executadas e posição interna; sem novas ordens">
-        {loading ? 'Conferindo Alpaca…' : 'Reconciliar'}
+        title={tr("Check Alpaca fills and internal position without submitting orders")}>
+        {tr(loading ? 'Checking Alpaca…' : 'Reconcile')}
       </button>
       {message ? <span role="status" className={'live-reconciliation-message ' + outcome}>{message}</span> : null}
     </div>
