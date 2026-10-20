@@ -5,6 +5,7 @@ import './LiveReconciliation.css'
 
 /** Two-step broker-backed reconciliation; never invokes an order endpoint. */
 export function LiveReconciliation({ executionSession, onReconciled }) {
+  const [manualSession, setManualSession] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [outcome, setOutcome] = useState('')
@@ -15,7 +16,8 @@ export function LiveReconciliation({ executionSession, onReconciled }) {
     setMessage('')
     setOutcome('')
     try {
-      const query = executionSession ? '?' + new URLSearchParams({ execution_session: executionSession }) : ''
+      const checkedSession = manualSession || executionSession
+      const query = checkedSession ? '?' + new URLSearchParams({ execution_session: checkedSession }) : ''
       const preview = await apiFetch(API + '/live-market/winner/manual-reconciliation/preview' + query, {
         cache: 'no-store',
       })
@@ -82,6 +84,13 @@ export function LiveReconciliation({ executionSession, onReconciled }) {
 
   return (
     <div className="live-reconciliation">
+      <label className="live-reconciliation-session">
+        Pregão
+        <input type="date" aria-label="Pregão a reconciliar"
+          value={manualSession || executionSession || ''}
+          onChange={(event) => setManualSession(event.target.value)}
+          disabled={loading} />
+      </label>
       <button type="button" className="secondary-action compact live-reconciliation-action"
         onClick={reconcile} disabled={loading}
         title="Conferir Alpaca, ordens executadas e posição interna; sem novas ordens">
