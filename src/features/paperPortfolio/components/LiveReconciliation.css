@@ -1,0 +1,33 @@
+.live-reconciliation {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+}
+.live-reconciliation-action {
+  border-color: rgba(93, 204, 180, 0.65) !important;
+  color: var(--text);
+}
+.live-reconciliation-action:disabled {
+  cursor: progress;
+  opacity: .65;
+}
+.live-reconciliation-message {
+  display: inline-block;
+  max-width: 580px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: .8rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.live-reconciliation-message.success {
+  color: #5ce3af;
+  border-color: rgba(92, 227, 175, .45);
+}
+.live-reconciliation-message.warning {
+  color: #ffcf86;
+  border-color: rgba(255, 207, 134, .45);
+}
