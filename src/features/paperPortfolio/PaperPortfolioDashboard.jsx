@@ -508,12 +508,14 @@ function PortfolioMarketView({ market }) {
   const auditSummary = audit?.summary || {}
   const latestDecision = audit?.latest_decision || null
   const operations = Array.isArray(audit?.operations) && audit.operations.length ? audit.operations : (data?.recent_orders || [])
-  const portfolioPositionDecision = (
+  // The first render has no portfolio snapshot. Construct this JSX only
+  // after data arrives; JSX expressions are evaluated even before display.
+  const portfolioPositionDecision = data ? (
     <div className="portfolio-audit-top-grid">
-      {live && Array.isArray(data?.positions) && data.positions.length > 1 ? <LiveMultiplePositions positions={data.positions} /> : <CurrentPosition position={position} cash={data.strategy_cash} />}
+      {live && Array.isArray(data.positions) && data.positions.length > 1 ? <LiveMultiplePositions positions={data.positions} /> : <CurrentPosition position={position} cash={data.strategy_cash} />}
       <DecisionOfDay decision={latestDecision} onOpen={setSelectedDecision} />
     </div>
-  )
+  ) : null
 
   return (
     <section className="portfolio-single-workspace" aria-busy={refreshing} data-portfolio-market={market}>
