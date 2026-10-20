@@ -20,7 +20,6 @@ import { CurrentPosition, PortfolioMetricsStrip, TradingSessionStrip } from './c
 import { WinnerOperationMonitor } from './components/WinnerOperationMonitor'
 import { LiveWinnerEvents } from './components/LiveWinnerEvents'
 import { LiveWorkflowMonitor } from './components/LiveWorkflowMonitor'
-import { LiveReconciliation } from './components/LiveReconciliation'
 
 
 const DECISION_REASON_LABELS = {
@@ -402,8 +401,6 @@ function PortfolioMarketView({ market }) {
   const [clockNow, setClockNow] = useState(() => Date.now())
   const [selectedDecision, setSelectedDecision] = useState(null)
   const [exporting, setExporting] = useState(false)
-  const [changingLiveMode, setChangingLiveMode] = useState(false)
-  const [liveModeMessage, setLiveModeMessage] = useState('')
   const mountedRef = useRef(false)
   const portfolioTimerRef = useRef(null)
   const portfolioRequestRef = useRef(false)
@@ -430,38 +427,6 @@ function PortfolioMarketView({ market }) {
       }
     }
   }, [live, marketApi])
-
-  const changeLiveMode = useCallback(async (mode) => {
-    if (!live || changingLiveMode || !robot || !Number.isInteger(robot.revision)) return
-    const names = { active: 'iniciar o monitoramento', paused: 'pausar o monitoramento', exit_only: 'ativar somente saída (sem executar vendas)', stopped: 'parar o monitoramento' }
-    const realOrdersArmed = Boolean(robot?.real_orders_armed)
-    const confirmation = realOrdersArmed
-      ? `Confirma ${names[mode]} da conta Live? ATENÇÃO: com execução Live autorizada no servidor, Iniciar poderá enviar ORDENS REAIS à Alpaca.`
-      : `Confirma ${names[mode]} da conta Live? Nenhuma ordem real será enviada enquanto a execução Live estiver desabilitada.`
-    if (!window.confirm(confirmation)) return
-    setChangingLiveMode(true)
-    setLiveModeMessage('')
-    try {
-      await apiFetch(`${API}/live-market/robot/mode`, {
-        method: 'POST',
-        body: {
-          mode,
-          expected_revision: robot.revision,
-          reason: `Operator requested Live monitoring mode: ${mode}`,
-          confirm: 'LIVE_MONITORING_ONLY',
-        },
-      })
-      await loadRobotStatus()
-      setLiveModeMessage(robot?.real_orders_armed
-        ? 'Controle Live atualizado. A execução real está autorizada no servidor, sujeita às verificações de risco.'
-        : 'Controle Live atualizado. Ordens reais continuam desabilitadas.')
-    } catch (requestError) {
-      setError(requestError.message)
-      await loadRobotStatus({ silent: true })
-    } finally {
-      setChangingLiveMode(false)
-    }
-  }, [live, changingLiveMode, robot, loadRobotStatus])
 
   const loadPortfolio = useCallback(async ({ silent = false } = {}) => {
     if (portfolioRequestRef.current) return
@@ -576,32 +541,7 @@ function PortfolioMarketView({ market }) {
             </div>
           </header>
 
-          {live ? (
-            <section className="portfolio-live-safety-note" aria-label="Operação do Trader · Live">
-              <strong>Operação do Trader · Live</strong>
-              <p>{robot?.real_orders_armed
-                ? "Operação real habilitada no servidor. Iniciar poderá executar as decisões verificadas da Winner na Alpaca Live; Pausar e Parar impedem novas ordens."
-                : "Ciclo Winner Live com execução real desabilitada. Iniciar acompanha e prepara decisões, mas não envia ordens à Alpaca."}</p>\n              <p>Próximo pregão: <strong>{robot?.next_execution_session || "não programado"}</strong> · Decisão: <strong>{robot?.active_run?.target_asset || "ainda não calculada"}</strong> · Etapa: <strong>{robot?.active_run?.phase || robot?.phase || "—"}</strong></p>
-              <p>Estado atual: <strong>{robot?.control_mode || 'indisponível'}</strong> · Revisão: {Number.isInteger(robot?.revision) ? robot.revision : '—'}</p>
-              <div className="portfolio-workspace-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
-                {[
-                  ['active', 'Iniciar'],
-                  ['paused', 'Pausar'],
-                  ['exit_only', 'Somente saída'],
-                  ['stopped', 'Parar'],
-                ].map(([mode, label]) => (
-                  <button key={mode} type="button" className="secondary-action compact"
-                    disabled={changingLiveMode || !Number.isInteger(robot?.revision) || robot?.control_mode === mode}
-                    onClick={() => changeLiveMode(mode)}>{changingLiveMode ? 'Aguarde…' : label}</button>
-                ))}
-              </div>
-              <LiveReconciliation
-                executionSession={robot?.active_run?.execution_session || robot?.latest_run?.execution_session}
-                onReconciled={() => refreshPortfolio({ includeRobot: true })}
-              />
-              {liveModeMessage ? <p role="status">{liveModeMessage}</p> : null}
-            </section>
-          ) : <WinnerOperationMonitor robot={robot} />}
+          {!live ? <WinnerOperationMonitor robot={robot} /> : null}
 
           {live ? <LiveWorkflowMonitor
             executionSession={robot?.active_run?.execution_session || robot?.latest_run?.execution_session}

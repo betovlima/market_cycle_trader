@@ -1,3 +1,13 @@
+## 2026-10-20 — Front v10.7.33 (Portfolio Live sem comandos duplicados)
+
+O box "Operação do Trader · Live" foi removido exclusivamente da tela Portfólio → Live, conforme imagem enviada pelo usuário. Removeu também os callbacks/states e import de LiveReconciliation não utilizados nessa tela. A ocorrência literal de \n exposta pelo box também deixa de aparecer.
+
+O Portfolio Live mantém métricas, posição, auditoria, monitoramento informativo Live, histórico de eventos e monitor de fluxo; não altera a interface Trading (Paper). Os controles Iniciar, Pausar, Somente saída, Parar, botão Reconciliar e execução manual da Winner permanecem íntegros e exclusivos da tela Estratégia → Operação do Trader Live.
+
+Alteração somente no frontend, sem alteração de APIs, dados MongoDB, estratégia, posição CAPR, ordens ou modo ativo do Live. Versão Front 10.7.33, branch feature/v10.7.33-remove-portfolio-live-controls. CI: build Vite, sem alterações funcionais de negociação.
+
+---
+
 ## 2026-10-20 — Front v10.7.32 (botao Reconciliar Live)
 
 Adicionado controle Reconciliar nas telas Portfolio Live e Trader Live. Um clique consulta a API read-only e mostra o resultado; em caso de validacao positiva, exige confirmacao separada antes do POST de metadata.
