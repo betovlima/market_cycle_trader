@@ -508,6 +508,12 @@ function PortfolioMarketView({ market }) {
   const auditSummary = audit?.summary || {}
   const latestDecision = audit?.latest_decision || null
   const operations = Array.isArray(audit?.operations) && audit.operations.length ? audit.operations : (data?.recent_orders || [])
+  const portfolioPositionDecision = (
+    <div className="portfolio-audit-top-grid">
+      {live && Array.isArray(data?.positions) && data.positions.length > 1 ? <LiveMultiplePositions positions={data.positions} /> : <CurrentPosition position={position} cash={data.strategy_cash} />}
+      <DecisionOfDay decision={latestDecision} onOpen={setSelectedDecision} />
+    </div>
+  )
 
   return (
     <section className="portfolio-single-workspace" aria-busy={refreshing} data-portfolio-market={market}>
@@ -543,14 +549,7 @@ function PortfolioMarketView({ market }) {
 
           {!live ? <WinnerOperationMonitor robot={robot} /> : null}
 
-          {live ? <LiveWorkflowMonitor
-            executionSession={robot?.active_run?.execution_session || robot?.latest_run?.execution_session}
-          /> : null}
-
-          {live ? <LiveWinnerEvents
-            executionSession={robot?.active_run?.execution_session || robot?.latest_run?.execution_session}
-            winnerStatus={robot?.active_run?.status || robot?.latest_run?.status}
-          /> : null}
+          {live ? portfolioPositionDecision : null}
 
           <PortfolioMetricsStrip data={data} position={position} auditSummary={auditSummary} />
 
@@ -569,10 +568,7 @@ function PortfolioMarketView({ market }) {
             nextRefreshAt={nextRefreshAt}
           />}
 
-          <div className="portfolio-audit-top-grid">
-            {live && Array.isArray(data?.positions) && data.positions.length > 1 ? <LiveMultiplePositions positions={data.positions} /> : <CurrentPosition position={position} cash={data.strategy_cash} />}
-            <DecisionOfDay decision={latestDecision} onOpen={setSelectedDecision} />
-          </div>
+          {!live ? portfolioPositionDecision : null}
 
           <PositionExcursionPanel excursion={audit?.position_excursion} observer={robot} />
 
@@ -584,7 +580,16 @@ function PortfolioMarketView({ market }) {
           <CandidateRanking decision={latestDecision} />
 
           
-           <OperationAuditTable operations={operations} market={market} onDecision={setSelectedDecision} />
+          <OperationAuditTable operations={operations} market={market} onDecision={setSelectedDecision} />
+
+          {live ? <LiveWorkflowMonitor
+            executionSession={robot?.active_run?.execution_session || robot?.latest_run?.execution_session}
+          /> : null}
+
+          {live ? <LiveWinnerEvents
+            executionSession={robot?.active_run?.execution_session || robot?.latest_run?.execution_session}
+            winnerStatus={robot?.active_run?.status || robot?.latest_run?.status}
+          /> : null}
         </section>
       )}
       <DecisionAuditDialog audit={selectedDecision} onClose={() => setSelectedDecision(null)} />

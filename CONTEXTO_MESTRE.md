@@ -1,3 +1,13 @@
+## 2026-10-20 — Front v10.7.34 | layout Portfólio Live
+
+Pedido: exibir **Posição Atual e Decisão do dia** como primeiro box, imediatamente depois do cabeçalho do Portfólio Live. As seções **Operações Live · Monitoramento somente de leitura** (LiveWorkflowMonitor) e **Diagnóstico operacional · Live** (LiveWinnerEvents) devem aparecer **abaixo de Auditoria / Operações** (OperationAuditTable), nesta ordem.
+
+Alteração restrita à composição visual de `PaperPortfolioDashboard.jsx`. A faixa de métricas, monitor informativo Live, posição, decisão, gráficos, ranking e tabela de operações foram preservados. Para Trading (Paper), mantida a ordem original: WinnerOperationMonitor, métricas, status da sessão e grid de posição/decisão. Ambos os monitores Live permanecem read-only, com mesmas props, polling e exportações. Nenhum botão operacional, estratégia, estado do robô, API, MongoDB ou execução Alpaca é alterado.
+
+Versionamento: Front v10.7.34; branch `feature/v10.7.34-portfolio-live-layout`; CI frontend-build (pnpm build). Publicar Front após validação.
+
+---
+
 ## 2026-10-20 — Front v10.7.33 (Portfolio Live sem comandos duplicados)
 
 O box "Operação do Trader · Live" foi removido exclusivamente da tela Portfólio → Live, conforme imagem enviada pelo usuário. Removeu também os callbacks/states e import de LiveReconciliation não utilizados nessa tela. A ocorrência literal de \n exposta pelo box também deixa de aparecer.
