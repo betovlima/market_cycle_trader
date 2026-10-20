@@ -80,6 +80,8 @@ export function LiveWorkflowMonitor({ executionSession }) {
         if (mounted) setLoading(false)
       }
     }
+    setReport(null)
+    setError('')
     setLoading(true)
     refresh()
     const timer = window.setInterval(refresh, POLL_MS)
@@ -111,7 +113,7 @@ export function LiveWorkflowMonitor({ executionSession }) {
         <div className="live-workflow-controls">
           <label>
             {tr('Session')}
-            <input type="date" aria-label={tr('Workflow session')} value={session} onChange={(event) => setSelectedSession(event.target.value)} />
+            <input type="date" aria-label={tr('Workflow session')} value={session || report?.execution_session || ''} onChange={(event) => setSelectedSession(event.target.value)} />
           </label>
           {selectedSession ? (
             <button type="button" className="secondary-action compact" onClick={() => setSelectedSession('')}>
