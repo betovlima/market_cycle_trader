@@ -651,6 +651,9 @@ function PortfolioMarketView({ market }) {
 export function PaperPortfolioDashboard({ capabilities = {} }) {
   const canViewLive = capabilities?.['admin.manage'] === true
   const [market, setMarket] = useState(canViewLive ? 'live' : 'trading')
+  useEffect(() => {
+    if (!canViewLive && market === 'live') setMarket('trading')
+  }, [canViewLive, market])
   return (
     <section className="page-stack portfolio-page" aria-label={tr('Portfolio environment')}>
       <nav className="portfolio-market-tabs" role="tablist" aria-label={tr('Portfolio environment')}>
