@@ -19,6 +19,7 @@ import { POLL_MS, ROBOT_POLL_MS } from './portfolioConfig'
 import { CurrentPosition, PortfolioMetricsStrip, TradingSessionStrip } from './components/PortfolioPrimitives'
 import { WinnerOperationMonitor } from './components/WinnerOperationMonitor'
 import { LiveWinnerEvents } from './components/LiveWinnerEvents'
+import { LiveWorkflowMonitor } from './components/LiveWorkflowMonitor'
 
 
 const DECISION_REASON_LABELS = {
@@ -597,6 +598,10 @@ function PortfolioMarketView({ market }) {
             </section>
           ) : <WinnerOperationMonitor robot={robot} />}
 
+          {live ? <LiveWorkflowMonitor
+            executionSession={robot?.active_run?.execution_session || robot?.latest_run?.execution_session}
+          /> : null}
+
           {live ? <LiveWinnerEvents
             executionSession={robot?.active_run?.execution_session || robot?.latest_run?.execution_session}
             winnerStatus={robot?.active_run?.status || robot?.latest_run?.status}
@@ -645,18 +650,21 @@ function PortfolioMarketView({ market }) {
 
 export function PaperPortfolioDashboard({ capabilities = {} }) {
   const canViewLive = capabilities?.['admin.manage'] === true
-  const [market, setMarket] = useState('trading')
+  const [market, setMarket] = useState(canViewLive ? 'live' : 'trading')
+  useEffect(() => {
+    if (!canViewLive && market === 'live') setMarket('trading')
+  }, [canViewLive, market])
   return (
     <section className="page-stack portfolio-page" aria-label={tr('Portfolio environment')}>
       <nav className="portfolio-market-tabs" role="tablist" aria-label={tr('Portfolio environment')}>
-        <button type="button" role="tab" aria-selected={market === 'trading'}
-          className={market === 'trading' ? 'selected' : ''}
-          onClick={() => setMarket('trading')}>{tr('Trading (Paper)')}</button>
         {canViewLive ? (
           <button type="button" role="tab" aria-selected={market === 'live'}
             className={market === 'live' ? 'selected' : ''}
             onClick={() => setMarket('live')}>{tr('Live')}</button>
         ) : null}
+        <button type="button" role="tab" aria-selected={market === 'trading'}
+          className={market === 'trading' ? 'selected' : ''}
+          onClick={() => setMarket('trading')}>{tr('Trading (Paper)')}</button>
       </nav>
       <PortfolioMarketView key={market} market={market} />
     </section>
