@@ -1,3 +1,15 @@
+## 2026-10-20 — Front v10.7.32 (botao Reconciliar Live)
+
+Adicionado controle Reconciliar nas telas Portfolio Live e Trader Live. Um clique consulta a API read-only e mostra o resultado; em caso de validacao positiva, exige confirmacao separada antes do POST de metadata.
+
+Verifica e exibe a operacao MAN -> CAPR, quantidade, numero de vendas/compras e sessao. Indica quando Paused/Stopped e exigido, quando ja conciliado, ou quando faltam comprovantes; sem executar compra, venda ou cancelamento de ordens.
+
+O backend versionado associado e API v10.8.121, branch fix/v10.8.121-live-manual-reconcile. Implantar a API antes do Front para evitar erro 404. Paper permanece intocado.
+
+Branches e versoes independentes: feature/v10.7.32-live-reconcile-button e API v10.8.121.
+
+---
+
 # Market Cycle Trader — contexto de interface Live (Front v10.7.31)
 
 ## Entrega

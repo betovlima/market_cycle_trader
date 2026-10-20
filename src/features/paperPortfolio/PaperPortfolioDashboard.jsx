@@ -20,6 +20,7 @@ import { CurrentPosition, PortfolioMetricsStrip, TradingSessionStrip } from './c
 import { WinnerOperationMonitor } from './components/WinnerOperationMonitor'
 import { LiveWinnerEvents } from './components/LiveWinnerEvents'
 import { LiveWorkflowMonitor } from './components/LiveWorkflowMonitor'
+import { LiveReconciliation } from './components/LiveReconciliation'
 
 
 const DECISION_REASON_LABELS = {
@@ -594,6 +595,10 @@ function PortfolioMarketView({ market }) {
                     onClick={() => changeLiveMode(mode)}>{changingLiveMode ? 'Aguarde…' : label}</button>
                 ))}
               </div>
+              <LiveReconciliation
+                executionSession={robot?.active_run?.execution_session || robot?.latest_run?.execution_session}
+                onReconciled={() => refreshPortfolio({ includeRobot: true })}
+              />
               {liveModeMessage ? <p role="status">{liveModeMessage}</p> : null}
             </section>
           ) : <WinnerOperationMonitor robot={robot} />}

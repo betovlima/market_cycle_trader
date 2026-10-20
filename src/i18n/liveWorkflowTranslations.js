@@ -1,4 +1,9 @@
 export const LIVE_WORKFLOW_PT_TRANSLATIONS = {
+  'Reconcile': 'Reconciliar',
+  'Checking Alpaca…': 'Conferindo Alpaca…',
+  'Trading session': 'Pregão',
+  'Session to reconcile': 'Pregão a reconciliar',
+  'Check Alpaca fills and internal position without submitting orders': 'Conferir ordens executadas, corretora e posição interna, sem enviar ordens',
   'Live workflow monitor': 'Monitor do fluxo Live',
   'Live operations': 'Operações Live',
   'Read-only monitoring': 'Monitoramento somente de leitura',
@@ -53,6 +58,11 @@ export const LIVE_WORKFLOW_PT_TRANSLATIONS = {
 }
 
 export const LIVE_WORKFLOW_ES_TRANSLATIONS = {
+  'Reconcile': 'Conciliar',
+  'Checking Alpaca…': 'Verificando Alpaca…',
+  'Trading session': 'Sesión bursátil',
+  'Session to reconcile': 'Sesión a conciliar',
+  'Check Alpaca fills and internal position without submitting orders': 'Verificar ejecuciones y posición interna sin enviar órdenes',
   'Live workflow monitor': 'Monitor del flujo Live',
   'Live operations': 'Operaciones Live',
   'Read-only monitoring': 'Monitoreo de solo lectura',

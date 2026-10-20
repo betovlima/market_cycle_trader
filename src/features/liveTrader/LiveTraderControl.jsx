@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { apiFetch } from '../../api/http'
 import { API } from '../../config/env'
 import { tr } from '../../i18n/runtime'
+import { LiveReconciliation } from '../paperPortfolio/components/LiveReconciliation'
 
 const MODES = [
   ['active', 'Start'],
@@ -147,6 +148,17 @@ export function LiveTraderControl() {
             {executing ? "Executando na Alpaca…" : "Executar Winner na Alpaca Live"}
           </button>
         </div>
+      </div>
+      <div className="trader-manual-recovery" aria-label="Reconciliação manual da Alpaca Live">
+        <div className="trader-manual-recovery-copy">
+          <span className="panel-kicker">CONFERÊNCIA · ALPACA LIVE</span>
+          <strong>Reconciliar posição e plano após ordens manuais</strong>
+          <p>Somente com Trader Live pausado ou parado. Não envia novas ordens.</p>
+        </div>
+        <LiveReconciliation
+          executionSession={state?.active_run?.execution_session || state?.latest_run?.execution_session}
+          onReconciled={refresh}
+        />
       </div>
       <p className="portfolio-live-safety-note" role="status">
         {'O Trader Live segue a Winner e os controles Start / Pause / Exit only / Stop. O ambiente Paper é independente.'}
