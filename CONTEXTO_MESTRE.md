@@ -1,3 +1,15 @@
+## 2026-10-20 — Front v10.7.35 | hotfix da tela preta no Portfólio
+
+**Problema observado:** após v10.7.34, tanto Portfólio Live quanto Trading deixaram de renderizar na entrada. Console apontou `TypeError: Cannot read properties of null (reading 'strategy_cash')`. `PortfolioMarketView` inicia com `useState(null)`, mas a refatoração v10.7.34 montava prematuramente `portfolioPositionDecision` antes da verificação `!data`; sua expressão JSX acessava `data.strategy_cash` ainda em null. O build Vite não detecta exceções de tempo de execução.
+
+**Correção:** o box Posição Atual + Decisão do dia só é construído quando `data` está disponível. Mantidas a disposição v10.7.34, a ordem da Auditoria e dos monitores Live, os conteúdos da carteira e a lógica Paper sem alteração.
+
+**Prevenção:** adicionado smoke-test de renderização inicial SSR para Live e Trading com API ainda sem resposta, executado no workflow frontend-build antes de Vite build. Nenhum endpoint, estado, posição, mercado financeiro ou ordem foi afetado.
+
+**Branch:** `fix/v10.7.35-portfolio-null-data-render`. CI: smoke-test SSR e build Vite.
+
+---
+
 ## 2026-10-20 — Front v10.7.34 | layout Portfólio Live
 
 Pedido: exibir **Posição Atual e Decisão do dia** como primeiro box, imediatamente depois do cabeçalho do Portfólio Live. As seções **Operações Live · Monitoramento somente de leitura** (LiveWorkflowMonitor) e **Diagnóstico operacional · Live** (LiveWinnerEvents) devem aparecer **abaixo de Auditoria / Operações** (OperationAuditTable), nesta ordem.
