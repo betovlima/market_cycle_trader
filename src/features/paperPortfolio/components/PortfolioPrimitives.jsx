@@ -3,6 +3,7 @@ import { getIntlLocale, tr } from '../../../i18n/runtime'
 import { ActivityIcon } from '../../../shared/components/Icons'
 import { money, number, percent, shortDateTime } from '../../../shared/formatters'
 import { scheduleValue } from '../portfolioUtils'
+import { liveSessionModel } from '../liveSessionModel'
 
 export function TradingSessionStrip({ connection, marketClock, robot, now, refreshing, nextRefreshAt }) {
   const firstCheckPending = refreshing && !connection.checkedAt
@@ -73,6 +74,55 @@ export function TradingSessionStrip({ connection, marketClock, robot, now, refre
   )
 }
 
+/** Matching Trading's read-only status ribbon, sourced exclusively from Live APIs. */
+export function LiveSessionStrip({ connection, marketClock, robot, now, refreshing, nextRefreshAt }) {
+  const state = liveSessionModel({ connection, marketClock, robot, nextRefreshAt })
+  const connectionStatus = refreshing && !connection?.checkedAt ? 'checking' : state.connectionStatus
+  const checkedLabel = connection?.checkedAt
+    ? tr('Broker {time}', { time: connection.checkedAt.toLocaleTimeString(getIntlLocale()) })
+    : tr('Broker check pending')
+
+  // The Live API does not expose all schedule timestamps. Do not substitute
+  // NYSE opening/closing times for actual model calibration or order execution.
+  const unknown = tr('Not available')
+  const schedule = [
+    { label: 'Post-close calibration', value: state.postCloseAt ? scheduleValue(state.postCloseAt, now) : unknown, tone: 'blue' },
+    { label: 'Open recalibration', value: state.openCalibrationAt ? scheduleValue(state.openCalibrationAt, now) : unknown, tone: 'cyan' },
+    { label: 'Execution', value: state.executionAt ? scheduleValue(state.executionAt, now) : unknown, tone: 'purple' },
+    { label: 'Daily close', value: state.closeAt ? scheduleValue(state.closeAt, now) : unknown, tone: 'gold' },
+    { label: 'Portfolio update', value: refreshing ? tr('Running now') : state.manualRefresh ? tr('Manual refresh') : state.refreshAt ? scheduleValue(state.refreshAt, now) : unknown, tone: 'cyan' },
+  ]
+
+  const phase = tr(state.phase.replace(/\b\w/g, (letter) => letter.toUpperCase()))
+  const session = state.session || tr('No session scheduled')
+  return (
+    <div className="portfolio-session-strip" data-session-market="live" aria-label={tr('Live session status')} aria-live="polite">
+      <div className="portfolio-session-main">
+        <div className="portfolio-session-title" title={tr('Robot phase: {phase}. Next execution: {session}. {broker}.', { phase, session, broker: checkedLabel })}>
+          <span className="portfolio-session-icon"><ActivityIcon size={16} /></span>
+          <span>{tr('Live Session')}</span>
+        </div>
+        <div className="trading-session-statuses portfolio-session-statuses">
+          <span className={`session-status-chip ${state.connectionReady && connectionStatus !== 'checking' ? 'ready' : connectionStatus === 'checking' ? 'checking' : 'unavailable'}`}>
+            <span className="connection-dot" />{tr('Alpaca')}{' '}{tr(state.connectionReady && connectionStatus !== 'checking' ? 'Connected' : connectionStatus === 'checking' ? 'Checking' : 'Unavailable')}
+          </span>
+          <span className={`session-status-chip ${state.robotTone}`}><span className="connection-dot" />{tr('Robot')}{' '}{tr(state.robotLabel)}</span>
+          <span className={`session-status-chip ${state.marketTone}`}><span className="connection-dot" />{tr(state.marketLabel)}</span>
+          {robot ? <span className={`session-status-chip ${robot.real_orders_armed ? 'unavailable' : 'checking'}`}><span className="connection-dot" />{tr(robot.real_orders_armed ? 'Real orders authorized' : 'Real orders disabled')}</span> : null}
+        </div>
+      </div>
+      <div className="portfolio-session-schedule" aria-label={tr('Live session schedule')}>
+        {schedule.map((item) => (
+          <div key={item.label} className={`portfolio-session-step ${item.tone}`}>
+            <span>{tr(item.label)}</span>
+            <strong>{item.value}</strong>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function PortfolioMetric({ label, value, detail, tone = '' }) {
   return (
     <div className={`portfolio-workspace-metric ${tone}`}>
@@ -84,10 +134,11 @@ export function PortfolioMetric({ label, value, detail, tone = '' }) {
 }
 
 export function PortfolioMetricsStrip({ data, position, auditSummary = {} }) {
-  const returnTone = Number(data.total_return) >= 0 ? 'positive' : 'negative'
-  const realizedTone = Number(data.realized_pnl) >= 0 ? 'positive' : 'negative'
-  const unrealizedTone = Number(data.unrealized_pnl) >= 0 ? 'positive' : 'negative'
-  const distanceTone = Number(auditSummary.distance_to_peak) >= 0 ? 'positive' : 'negative'
+  const signedTone = (value) => value == null || !Number.isFinite(Number(value)) ? '' : Number(value) >= 0 ? 'positive' : 'negative'
+  const returnTone = signedTone(data.total_return)
+  const realizedTone = signedTone(data.realized_pnl)
+  const unrealizedTone = signedTone(data.unrealized_pnl)
+  const distanceTone = signedTone(auditSummary.distance_to_peak)
   const livePositionCount = data?.environment === 'live' ? (data?.positions?.length || 0) : 0
 
   return (
@@ -99,7 +150,7 @@ export function PortfolioMetricsStrip({ data, position, auditSummary = {} }) {
       <PortfolioMetric label={tr("Cash")} value={money(data.strategy_cash)} tone="purple" />
       <PortfolioMetric label={tr("Position")} value={position ? position.symbol : livePositionCount > 0 ? `${livePositionCount} ${tr('positions')}` : tr('Cash')} detail={position ? `${number(position.quantity, 4)} ${tr('shares')}` : livePositionCount > 0 ? tr('Multiple Live positions') : tr('No open position.')} tone="gold" />
       <PortfolioMetric label={tr("Distance to peak")} value={percent(auditSummary.distance_to_peak)} detail={auditSummary.peak_portfolio_value == null ? '' : money(auditSummary.peak_portfolio_value)} tone={distanceTone} />
-      <PortfolioMetric label={tr("Max drawdown")} value={percent(auditSummary.maximum_drawdown)} tone="negative" />
+      <PortfolioMetric label={tr("Max drawdown")} value={percent(auditSummary.maximum_drawdown)} tone={signedTone(auditSummary.maximum_drawdown)} />
     </div>
   )
 }
