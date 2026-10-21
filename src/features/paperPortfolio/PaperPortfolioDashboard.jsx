@@ -16,7 +16,7 @@ import { PortfolioIcon } from '../../shared/components/Icons'
 import { AnalyticsResponsiveContainer } from '../analytics/components/AnalyticsPrimitives'
 import { money, number, percent, shortDateTime } from '../../shared/formatters'
 import { POLL_MS, ROBOT_POLL_MS } from './portfolioConfig'
-import { CurrentPosition, PortfolioMetricsStrip, TradingSessionStrip } from './components/PortfolioPrimitives'
+import { CurrentPosition, PortfolioMetricsStrip, TradingSessionStrip, LiveSessionStrip } from './components/PortfolioPrimitives'
 import { WinnerOperationMonitor } from './components/WinnerOperationMonitor'
 import { LiveWinnerEvents } from './components/LiveWinnerEvents'
 import { LiveWorkflowMonitor } from './components/LiveWorkflowMonitor'
@@ -555,13 +555,14 @@ function PortfolioMarketView({ market }) {
 
           <PortfolioMetricsStrip data={data} position={position} auditSummary={auditSummary} />
 
-          {live ? (
-            <section className="portfolio-live-safety-note" aria-label={tr('Live monitoring')}>
-              <strong>{tr('Live monitoring')}</strong> · {tr(robot?.control_mode || 'stopped')} ·
-              {' '}{robot?.real_orders_armed ? 'Ordens reais autorizadas' : tr('Real orders disabled')} ·
-              {' '}{tr(data?.market_clock?.is_open ? 'Market open' : 'Market closed')}
-            </section>
-          ) : <TradingSessionStrip
+          {live ? <LiveSessionStrip
+            connection={connection}
+            marketClock={data?.market_clock}
+            robot={robot}
+            now={clockNow}
+            refreshing={refreshing}
+            nextRefreshAt={nextRefreshAt}
+          /> : <TradingSessionStrip
             connection={connection}
             marketClock={data?.market_clock}
             robot={robot}

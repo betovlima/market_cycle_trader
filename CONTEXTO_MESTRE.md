@@ -1,3 +1,15 @@
+## 2026-10-21 — Front v10.7.36 | faixa de sessão Live
+
+Branch `feature/v10.7.36-live-trading-session-strip` criada a partir da main em v10.7.35; integração da melhoria originalmente preparada para Front v10.7.31.1. API v10.8.124 não modificada.
+
+**Escopo:** adicionar à tela Portfólio Live a faixa de sessão de aparência equivalente ao Trading, mas consultando somente `GET /api/live-market/portfolio` e `GET /api/live-market/robot/status`. Estado do robô Live vem de `control_mode`. Mantido o indicador de autorização de ordens reais (somente informativo). Sem alterar a faixa Paper, os controles reais, autenticação, banco, ordens ou API.
+
+**Ausência de dados:** P/L realizado, P/L total, retorno, distância ao topo e drawdown Live retornados como `null` pela API permanecem `—` e sem cores artificiais. Horários de calibração e execução aparecem como indisponíveis quando a API não fornece as datas; não inferir horário de ordem da abertura da bolsa. Atualização automática só é indicada se o Live estiver com `monitoring_enabled=true`.
+
+**Regressões preservadas:** correção de render inicial `data=null` da v10.7.35, ordem do painel Posição/Decisão Live da v10.7.34, monitores Live após a auditoria e ausência de controles duplicados na tela Portfólio. Testes do modelo, SSR de primeira renderização e build Vite. O deploy não é realizado pelo merge automaticamente.
+
+---
+
 ## 2026-10-20 — Front v10.7.35 | hotfix da tela preta no Portfólio
 
 **Problema observado:** após v10.7.34, tanto Portfólio Live quanto Trading deixaram de renderizar na entrada. Console apontou `TypeError: Cannot read properties of null (reading 'strategy_cash')`. `PortfolioMarketView` inicia com `useState(null)`, mas a refatoração v10.7.34 montava prematuramente `portfolioPositionDecision` antes da verificação `!data`; sua expressão JSX acessava `data.strategy_cash` ainda em null. O build Vite não detecta exceções de tempo de execução.

@@ -1,4 +1,10 @@
 export const LIVE_WORKFLOW_PT_TRANSLATIONS = {
+  'Live Session': 'Sessão Live',
+  'Live session status': 'Estado da sessão Live',
+  'Live session schedule': 'Programação da sessão Live',
+  'Exit only': 'Somente saída',
+  'Manual refresh': 'Atualização manual',
+  'Real orders authorized': 'Ordens reais autorizadas',
   'Reconcile': 'Reconciliar',
   'Checking Alpaca…': 'Conferindo Alpaca…',
   'Trading session': 'Pregão',
@@ -58,6 +64,12 @@ export const LIVE_WORKFLOW_PT_TRANSLATIONS = {
 }
 
 export const LIVE_WORKFLOW_ES_TRANSLATIONS = {
+  'Live Session': 'Sesión Live',
+  'Live session status': 'Estado de la sesión Live',
+  'Live session schedule': 'Programación de la sesión Live',
+  'Exit only': 'Solo salida',
+  'Manual refresh': 'Actualización manual',
+  'Real orders authorized': 'Órdenes reales autorizadas',
   'Reconcile': 'Conciliar',
   'Checking Alpaca…': 'Verificando Alpaca…',
   'Trading session': 'Sesión bursátil',
