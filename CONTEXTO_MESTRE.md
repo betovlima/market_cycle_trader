@@ -1,3 +1,15 @@
+## 2026-10-21 — Front v10.7.31.1 | faixa de sessão no Portfólio Live
+
+**Base explícita do ambiente em uso:** Front v10.7.31, commit `4351ac5078c29559e8f623b8cda657ca924d0f9f`; API v10.8.124, sem alteração. Alteração isolada na branch `fix/v10.7.31.1-live-session-strip` — não integrar automaticamente a `main` mais nova para evitar trazer mudanças de layout e comandos v10.7.32–v10.7.35.
+
+**Objetivo:** no Portfólio → Live, exibir a mesma faixa de sessão disponível em Trading, preservando os oito indicadores financeiros compartilhados. As fontes continuam segregadas: `GET /api/live-market/portfolio` e `GET /api/live-market/robot/status` no Live; as rotas Paper não são chamadas pela tela Live. Estado do robô = `control_mode` real do Live; conexão = leitura do portfólio da conta Live; mercado = `market_clock` Live.
+
+**Limites da API v10.8.124:** o backend Live fornece `realized_pnl=null`, `total_pnl=null`, `total_return=null`, `audit.summary.distance_to_peak=null` e `maximum_drawdown=null`. A interface exibe `—` nesses campos; não substitui por zeros, valores Paper ou estimativas baseadas em depósitos. Horários reais de pós-fechamento, recalibração e execução também podem não estar disponíveis na resposta Live; exibir `Indisponível` quando a API não fornece timestamps. Não usar `next_open` como horário garantido de execução de ordens. O horário de próximo fechamento vem do relógio da Alpaca Live; atualização automática só é indicada quando `monitoring_enabled=true`; caso contrário é manual.
+
+**Proteções:** não modificar backend, posições, ordens, estado do robô, autenticação ou endpoints; nenhuma chamada mutável nova. Mudança somente de UI. Testar `node --test tests/live-session-model.test.mjs` e `pnpm build`. Não afirmar implantação em produção antes do deploy.
+
+---
+
 # Market Cycle Trader — contexto de interface Live (Front v10.7.31)
 
 ## Entrega

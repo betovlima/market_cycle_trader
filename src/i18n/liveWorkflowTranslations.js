@@ -1,4 +1,9 @@
 export const LIVE_WORKFLOW_PT_TRANSLATIONS = {
+  'Live Session': 'Sessão Live',
+  'Live session status': 'Estado da sessão Live',
+  'Live session schedule': 'Programação da sessão Live',
+  'Exit only': 'Somente saída',
+  'Manual refresh': 'Atualização manual',
   'Live workflow monitor': 'Monitor do fluxo Live',
   'Live operations': 'Operações Live',
   'Read-only monitoring': 'Monitoramento somente de leitura',
@@ -53,6 +58,11 @@ export const LIVE_WORKFLOW_PT_TRANSLATIONS = {
 }
 
 export const LIVE_WORKFLOW_ES_TRANSLATIONS = {
+  'Live Session': 'Sesión Live',
+  'Live session status': 'Estado de la sesión Live',
+  'Live session schedule': 'Programación de la sesión Live',
+  'Exit only': 'Solo salida',
+  'Manual refresh': 'Actualización manual',
   'Live workflow monitor': 'Monitor del flujo Live',
   'Live operations': 'Operaciones Live',
   'Read-only monitoring': 'Monitoreo de solo lectura',
