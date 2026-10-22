@@ -1,4 +1,12 @@
 export const LIVE_WORKFLOW_PT_TRANSLATIONS = {
+  'Live broker execution': 'Execução na corretora Live',
+  'Live decision not executed yet': 'Decisão Live ainda não executada',
+  'No orders · HOLD/CASH confirmed': 'Sem ordens · Manter/Caixa confirmado',
+  'Manual Alpaca fills · verified': 'Ordens manuais na Alpaca · verificadas',
+  'Automatic MCT Live order · verified': 'Ordem automática do MCT Live · verificada',
+  'Alpaca order · origin not verified': 'Ordem Alpaca · origem não verificada',
+  'Live Winner decision preserved from the validated prior-day signal.': 'Decisão Winner Live preservada do sinal diário validado D−1.',
+  'Execution origin': 'Origem da execução',
   'Live Session': 'Sessão Live',
   'Live session status': 'Estado da sessão Live',
   'Live session schedule': 'Programação da sessão Live',
@@ -64,6 +72,14 @@ export const LIVE_WORKFLOW_PT_TRANSLATIONS = {
 }
 
 export const LIVE_WORKFLOW_ES_TRANSLATIONS = {
+  'Live broker execution': 'Ejecución en el bróker Live',
+  'Live decision not executed yet': 'Decisión Live todavía no ejecutada',
+  'No orders · HOLD/CASH confirmed': 'Sin órdenes · Mantener/Efectivo confirmado',
+  'Manual Alpaca fills · verified': 'Órdenes manuales en Alpaca · verificadas',
+  'Automatic MCT Live order · verified': 'Orden automática del MCT Live · verificada',
+  'Alpaca order · origin not verified': 'Orden Alpaca · origen no verificado',
+  'Live Winner decision preserved from the validated prior-day signal.': 'Decisión Winner Live conservada de la señal diaria validada D−1.',
+  'Execution origin': 'Origen de ejecución',
   'Live Session': 'Sesión Live',
   'Live session status': 'Estado de la sesión Live',
   'Live session schedule': 'Programación de la sesión Live',

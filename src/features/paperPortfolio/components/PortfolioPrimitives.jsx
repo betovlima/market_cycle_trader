@@ -108,7 +108,7 @@ export function LiveSessionStrip({ connection, marketClock, robot, now, refreshi
           </span>
           <span className={`session-status-chip ${state.robotTone}`}><span className="connection-dot" />{tr('Robot')}{' '}{tr(state.robotLabel)}</span>
           <span className={`session-status-chip ${state.marketTone}`}><span className="connection-dot" />{tr(state.marketLabel)}</span>
-          {robot ? <span className={`session-status-chip ${robot.real_orders_armed ? 'unavailable' : 'checking'}`}><span className="connection-dot" />{tr(robot.real_orders_armed ? 'Real orders authorized' : 'Real orders disabled')}</span> : null}
+          {robot ? <span className={`session-status-chip ${robot.real_orders_armed ? 'risk' : 'checking'}`}><span className="connection-dot" />{tr(robot.real_orders_armed ? 'Real orders authorized' : 'Real orders disabled')}</span> : null}
         </div>
       </div>
       <div className="portfolio-session-schedule" aria-label={tr('Live session schedule')}>

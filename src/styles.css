@@ -2006,6 +2006,12 @@ a { color: inherit; }
   border-color: rgba(239, 107, 115, .3);
   background: rgba(239, 107, 115, .08);
 }
+/* Live order authorization means risk awareness, not connection failure. */
+.session-status-chip.risk {
+  color: #f5ca7a;
+  border-color: rgba(233, 174, 68, .36);
+  background: rgba(233, 174, 68, .11);
+}
 .session-status-chip.closed {
   color: #e5b5ba;
   border-color: rgba(239, 107, 115, .22);
