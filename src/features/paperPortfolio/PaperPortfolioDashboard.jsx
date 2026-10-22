@@ -527,7 +527,12 @@ function PortfolioMarketView({ market }) {
   // after data arrives; JSX expressions are evaluated even before display.
   const portfolioPositionDecision = data ? (
     <div className="portfolio-audit-top-grid">
-      {live && Array.isArray(data.positions) && data.positions.length > 1 ? <LiveMultiplePositions positions={data.positions} /> : <CurrentPosition position={position} cash={data.strategy_cash} />}
+      {live && Array.isArray(data.positions) && data.positions.length > 1 ? <LiveMultiplePositions positions={data.positions} /> : <CurrentPosition
+        position={position}
+        cash={data.strategy_cash}
+        lastExecutionSession={live ? data.last_execution_session : null}
+        lastExecutionOriginLabel={live && data.last_execution_origin ? executionOriginLabel(data.last_execution_origin) : null}
+      />}
       <DecisionOfDay decision={latestDecision} market={market} onOpen={setSelectedDecision} />
     </div>
   ) : null
