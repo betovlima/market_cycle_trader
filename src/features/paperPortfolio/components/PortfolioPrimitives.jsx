@@ -155,7 +155,7 @@ export function PortfolioMetricsStrip({ data, position, auditSummary = {} }) {
   )
 }
 
-export function CurrentPosition({ position, cash }) {
+export function CurrentPosition({ position, cash, lastExecutionSession = null, lastExecutionOriginLabel = null }) {
   if (!position) {
     return (
       <aside className="current-position-section">
@@ -192,6 +192,13 @@ export function CurrentPosition({ position, cash }) {
         <div><span>{tr("Market value")}</span><strong>{money(position.market_value)}</strong></div>
         <div><span>{tr("Trade P/L")}</span><strong className={returnPositive ? 'positive' : 'negative'}>{unrealizedPnl === null ? '—' : money(unrealizedPnl)}</strong></div>
       </div>
+
+      {lastExecutionSession ? (
+        <div className="current-position-stats" aria-label={tr("Last recorded trade")}>
+          <div><span>{tr("Last recorded trade")}</span><strong>{lastExecutionSession}</strong></div>
+          <div><span>{tr("Execution origin")}</span><strong>{lastExecutionOriginLabel || '—'}</strong></div>
+        </div>
+      ) : null}
 
       <div className={`current-trade-return current-position-return ${returnPositive ? 'positive' : 'negative'}`}>
         <span>{tr("Unrealized return")}</span>
