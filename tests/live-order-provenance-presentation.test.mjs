@@ -28,3 +28,13 @@ test('provenance labels are localized for PT and ES', () => {
     assert.equal(translations.split(label).length - 1, 2)
   }
 })
+
+
+test('last verified position-changing trade is presented separately from the Winner decision', () => {
+  assert.ok(dashboard.includes('lastExecutionSession={live ? data.last_execution_session : null}'))
+  assert.ok(dashboard.includes('executionOriginLabel(data.last_execution_origin)'))
+  assert.ok(strips.includes('{lastExecutionSession ? ('))
+  assert.ok(strips.includes('tr("Last recorded trade")'))
+  assert.ok(strips.includes('lastExecutionOriginLabel ||'))
+  assert.equal(translations.split("'Last recorded trade':").length - 1, 2)
+})
