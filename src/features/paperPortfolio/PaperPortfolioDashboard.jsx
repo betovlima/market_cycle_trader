@@ -40,10 +40,19 @@ const EXECUTION_ORIGIN_LABELS = {
   historical_unknown: 'Historical execution origin not recorded',
   unknown: 'Execution origin not available',
   live_broker_history: 'Live broker history',
+  live_broker: 'Live broker execution',
+  live_not_executed: 'Live decision not executed yet',
+  live_no_orders: 'No orders · HOLD/CASH confirmed',
+  manual_alpaca_fills: 'Manual Alpaca fills · verified',
+  live_automated_verified: 'Automatic MCT Live order · verified',
+  live_broker_unclassified: 'Alpaca order · origin not verified',
 }
 
-function decisionReasonLabel(reason) {
-  return tr(DECISION_REASON_LABELS[reason] || 'Decision preserved from the persisted Paper plan.')
+function decisionReasonLabel(reason, market = 'trading') {
+  const fallback = market === 'live'
+    ? 'Live Winner decision preserved from the validated prior-day signal.'
+    : 'Decision preserved from the persisted Paper plan.'
+  return tr(DECISION_REASON_LABELS[reason] || fallback)
 }
 
 function executionOriginLabel(origin) {
@@ -88,7 +97,7 @@ function DecisionAuditDialog({ audit, onClose }) {
 
         <div className="portfolio-decision-reason">
           <span>{tr('Why this asset')}</span>
-          <strong>{decisionReasonLabel(audit.selection_reason)}</strong>
+          <strong>{decisionReasonLabel(audit.selection_reason, audit.decision_origin === 'live_winner_model' ? 'live' : 'trading')}</strong>
           {audit.execution_origin === 'manual_recovery' || audit.execution_origin === 'manual_contingency' ? <small>{tr('The asset decision came from the persisted model plan, but the order execution was triggered manually as recovery or contingency.')}</small> : null}
           {audit.execution_origin === 'historical_unknown' ? <small>{tr('This historical plan predates execution-origin tracking, so automatic versus manual execution cannot be inferred safely.')}</small> : null}
         </div>
@@ -137,7 +146,7 @@ function DecisionAuditDialog({ audit, onClose }) {
   )
 }
 
-function DecisionOfDay({ decision, onOpen }) {
+function DecisionOfDay({ decision, onOpen, market = 'trading' }) {
   if (!decision) {
     return (
       <section className="portfolio-audit-card portfolio-decision-today">
@@ -164,8 +173,14 @@ function DecisionOfDay({ decision, onOpen }) {
       </div>
       <div className="portfolio-decision-reason portfolio-decision-reason-inline">
         <span>{tr('Why')}</span>
-        <strong>{decisionReasonLabel(decision.selection_reason)}</strong>
+        <strong>{decisionReasonLabel(decision.selection_reason, market)}</strong>
       </div>
+      {market === 'live' ? (
+        <div className="portfolio-decision-reason portfolio-decision-reason-inline">
+          <span>{tr('Execution origin')}</span>
+          <strong>{executionOriginLabel(decision.execution_origin)}</strong>
+        </div>
+      ) : null}
       <div className="portfolio-decision-rule-grid">
         <div><span>{tr('Best vs current')}</span><strong>{number(decision.raw_best_vs_current_utility, 6)}</strong></div>
         <div><span>{tr('Switch margin')}</span><strong>{number(decision.effective_switch_margin, 6)}</strong><small>{tr('Passed')}: {yesNo(decision.switch_margin_passed)}</small></div>
@@ -513,7 +528,7 @@ function PortfolioMarketView({ market }) {
   const portfolioPositionDecision = data ? (
     <div className="portfolio-audit-top-grid">
       {live && Array.isArray(data.positions) && data.positions.length > 1 ? <LiveMultiplePositions positions={data.positions} /> : <CurrentPosition position={position} cash={data.strategy_cash} />}
-      <DecisionOfDay decision={latestDecision} onOpen={setSelectedDecision} />
+      <DecisionOfDay decision={latestDecision} market={market} onOpen={setSelectedDecision} />
     </div>
   ) : null
 

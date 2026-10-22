@@ -1,3 +1,11 @@
+## 2026-10-22 — Front v10.7.38 | proveniência de ordens Live e risco operacional
+
+A API v10.8.126 distingue ordens comprovadamente manuais, ordens de executor MCT verificadas no ledger e ordens externas de origem desconhecida. O Front traduz e exibe a origem factual no histórico de operações Live. Decisões HOLD concluídas aparecem como "sem ordens", em vez de "execução na corretora"; a decisão diária continua separada da ação efetiva. O fallback Live de justificativa agora menciona sinal D−1, e não Paper. O chip "Ordens reais autorizadas" passa de vermelho de indisponibilidade para âmbar de risco autorizado.
+
+Sem alterações na lógica de execução, permissões, API, banco, modelo, layout base 10.7.37, isolamento Paper/Live ou tempos indisponíveis. Testes adicionais de proveniência + SSR/CI/Vite; merge somente com CI verde. Branch `fix/v10.7.38-live-provenance-audit`.
+
+---
+
 ## 2026-10-22 — Front v10.7.37 | paridade visual Portfólio Live e Trading
 
 **Motivação:** o Live da v10.7.36 colocava Posição/Decisão antes do resumo e da faixa da sessão. No Trading, o resumo e a faixa da sessão estavam corretamente acima do corpo. As duas telas compartilhavam os mesmos componentes e classes CSS, mas o JSX usava renderização condicional para alterar a ordem somente no Live.
