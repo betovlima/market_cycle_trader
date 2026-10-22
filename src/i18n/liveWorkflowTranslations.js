@@ -1,4 +1,5 @@
 export const LIVE_WORKFLOW_PT_TRANSLATIONS = {
+  'Last recorded trade': 'Última operação registrada',
   'Live broker execution': 'Execução na corretora Live',
   'Live decision not executed yet': 'Decisão Live ainda não executada',
   'No orders · HOLD/CASH confirmed': 'Sem ordens · Manter/Caixa confirmado',
@@ -72,6 +73,7 @@ export const LIVE_WORKFLOW_PT_TRANSLATIONS = {
 }
 
 export const LIVE_WORKFLOW_ES_TRANSLATIONS = {
+  'Last recorded trade': 'Última operación registrada',
   'Live broker execution': 'Ejecución en el bróker Live',
   'Live decision not executed yet': 'Decisión Live todavía no ejecutada',
   'No orders · HOLD/CASH confirmed': 'Sin órdenes · Mantener/Efectivo confirmado',
