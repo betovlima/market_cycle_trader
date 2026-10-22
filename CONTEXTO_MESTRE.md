@@ -1,3 +1,13 @@
+## 2026-10-22 — Front v10.7.39 | operação CAPR manual exibida sem atribuição ao robô
+
+**Contexto:** CAPR foi adquirido manualmente na Alpaca em 20/10/2026. O dashboard já mostra posição Live e proveniência `manual_alpaca_fills`, mas não mostrava a última sessão de negociação registrada.
+
+**Alteração:** painel CurrentPosition passa a exibir `last_execution_session` e tradução de `last_execution_origin`, exclusivamente para Live e quando a API v10.8.127 entrega informação validada. Origem não comprovada permanece sem atribuição; a decisão Winner continua independente. Traduções PT/ES e teste de apresentação adicionados. Sem ações financeiras nem integração Paper.
+
+**Rastreabilidade:** branch `audit/v10.7.39-live-winner-observability`, PR #26; dependência de API v10.8.127 (PR #79). Validar build e regressões CI; merge não significa deploy.
+
+---
+
 ## 2026-10-22 — Front v10.7.38 | proveniência de ordens Live e risco operacional
 
 A API v10.8.126 distingue ordens comprovadamente manuais, ordens de executor MCT verificadas no ledger e ordens externas de origem desconhecida. O Front traduz e exibe a origem factual no histórico de operações Live. Decisões HOLD concluídas aparecem como "sem ordens", em vez de "execução na corretora"; a decisão diária continua separada da ação efetiva. O fallback Live de justificativa agora menciona sinal D−1, e não Paper. O chip "Ordens reais autorizadas" passa de vermelho de indisponibilidade para âmbar de risco autorizado.
