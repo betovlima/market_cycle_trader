@@ -24,5 +24,5 @@ jobs:
           node-version: "22"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: node --test tests/portfolio-initial-render.test.mjs tests/live-session-model.test.mjs
+      - run: node --test tests/portfolio-initial-render.test.mjs tests/live-session-model.test.mjs tests/portfolio-layout-order.test.mjs
       - run: pnpm build

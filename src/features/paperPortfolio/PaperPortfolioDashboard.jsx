@@ -551,8 +551,7 @@ function PortfolioMarketView({ market }) {
 
           {!live ? <WinnerOperationMonitor robot={robot} /> : null}
 
-          {live ? portfolioPositionDecision : null}
-
+          {/* Same vertical hierarchy for Trading and Live: metrics → session → position/decision. */}
           <PortfolioMetricsStrip data={data} position={position} auditSummary={auditSummary} />
 
           {live ? <LiveSessionStrip
@@ -571,7 +570,7 @@ function PortfolioMarketView({ market }) {
             nextRefreshAt={nextRefreshAt}
           />}
 
-          {!live ? portfolioPositionDecision : null}
+          {portfolioPositionDecision}
 
           <PositionExcursionPanel excursion={audit?.position_excursion} observer={robot} />
 

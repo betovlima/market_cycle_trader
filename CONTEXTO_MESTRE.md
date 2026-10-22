@@ -1,3 +1,15 @@
+## 2026-10-22 — Front v10.7.37 | paridade visual Portfólio Live e Trading
+
+**Motivação:** o Live da v10.7.36 colocava Posição/Decisão antes do resumo e da faixa da sessão. No Trading, o resumo e a faixa da sessão estavam corretamente acima do corpo. As duas telas compartilhavam os mesmos componentes e classes CSS, mas o JSX usava renderização condicional para alterar a ordem somente no Live.
+
+**Correção:** remover a renderização antecipada e condicional de `portfolioPositionDecision` e utilizar um único ponto de montagem abaixo de `PortfolioMetricsStrip` e de `LiveSessionStrip`/`TradingSessionStrip`, ambos imediatamente depois do cabeçalho (preservando o monitor Paper existente). As duas telas passam a seguir o fluxo: cabeçalho → métricas → sessão → posição/decisão → excursão, gráficos, ranking e operações. Não foram criados grids, espaçamentos ou CSS especiais para Live: mantidos os mesmos estilos e regras responsivas usados pelo Trading.
+
+**Proteções:** manter os dados do Live exclusivamente em `/api/live-market/*`; conservar estados e rótulos próprios do Live, incluindo controles/indicadores de autorização de ordens reais. Preservar os valores financeiros indisponíveis como `—`, os timers somente quando explícitos, a correção SSR de `data=null` e os monitores Live no final. Sem alterações na API v10.8.125, serviços de broker, ordens, modelos ou banco.
+
+**Testes:** regressão `tests/portfolio-layout-order.test.mjs`, SSR inicial, modelo da faixa Live e `pnpm build`, executados no workflow `frontend-build`. Branch `fix/v10.7.37-live-layout-trading-parity` preparada desde main v10.7.36; integração via PR e CI. O merge pode gerar um deploy via integração GitHub/Railway, mas não equivale à confirmação de implantação.
+
+---
+
 ## 2026-10-21 — Front v10.7.36 | faixa de sessão Live
 
 Branch `feature/v10.7.36-live-trading-session-strip` criada a partir da main em v10.7.35; integração da melhoria originalmente preparada para Front v10.7.31.1. API v10.8.124 não modificada.
