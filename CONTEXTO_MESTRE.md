@@ -1,3 +1,13 @@
+## 2026-10-23 — Front v10.7.40 | Live e Trading em abas independentes
+
+**Solicitação:** mover as telas Live e Trading para a navegação principal e remover a aba Portfólio. **Implementação:** `src/App.jsx` define duas rotas visuais `live` e `trading`; `src/features/backtest/components/AppHeader.jsx` apresenta as abas Live e Trading (Paper); `src/features/paperPortfolio/PaperPortfolioDashboard.jsx` deixa de gerenciar subabas e recebe `market` diretamente. Títulos agora identificam o ambiente ativo. Estilos da subaba antiga removidos. Sem alterar API, banco, dados, critérios de negociação, ordens, autenticação ou credenciais.
+
+**Segurança:** Live continua condicionado simultaneamente a `portfolio.view` e `admin.manage`, incluindo verificação em menu, roteador e guarda interna da página. Trading (Paper) exige `portfolio.view`. Endpoints `/api/live-market/*` e `/api/paper-market/*` continuam isolados. O frontend mantém renderização condicional, desmontando um ambiente ao alternar ao outro. Não confundir navegação separada com mudança em infraestrutura de segurança ou permissões na API.
+
+**Versão:** Front v10.7.40, branch `feature/v10.7.40-live-trading-top-tabs` a partir da `main`, protegida sem alteração. **Testes:** renderização SSR dos estados de carga e permissão Live, navegação por capacidades e checagens de não regressão; `pnpm build` deve passar em CI antes de qualquer merge. **Manual de mudança:** `docs/changes/v10.7.40-live-trading-top-tabs.md`. PR mantido em Draft até validação, sem promoção automática.
+
+---
+
 ## 2026-10-22 — Front v10.7.39 | operação CAPR manual exibida sem atribuição ao robô
 
 **Contexto:** CAPR foi adquirido manualmente na Alpaca em 20/10/2026. O dashboard já mostra posição Live e proveniência `manual_alpaca_fills`, mas não mostrava a última sessão de negociação registrada.
