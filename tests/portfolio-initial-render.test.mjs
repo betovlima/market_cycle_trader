@@ -19,7 +19,7 @@ const { PaperPortfolioDashboard } = await vite.ssrLoadModule(
 
 test('Live portfolio renders a loading state with null API data', () => {
   const html = renderToString(React.createElement(PaperPortfolioDashboard, {
-    capabilities: { 'admin.manage': true },
+    market: 'live', capabilities: { 'admin.manage': true },
   }))
   assert.match(html, /data-portfolio-market="live"/)
   assert.match(html, /portfolio-tab-loader/)
@@ -28,8 +28,26 @@ test('Live portfolio renders a loading state with null API data', () => {
 
 test('Trading portfolio renders its loading state with null API data', () => {
   const html = renderToString(React.createElement(PaperPortfolioDashboard, {
-    capabilities: {},
+    market: 'trading', capabilities: {},
   }))
   assert.match(html, /data-portfolio-market="trading"/)
   assert.match(html, /portfolio-tab-loader/)
+})
+
+
+test('Live cannot render for a user without the existing admin permission', () => {
+  const html = renderToString(React.createElement(PaperPortfolioDashboard, {
+    market: 'live', capabilities: { 'portfolio.view': true },
+  }))
+  assert.equal(html, '')
+})
+
+test('neither market shows the removed nested Portfolio tabs', () => {
+  for (const market of ['live', 'trading']) {
+    const html = renderToString(React.createElement(PaperPortfolioDashboard, {
+      market, capabilities: { 'admin.manage': true },
+    }))
+    assert.doesNotMatch(html, /portfolio-market-tabs/)
+    assert.match(html, new RegExp('data-portfolio-market="'+market+'"'))
+  }
 })
