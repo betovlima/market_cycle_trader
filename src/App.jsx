@@ -23,7 +23,8 @@ const TAB_CAPABILITIES = {
   'decision-science': 'decision_science.view',
   backtest: 'backtest.view',
   'asset-discovery': 'asset_discovery.view',
-  portfolio: 'portfolio.view',
+  live: 'portfolio.view',
+  trading: 'portfolio.view',
   administration: 'administration.view',
   'reviewer-access': 'admin.manage',
   'system-settings': 'settings.view',
@@ -43,7 +44,10 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
   const [dashboardProcessingId, setDashboardProcessingId] = useState('')
   const capabilities = session?.capabilities || {}
   const allowedTabs = useMemo(
-    () => Object.entries(TAB_CAPABILITIES).filter(([, capability]) => hasCapability(capabilities, capability)).map(([tab]) => tab),
+    () => Object.entries(TAB_CAPABILITIES)
+      .filter(([tab, capability]) => hasCapability(capabilities, capability)
+        && (tab !== 'live' || hasCapability(capabilities, 'admin.manage')))
+      .map(([tab]) => tab),
     [capabilities],
   )
   const canExecuteAssetDiscovery = hasCapability(capabilities, 'asset_discovery.start') || hasCapability(capabilities, 'asset_discovery.stop')
@@ -97,7 +101,8 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
       {activeTab === 'decision-science' && hasCapability(capabilities, 'decision_science.view') ? <DecisionSciencePage capabilities={capabilities} /> : null}
       {activeTab === 'backtest' && hasCapability(capabilities, 'backtest.view') ? <BacktestPage workspace={workspace} capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'asset-discovery' && hasCapability(capabilities, 'asset_discovery.view') ? <AssetDiscoveryExecutionPage capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
-      {activeTab === 'portfolio' && hasCapability(capabilities, 'portfolio.view') ? <PaperPortfolioDashboard capabilities={capabilities} /> : null}
+      {activeTab === 'live' && hasCapability(capabilities, 'portfolio.view') && hasCapability(capabilities, 'admin.manage') ? <PaperPortfolioDashboard market="live" capabilities={capabilities} /> : null}
+      {activeTab === 'trading' && hasCapability(capabilities, 'portfolio.view') ? <PaperPortfolioDashboard market="trading" capabilities={capabilities} /> : null}
       {activeTab === 'administration' && hasCapability(capabilities, 'administration.view') ? <AdministrationPage onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'reviewer-access' && hasCapability(capabilities, 'admin.manage') ? <ReviewerAccessPage onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'system-settings' && hasCapability(capabilities, 'settings.view') ? <SystemSettingsPage onSessionExpired={onSessionExpired} /> : null}

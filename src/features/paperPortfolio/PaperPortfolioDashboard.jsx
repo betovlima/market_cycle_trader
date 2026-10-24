@@ -554,7 +554,7 @@ function PortfolioMarketView({ market }) {
           <header className="portfolio-workspace-header">
             <div className="portfolio-workspace-title">
               <div className="page-title-icon"><PortfolioIcon size={18} /></div>
-              <div><h2>{tr('Portfolio')} · {tr(live ? 'Live' : 'Trading (Paper)')}</h2></div>
+              <div><h2>{tr(live ? 'Live' : 'Trading (Paper)')}</h2></div>
             </div>
             <div className="portfolio-workspace-actions">
               <span>{lastUpdated ? tr('Updated {time}', { time: lastUpdated.toLocaleTimeString(getIntlLocale()) }) : tr('Read-only snapshot')}</span>
@@ -620,24 +620,14 @@ function PortfolioMarketView({ market }) {
 }
 
 
-export function PaperPortfolioDashboard({ capabilities = {} }) {
-  const canViewLive = capabilities?.['admin.manage'] === true
-  const [market, setMarket] = useState(canViewLive ? 'live' : 'trading')
-  useEffect(() => {
-    if (!canViewLive && market === 'live') setMarket('trading')
-  }, [canViewLive, market])
+// The top-level navigation determines the environment. A view never switches
+// broker accounts internally; Live requires the same admin permission as before.
+export function PaperPortfolioDashboard({ market = 'trading', capabilities = {} }) {
+  if (market !== 'live' && market !== 'trading') return null
+  if (market === 'live' && capabilities?.['admin.manage'] !== true) return null
+
   return (
-    <section className="page-stack portfolio-page" aria-label={tr('Portfolio environment')}>
-      <nav className="portfolio-market-tabs" role="tablist" aria-label={tr('Portfolio environment')}>
-        {canViewLive ? (
-          <button type="button" role="tab" aria-selected={market === 'live'}
-            className={market === 'live' ? 'selected' : ''}
-            onClick={() => setMarket('live')}>{tr('Live')}</button>
-        ) : null}
-        <button type="button" role="tab" aria-selected={market === 'trading'}
-          className={market === 'trading' ? 'selected' : ''}
-          onClick={() => setMarket('trading')}>{tr('Trading (Paper)')}</button>
-      </nav>
+    <section className="page-stack portfolio-page" aria-label={tr(market === 'live' ? 'Live' : 'Trading (Paper)')}>
       <PortfolioMarketView key={market} market={market} />
     </section>
   )
