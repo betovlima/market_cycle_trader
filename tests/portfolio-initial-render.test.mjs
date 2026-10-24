@@ -17,6 +17,13 @@ const { PaperPortfolioDashboard } = await vite.ssrLoadModule(
   '/src/features/paperPortfolio/PaperPortfolioDashboard.jsx',
 )
 
+const { AppHeader } = await vite.ssrLoadModule(
+  '/src/features/backtest/components/AppHeader.jsx',
+)
+const { I18nProvider } = await vite.ssrLoadModule(
+  '/src/i18n/I18nProvider.jsx',
+)
+
 test('Live portfolio renders a loading state with null API data', () => {
   const html = renderToString(React.createElement(PaperPortfolioDashboard, {
     market: 'live', capabilities: { 'admin.manage': true },
@@ -51,13 +58,6 @@ test('neither market shows the removed nested Portfolio tabs', () => {
     assert.match(html, new RegExp('data-portfolio-market="'+market+'"'))
   }
 })
-
-const { AppHeader } = await vite.ssrLoadModule(
-  '/src/features/backtest/components/AppHeader.jsx',
-)
-const { I18nProvider } = await vite.ssrLoadModule(
-  '/src/i18n/I18nProvider.jsx',
-)
 
 function renderNavigation(capabilities) {
   return renderToString(React.createElement(
