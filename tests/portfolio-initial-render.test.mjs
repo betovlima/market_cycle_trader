@@ -51,3 +51,45 @@ test('neither market shows the removed nested Portfolio tabs', () => {
     assert.match(html, new RegExp('data-portfolio-market="'+market+'"'))
   }
 })
+
+const { AppHeader } = await vite.ssrLoadModule(
+  '/src/features/backtest/components/AppHeader.jsx',
+)
+const { I18nProvider } = await vite.ssrLoadModule(
+  '/src/i18n/I18nProvider.jsx',
+)
+
+function renderNavigation(capabilities) {
+  return renderToString(React.createElement(
+    I18nProvider, {},
+    React.createElement(AppHeader, {
+      activeTab: 'trading', capabilities, session: { display_name: 'Test user' },
+      onTabChange: () => {}, onLogout: () => {},
+    }),
+  ))
+}
+
+test('main navigation replaces Portfolio with distinct Live and Trading tabs', () => {
+  const html = renderNavigation({ 'portfolio.view': true, 'admin.manage': true })
+  assert.match(html, /data-nav-tab="live"/)
+  assert.match(html, /data-nav-tab="trading"/)
+  assert.doesNotMatch(html, /data-nav-tab="portfolio"/)
+})
+
+test('Live menu retains both portfolio and admin permissions; Trading retains portfolio permission', () => {
+  const trader = renderNavigation({ 'portfolio.view': true })
+  assert.match(trader, /data-nav-tab="trading"/)
+  assert.doesNotMatch(trader, /data-nav-tab="live"/)
+
+  const adminWithoutPortfolio = renderNavigation({ 'admin.manage': true })
+  assert.doesNotMatch(adminWithoutPortfolio, /data-nav-tab="trading"/)
+  assert.doesNotMatch(adminWithoutPortfolio, /data-nav-tab="live"/)
+})
+
+test('top-level routing enforces access restrictions independently of menu rendering', async () => {
+  const { readFileSync } = await import('node:fs')
+  const app = readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8')
+  assert.match(app, /activeTab === 'live' && hasCapability\(capabilities, 'portfolio.view'\) && hasCapability\(capabilities, 'admin.manage'\)/)
+  assert.match(app, /activeTab === 'trading' && hasCapability\(capabilities, 'portfolio.view'\)/)
+  assert.doesNotMatch(app, /activeTab === 'portfolio'/)
+})
