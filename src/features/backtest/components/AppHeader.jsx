@@ -8,14 +8,17 @@ const NAV_ITEMS = [
   { id: 'decision-science', label: 'Decision Science', Icon: AnalyticsIcon, capability: 'decision_science.view' },
   { id: 'backtest', label: 'Backtest', Icon: BacktestIcon, capability: 'backtest.view' },
   { id: 'asset-discovery', label: 'Asset Discovery', Icon: SearchIcon, capability: 'asset_discovery.view' },
-  { id: 'portfolio', label: 'Portfolio', Icon: PortfolioIcon, capability: 'portfolio.view' },
+  { id: 'live', label: 'Live', Icon: PortfolioIcon, capability: 'portfolio.view', requiredCapability: 'admin.manage' },
+  { id: 'trading', label: 'Trading (Paper)', Icon: PortfolioIcon, capability: 'portfolio.view' },
   { id: 'administration', label: 'Administration', Icon: DashboardIcon, capability: 'administration.view' },
   { id: 'reviewer-access', label: 'Guest Access', Icon: DashboardIcon, capability: 'admin.manage' },
   { id: 'system-settings', label: 'Strategies & Operations', Icon: SettingsIcon, capability: 'settings.view' },
 ]
 
 export function AppHeader({ activeTab, onTabChange, session, capabilities = {}, onLogout }) {
-  const navItems = NAV_ITEMS.filter(({ capability }) => capabilities?.[capability] === true)
+  const navItems = NAV_ITEMS.filter(({ capability, requiredCapability }) =>
+    capabilities?.[capability] === true
+    && (!requiredCapability || capabilities?.[requiredCapability] === true))
   return (
     <header className="app-header">
       <div className="brand-area">
@@ -35,7 +38,7 @@ export function AppHeader({ activeTab, onTabChange, session, capabilities = {}, 
         </div>
         <nav className="main-nav" aria-label={tr('Main navigation')}>
           {navItems.map(({ id, label, Icon }) => (
-            <button key={id} type="button" className={activeTab === id ? 'active' : ''} onClick={() => onTabChange(id)}>
+            <button key={id} type="button" data-nav-tab={id} className={activeTab === id ? 'active' : ''} onClick={() => onTabChange(id)}>
               <Icon size={16} />
               <span>{tr(label)}</span>
             </button>
