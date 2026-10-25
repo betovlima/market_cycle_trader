@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { normalizeAnnualReplay, replayYears, buildYearReplay, replayChartPath } from '../src/features/backtestReplay/annualReplayModel.mjs'
+import { normalizeAnnualReplay, replayYears, buildYearReplay, replayChartPath, lastRecordedRotationSessionIndex } from '../src/features/backtestReplay/annualReplayModel.mjs'
 
 const snapshot = normalizeAnnualReplay({
   equity: [
@@ -127,3 +127,21 @@ test('execution-date score diagnostics include threshold and decision reason', (
   assert.equal(record.reason, 'ROTATE_TO_BEST_ASSET')
 })
 
+
+test('last rotation is reachable even with three later trading sessions', () => {
+  const replay = normalizeAnnualReplay({
+    equity: [
+      { timestamp: '2026-10-20', simulation_equity: 100 },
+      { timestamp: '2026-10-21', simulation_equity: 101 },
+      { timestamp: '2026-10-22', simulation_equity: 102 },
+      { timestamp: '2026-10-23', simulation_equity: 103 },
+    ],
+    rotations: [{ executed_at: '2026-10-20T13:30:00Z', from_asset: 'ADEA', to_asset: 'CAPR' }],
+  })
+  const sessions = buildYearReplay(replay, 2026).sessions
+  assert.equal(lastRecordedRotationSessionIndex(sessions), 0)
+  assert.equal(sessions.length - 1, 3)
+  assert.equal(sessions[lastRecordedRotationSessionIndex(sessions)].date, '2026-10-20')
+  assert.equal(sessions.at(-1).date, '2026-10-23')
+  assert.equal(lastRecordedRotationSessionIndex([{ date: '2026-10-23', events: [] }]), -1)
+})
