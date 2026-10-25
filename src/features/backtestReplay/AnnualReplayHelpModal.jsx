@@ -50,6 +50,11 @@ export function AnnualReplayHelpModal({ signals, onClose }) {
             <p>{tr('Each asset has a trained regression model. Its LightGBM trees start with a base prediction and add adjustments based on the 52 indicators for that asset and session.')}</p>
             <div className="annual-replay-help-formula">{tr('Estimated utility = base prediction + sum of the tree contributions')}</div>
             <p>{tr('The historical replay stores the final score, not the contribution of every tree. An exact decomposition requires the fitted model and the input indicators and cannot be inferred from these bars.')}</p>
+            <p className="annual-replay-help-example-alert">{tr('Illustrative arithmetic only (not actual model-tree contributions):')}</p>
+            <div className="annual-replay-help-formula">
+              <span>AVGO: 0,300000 + 0,080000 − 0,005439 = 0,374561</span>
+              <span>LLY: 0,300000 + 0,120000 − 0,012550 = 0,407450</span>
+            </div>
             {example.recorded
               ? <p className="annual-replay-help-recorded">{tr('Recorded scores for the selected session')}</p>
               : <p className="annual-replay-help-example-alert">{tr('Illustrative example only: both historic scores are unavailable for this session; the values below are not reconstructed predictions.')}</p>}
