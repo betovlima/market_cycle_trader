@@ -102,3 +102,28 @@ test('malformed scores never become fabricated zeroes or new candidates', () => 
   assert.equal(row.scores.best, 'AVGO')
   assert.equal(row.scores.candidateCount, null)
 })
+
+
+test('execution-date score diagnostics include threshold and decision reason', () => {
+  const replay = normalizeAnnualReplay({
+    equity: [{ timestamp: '2025-04-02', simulation_equity: 110 }],
+    decision_scores: [{
+      execution_date: '2025-04-02', decision_date: '2025-04-01',
+      current_asset: 'AVGO', current_score: 0.374561,
+      best_asset: 'LLY', best_score: 0.407450,
+      best_vs_current_gap: 0.032889, effective_switch_margin: 0.010,
+      decision_reason: 'ROTATE_TO_BEST_ASSET',
+      top_scores: [
+        { asset: 'LLY', score: 0.407450 }, { asset: 'AVGO', score: 0.374561 },
+        { asset: 'TSLA', score: 0.330 }, { asset: 'NVDA', score: 0.315 },
+        { asset: 'MSFT', score: 0.300 },
+      ],
+    }],
+  })
+  const record = buildYearReplay(replay, 2025).sessions[0].scores
+  assert.equal(record.top.length, 5)
+  assert.equal(record.margin, 0.010)
+  assert.equal(record.gap, 0.032889)
+  assert.equal(record.reason, 'ROTATE_TO_BEST_ASSET')
+})
+
