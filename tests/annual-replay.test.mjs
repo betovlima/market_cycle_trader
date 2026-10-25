@@ -22,7 +22,7 @@ test('annual replay preserves positions on sessions without trades', () => {
   assert.deepEqual(year.sessions.map((row) => row.asset), ['AVGO', 'AVGO', 'LLY', 'LLY'])
   assert.deepEqual(year.sessions.map((row) => row.events.length), [0, 0, 1, 0])
   assert.equal(year.baseline, 1000)
-  assert.equal(year.change, 0.04)
+  assert.ok(Math.abs(year.change - 0.04) < 1e-12)
 })
 
 test('years are derived from persisted equity observations, not invented', () => {
