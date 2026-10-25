@@ -3,7 +3,7 @@ import { getIntlLocale, tr } from '../../i18n/runtime'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiFetch } from '../../api/http'
 import { API } from '../../config/env'
-import { buildYearReplay, normalizeAnnualReplay, replayChartPath, replayYears } from './annualReplayModel.mjs'
+import { buildYearReplay, lastRecordedRotationSessionIndex, normalizeAnnualReplay, replayChartPath, replayYears } from './annualReplayModel.mjs'
 import './annualReplay.css'
 
 const SPEEDS = [{ text: '1', ms: 1000 }, { text: '3', ms: 333 }, { text: '10', ms: 100 }, { text: '20', ms: 50 }]
@@ -159,6 +159,7 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
   const candidateCounts = [...new Set(sessions.map((row) => row.scores?.candidateCount).filter((value) => Number.isInteger(value) && value > 0))]
   const candidateCount = candidateCounts.length === 1 ? candidateCounts[0] : null
   const selectedEvent = current?.events?.at(-1) || null
+  const finalRotationIndex = useMemo(() => lastRecordedRotationSessionIndex(sessions), [sessions])
 
   useEffect(() => {
     if (!playing || sessions.length < 2) return undefined
@@ -218,11 +219,11 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
           <button type="button" disabled={safeIndex >= sessions.length - 1} onClick={() => seek(safeIndex + 1)}>{tr('Next')} →</button>
           <button type="button" disabled={!events.some((e) => e.sessionIndex < safeIndex)} onClick={() => seekTrade(true)}>⇤ {tr('Previous rotation')}</button>
           <button type="button" disabled={!events.some((e) => e.sessionIndex > safeIndex)} onClick={() => seekTrade(false)}>{tr('Next rotation')} ⇥</button>
-          <button type="button" disabled={!events.length || safeIndex === events[events.length - 1].sessionIndex} onClick={() => seek(events[events.length - 1].sessionIndex)}>{tr('Last rotation')} ⇥</button>
+          <button type="button" disabled={finalRotationIndex < 0 || safeIndex === finalRotationIndex} onClick={() => seek(finalRotationIndex)}>{tr('Last rotation')} ⇥</button>
           <button type="button" disabled={safeIndex >= sessions.length - 1} onClick={() => seek(sessions.length - 1)}>{tr('Last trading session')} ⇥</button>
           <label>{tr('Speed')}<select value={speed} onChange={(e) => setSpeed(Number(e.target.value))}>{SPEEDS.map((item) => <option value={item.ms} key={item.ms}>{item.text} {tr('sessions/s')}</option>)}</select></label>
         </div>
-        {events.length > 0 && safeIndex >= events[events.length - 1].sessionIndex && safeIndex < sessions.length - 1 ? <p className="annual-replay-help">{tr('The final recorded rotation was on {date}. {count} sessions remain until {end}.', { date: dateLabel(events[events.length - 1].date), count: sessions.length - 1 - safeIndex, end: dateLabel(sessions[sessions.length - 1].date) })}</p> : null}
+        {finalRotationIndex >= 0 && safeIndex >= finalRotationIndex && safeIndex < sessions.length - 1 ? <p className="annual-replay-help">{tr('The final recorded rotation was on {date}. {count} sessions remain until {end}.', { date: dateLabel(sessions[finalRotationIndex].date), count: sessions.length - 1 - safeIndex, end: dateLabel(sessions[sessions.length - 1].date) })}</p> : null}
         <div className="annual-replay-scrubber"><input type="range" aria-label={tr('Session position')} min="0" max={sessions.length - 1} value={safeIndex} onChange={(e) => seek(Number(e.target.value))}/><span>{safeIndex + 1} / {sessions.length}</span></div>
         <div className="annual-replay-track"><span style={{ width: String((safeIndex + 1) / sessions.length * 100) + '%' }}/></div>
         <div className={selectedEvent ? 'annual-replay-banner rotated' : 'annual-replay-banner'}>
