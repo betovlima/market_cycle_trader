@@ -74,7 +74,9 @@ export function normalizeAnnualReplay(payload) {
       target: asset(item?.final_action_asset),
     })
   }
-  return { equity: dailyEquity, rotations, scoresByDate }
+  // Match the stored final-capital metric displayed on the Backtest result screen.
+  // The yearly replay and selected session do not determine this total.
+  return { equity: dailyEquity, rotations, scoresByDate, finalCapital: finiteNumber(payload?.metrics?.ending_capital) }
 }
 
 export function replayYears(analytics) {

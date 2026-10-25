@@ -3,7 +3,12 @@
 .annual-replay-page *{box-sizing:border-box}
 .annual-replay-page .positive{color:var(--positive)}
 .annual-replay-page .negative{color:var(--negative)}
-.annual-replay-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.annual-replay-heading{display:grid;align-content:start;gap:12px}
+.annual-replay-heading-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;width:100%}
+.annual-replay-final-capital{display:grid;gap:5px;width:min(100%,480px);padding:16px 20px;background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--positive);border-radius:13px}
+.annual-replay-final-capital span{font-size:12px;font-weight:650;color:var(--muted)}
+.annual-replay-final-capital strong{font-size:clamp(24px,2.5vw,34px);line-height:1.2;color:var(--positive);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.annual-replay-final-capital small{font-size:11px;line-height:1.45;color:var(--muted)}
 .annual-replay-heading h2{font-size:clamp(23px,2.6vw,32px);margin:6px 0}
 .annual-replay-heading p{max-width:760px;color:var(--muted);font-size:14px;line-height:1.5;margin:0}
 .annual-replay-tag{font-weight:600;font-size:12px;border:1px solid var(--positive);color:var(--positive);padding:9px 13px;border-radius:999px;white-space:nowrap}

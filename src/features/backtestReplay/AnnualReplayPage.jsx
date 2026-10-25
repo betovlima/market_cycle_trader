@@ -181,9 +181,19 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
   if (!canView) return null
   return <div className="annual-replay-page">
     <header className="annual-replay-heading">
-      <div><span className="panel-kicker">{tr('Backtest playback')}</span><h2>{tr('One year of capital rotations')}</h2>
-        <p>{tr('Watch the saved trades and capital evolve session by session, as in the interactive example.')}</p></div>
-      <span className="annual-replay-tag">{tr('Recorded history · read-only')}</span>
+      <div className="annual-replay-heading-top">
+        <span className="panel-kicker">{tr('Backtest playback')}</span>
+        <span className="annual-replay-tag">{tr('Recorded history · read-only')}</span>
+      </div>
+      <div className="annual-replay-final-capital" aria-label={tr('Final capital of selected backtest')}>
+        <span>{tr('Final capital of selected backtest')}</span>
+        <strong>{usd(analytics?.finalCapital)}</strong>
+        <small>{tr('Full backtest · not the capital at the played session')}</small>
+      </div>
+      <div className="annual-replay-heading-copy">
+        <h2>{tr('One year of capital rotations')}</h2>
+        <p>{tr('Watch the saved trades and capital evolve session by session, as in the interactive example.')}</p>
+      </div>
     </header>
     <div className="annual-replay-selectors">
       <label>{tr('Completed backtest')}<select value={jobId} disabled={!jobs.length || listLoading} onChange={(e) => setJobId(e.target.value)}>
