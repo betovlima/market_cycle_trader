@@ -1,5 +1,6 @@
 // Dedicated translations for the historical, read-only Backtest replay tab.
 export const ANNUAL_REPLAY_PT_TRANSLATIONS = {
+  "Illustrative arithmetic only (not actual model-tree contributions):": "Soma apenas didática (não são as contribuições reais das árvores):",
   "Explain estimated utilities and asset selection": "Entenda as utilidades estimadas e a escolha do ativo",
   "How does the strategy choose an asset?": "Como o modelo escolhe um ativo?",
   "Understand estimated scores and rotation decisions": "Entenda as pontuações e as decisões de troca",
@@ -143,6 +144,7 @@ export const ANNUAL_REPLAY_PT_TRANSLATIONS = {
 }
 
 export const ANNUAL_REPLAY_ES_TRANSLATIONS = {
+  "Illustrative arithmetic only (not actual model-tree contributions):": "Suma solo didáctica (no son las contribuciones reales de los árboles):",
   "Explain estimated utilities and asset selection": "Explicar utilidades estimadas y selección del activo",
   "How does the strategy choose an asset?": "¿Cómo elige un activo el modelo?",
   "Understand estimated scores and rotation decisions": "Comprenda las puntuaciones y decisiones de rotación",
