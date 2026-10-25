@@ -1,3 +1,9 @@
+## 2026-10-25 — Front v10.7.46 | Help contextual na Reprodução Anual
+
+O botão (?) em "Cinco maiores utilidades estimadas" abre diálogo quadrado centralizado e acessível por teclado, com explicação de utilidade observada, previsão LightGBM e rotação. O exemplo usa os registros históricos de decisão; backtests sem pontuações mostram exemplo explicitamente didático, sem reconstruir previsões ou contribuições das árvores. Explicações de Control referem-se à política de referência; estratégias podem diferir. Não houve alteração na API, política, dados, Alpaca, MongoDB ou operações. Arquivo: `docs/changes/v10.7.46-annual-replay-selection-help.md`. Branch `feature/v10.7.46-annual-replay-selection-help`.
+
+---
+
 ## 2026-10-25 — Front v10.7.45 | Capital final do Backtest na Reprodução Anual
 
 Novo box no cabeçalho da Reprodução Anual com `metrics.ending_capital` do Backtest selecionado, abaixo do selo de histórico e acima do título. A métrica provém do mesmo resumo persistido exibido na tela Backtest, permanecendo fixa quando o usuário muda de ano ou pregão. O gráfico continua mostrando capital até o pregão animado. Quando a métrica falta, mostra `—` sem estimativa ou substituição por equity; tradução PT/ES e teste de contrato. Não alteramos API, acesso do professor, modelos, backtests, Alpaca nem operações. Branch `feature/v10.7.45-replay-backtest-final-capital`; docs `docs/changes/v10.7.45-backtest-final-capital-replay.md`.
