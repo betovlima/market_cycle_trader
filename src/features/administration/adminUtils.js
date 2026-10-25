@@ -27,6 +27,7 @@ export function statusLabel(status) {
 
 export function roleLabel(value) {
   if (!value) return tr('Viewer')
+  if (value === 'replay_guest') return tr('Professor (Annual Replay only)')
   return tr(value.charAt(0).toUpperCase() + value.slice(1))
 }
 
