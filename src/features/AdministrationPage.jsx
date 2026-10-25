@@ -364,6 +364,7 @@ export function AdministrationPage({ onSessionExpired }) {
                 required
               >
                 <option value="viewer">{tr("Viewer")}</option>
+                   <option value="replay_guest">{tr("Professor (Annual Replay only)")}</option>
                 <option value="trader">{tr("Trader")}</option>
                 <option value="admin">{tr("Administrator")}</option>
               </select>
@@ -433,6 +434,7 @@ export function AdministrationPage({ onSessionExpired }) {
                 <select value={invitationRole} onChange={(event) => setInvitationRole(event.target.value)} aria-label={tr("Filter invitation role")}>
                   <option value="all">{tr("All roles")}</option>
                   <option value="viewer">{tr("Viewer")}</option>
+                   <option value="replay_guest">{tr("Professor (Annual Replay only)")}</option>
                   <option value="trader">{tr("Trader")}</option>
                   <option value="admin">{tr("Administrator")}</option>
                 </select>
@@ -554,6 +556,7 @@ export function AdministrationPage({ onSessionExpired }) {
                 <select value={logRole} onChange={(event) => setLogRole(event.target.value)} aria-label={tr("Filter audit role")}>
                   <option value="all">{tr("All roles")}</option>
                   <option value="viewer">{tr("Viewer")}</option>
+                   <option value="replay_guest">{tr("Professor (Annual Replay only)")}</option>
                   <option value="trader">{tr("Trader")}</option>
                   <option value="admin">{tr("Administrator")}</option>
                 </select>
