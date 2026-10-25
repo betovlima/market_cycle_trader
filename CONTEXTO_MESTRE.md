@@ -1,3 +1,9 @@
+## 2026-10-25 — Front v10.7.43 | ranking e margem históricos na aba Annual Replay
+
+Ranking até cinco ativos só com diagnósticos reais de `decision_scores[]` (API v10.8.128); mostrar ranking parcial dos legados como 3/5, sem fabricar dados. Informações de vantagem, margem e motivo de manter/trocar quando disponíveis; layouts, permissões e operações de Live/Paper preservados. Branch `feature/v10.7.43-backtest-replay-utility-scores`, documentação `docs/changes/v10.7.43-backtest-replay-utility-scores.md`. CI + PR antes de merge.
+
+---
+
 ## 2026-10-25 — Front v10.7.42 | paridade visual da reprodução anual
 
 A aba Annual Replay foi reorganizada com a mesma hierarquia do exemplo HTML de 2025: quatro métricas, player e progresso, painel de avaliação de ativos (escores apenas quando gravados), gráfico de capital com meses clicáveis e lista de rotações com navegação por pregão. Testes estendidos para `decision_scores[]` explicitamente fornecidos, sem fabricar previsões ou justificativas de permanência. Nenhuma mudança na API/Alpaca/MongoDB/estratégia, sem ordens. Branch `feature/v10.7.42-annual-replay-visual-parity`; `docs/changes/v10.7.42-annual-replay-visual-parity.md`; main só via PR + CI.
