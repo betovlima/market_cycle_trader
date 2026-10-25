@@ -1,3 +1,9 @@
+## 2026-10-25 — Front v10.7.42 | paridade visual da reprodução anual
+
+A aba Annual Replay foi reorganizada com a mesma hierarquia do exemplo HTML de 2025: quatro métricas, player e progresso, painel de avaliação de ativos (escores apenas quando gravados), gráfico de capital com meses clicáveis e lista de rotações com navegação por pregão. Testes estendidos para `decision_scores[]` explicitamente fornecidos, sem fabricar previsões ou justificativas de permanência. Nenhuma mudança na API/Alpaca/MongoDB/estratégia, sem ordens. Branch `feature/v10.7.42-annual-replay-visual-parity`; `docs/changes/v10.7.42-annual-replay-visual-parity.md`; main só via PR + CI.
+
+---
+
 ## 2026-10-24 — Front v10.7.41 | aba de reprodução anual de Backtest
 
 Nova aba `Annual Replay` para visualizar, sem recalcular operações, um ano de qualquer Backtest concluído disponível em Analytics. Usa somente os endpoints GET existentes de histórico, com seletor de ano, play/pause, velocidades, navegação por pregão, salto para rotação e curva do capital. Os dados de escore diário não são oferecidos pelos endpoints atuais e permanecem **indisponíveis**; nunca inventar valores. Sem Alpaca, Mongo writes ou ordens reais/Paper. Permissão `backtest.view`; API e main não alteradas. Versão Front v10.7.41, branch `feature/v10.7.41-annual-backtest-replay`, documento `docs/changes/v10.7.41-annual-backtest-replay.md`; validar testes Node + build/CI antes de merge e implantação.
