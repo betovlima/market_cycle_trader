@@ -66,6 +66,12 @@ export function normalizeAnnualReplay(payload) {
         : null,
       top,
       reason: typeof item?.decision_reason === 'string' ? item.decision_reason : null,
+      margin: finiteNumber(item?.effective_switch_margin),
+      gap: finiteNumber(item?.best_vs_current_gap),
+      holdingDays: finiteNumber(item?.holding_days_at_decision),
+      heldByMinimum: item?.min_hold_guard_applied === true,
+      heldByMargin: item?.switch_margin_guard_applied === true,
+      target: asset(item?.final_action_asset),
     })
   }
   return { equity: dailyEquity, rotations, scoresByDate }
