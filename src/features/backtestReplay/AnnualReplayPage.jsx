@@ -36,7 +36,7 @@ function ScorePanel({ session }) {
       <div className="annual-replay-card-accent"><span>{signals ? tr('Highest utility candidate') : tr('Asset acquired, if any')}</span><strong>{candidate}</strong><small>{tr('Utility')}: {score(signals?.bestScore)}</small></div>
       <div><span>{tr('Position at this session')}</span><strong>{session?.asset || '—'}</strong><small>{tr('Utility')}: {signals && session.asset === signals.best ? score(signals.bestScore) : signals && session.asset === signals.before ? score(signals.beforeScore) : '—'}</small></div>
     </div>
-    <h4>{tr('Top five estimated utilities')}</h4>
+    <h4>{tr('Top five estimated utilities')} {ranked.length ? <span className="annual-replay-partial-count">({ranked.length}/5 {tr('recorded')})</span> : null}</h4>
     {ranked.length ? <div className="annual-replay-score-bars">
       {ranked.map((entry) => <div className="annual-replay-score-bar" key={entry.asset}>
         <strong>{entry.asset}</strong>
@@ -47,9 +47,15 @@ function ScorePanel({ session }) {
       <strong>{tr('Ranking unavailable for this session')}</strong>
       <p>{tr('The selected historical Backtest has no stored daily candidate scores in its analytics response. The application does not invent or reconstruct them.')}</p>
     </div>}
+    {signals && (signals.gap !== null || signals.margin !== null) ? <div className="annual-replay-score-comparison">
+      <div><small>{tr('Candidate advantage')}</small><strong>{score(signals.gap)}</strong></div>
+      <div><small>{tr('Required margin')}</small><strong>{score(signals.margin)}</strong></div>
+      <div><small>{tr('Decision')}</small><strong>{signals.heldByMinimum ? tr('Minimum holding') : signals.heldByMargin ? tr('Below margin') : signals.reason ? tr(signals.reason) : '—'}</strong></div>
+    </div> : null}
+    {ranked.length > 0 && ranked.length < 5 ? <p className="annual-replay-help annual-replay-partial-notice">{tr('Only the candidates saved by this historical backtest are shown. Missing ranks are not inferred.')}</p> : null}
     <div className="annual-replay-reason">{rotation
       ? <>{tr('Recorded execution')}: <strong>{rotation.from} → {rotation.to}</strong> · {dateLabel(session.date)}.</>
-      : <>{tr('No position change was recorded for this session.')} {tr('The exact decision guard is not available in the historical record.')}</>}
+      : <>{tr('No position change was recorded for this session.')} {signals?.reason ? tr(signals.reason) : tr('The exact decision guard is not available in the historical record.')}</>}
     </div>
   </section>
 }
