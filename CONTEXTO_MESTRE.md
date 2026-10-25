@@ -1,3 +1,9 @@
+## 2026-10-24 — Front v10.7.41 | aba de reprodução anual de Backtest
+
+Nova aba `Annual Replay` para visualizar, sem recalcular operações, um ano de qualquer Backtest concluído disponível em Analytics. Usa somente os endpoints GET existentes de histórico, com seletor de ano, play/pause, velocidades, navegação por pregão, salto para rotação e curva do capital. Os dados de escore diário não são oferecidos pelos endpoints atuais e permanecem **indisponíveis**; nunca inventar valores. Sem Alpaca, Mongo writes ou ordens reais/Paper. Permissão `backtest.view`; API e main não alteradas. Versão Front v10.7.41, branch `feature/v10.7.41-annual-backtest-replay`, documento `docs/changes/v10.7.41-annual-backtest-replay.md`; validar testes Node + build/CI antes de merge e implantação.
+
+---
+
 ## 2026-10-23 — Front v10.7.40 | Live e Trading em abas independentes
 
 **Solicitação:** mover as telas Live e Trading para a navegação principal e remover a aba Portfólio. **Implementação:** `src/App.jsx` define duas rotas visuais `live` e `trading`; `src/features/backtest/components/AppHeader.jsx` apresenta as abas Live e Trading (Paper); `src/features/paperPortfolio/PaperPortfolioDashboard.jsx` deixa de gerenciar subabas e recebe `market` diretamente. Títulos agora identificam o ambiente ativo. Estilos da subaba antiga removidos. Sem alterar API, banco, dados, critérios de negociação, ordens, autenticação ou credenciais.
