@@ -13,6 +13,7 @@ import { ReviewerAccessPage } from './features/ReviewerAccessPage'
 import { SystemSettingsPage } from './features/SystemSettingsPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { DecisionSciencePage } from './features/decisionScience/DecisionSciencePage'
+import { AnnualReplayPage } from './features/backtestReplay/AnnualReplayPage'
 import { LoginPage } from './features/LoginPage'
 import { PaperPortfolioDashboard } from './features/paperPortfolio/PaperPortfolioDashboard'
 import { AssetDiscoveryExecutionPage } from './features/assetDiscovery/AssetDiscoveryExecutionPage'
@@ -22,6 +23,7 @@ const TAB_CAPABILITIES = {
   dashboard: 'dashboard.view',
   'decision-science': 'decision_science.view',
   backtest: 'backtest.view',
+  'annual-replay': 'backtest.view',
   'asset-discovery': 'asset_discovery.view',
   live: 'portfolio.view',
   trading: 'portfolio.view',
@@ -100,6 +102,7 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
       {activeTab === 'dashboard' && hasCapability(capabilities, 'dashboard.view') ? <DashboardPage workspace={workspace} capabilities={capabilities} onOpenBacktest={() => setActiveTab('backtest')} initialProcessingId={dashboardProcessingId} /> : null}
       {activeTab === 'decision-science' && hasCapability(capabilities, 'decision_science.view') ? <DecisionSciencePage capabilities={capabilities} /> : null}
       {activeTab === 'backtest' && hasCapability(capabilities, 'backtest.view') ? <BacktestPage workspace={workspace} capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
+      {activeTab === 'annual-replay' && hasCapability(capabilities, 'backtest.view') ? <AnnualReplayPage capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'asset-discovery' && hasCapability(capabilities, 'asset_discovery.view') ? <AssetDiscoveryExecutionPage capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'live' && hasCapability(capabilities, 'portfolio.view') && hasCapability(capabilities, 'admin.manage') ? <PaperPortfolioDashboard market="live" capabilities={capabilities} /> : null}
       {activeTab === 'trading' && hasCapability(capabilities, 'portfolio.view') ? <PaperPortfolioDashboard market="trading" capabilities={capabilities} /> : null}
