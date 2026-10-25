@@ -35,6 +35,7 @@ function roleLabel(role) {
     trader: 'Trader',
     viewer: 'Viewer',
     reviewer: 'Reviewer',
+    replay_guest: 'Professor (Annual Replay only)',
   }
   return tr(labels[role] || 'Authorized')
 }
