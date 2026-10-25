@@ -57,3 +57,48 @@ test('portfolio asset stays unavailable when movements are absent', () => {
   const data = normalizeAnnualReplay({ equity: [{ timestamp: '2025-01-03', simulation_equity: 100 }], rotations: [] })
   assert.equal(buildYearReplay(data, 2025).sessions[0].asset, null)
 })
+
+
+test('score panel uses only explicitly persisted execution-date decision scores', () => {
+  const raw = normalizeAnnualReplay({
+    equity: [
+      { timestamp: '2025-04-01T20:00:00Z', simulation_equity: 1200 },
+      { timestamp: '2025-04-02T20:00:00Z', simulation_equity: 1220 },
+    ],
+    rotations: [{ executed_at: '2025-04-02T13:30:00Z', from_asset: 'AVGO', to_asset: 'LLY' }],
+    decision_scores: [{
+      execution_date: '2025-04-02',
+      decision_date: '2025-04-01',
+      current_asset: 'AVGO',
+      current_score: 0.374561,
+      best_asset: 'LLY',
+      best_score: 0.407450,
+      finite_score_count: 75,
+      top_scores: [
+        { asset: 'AVGO', score: 0.374561 },
+        { asset: 'LLY', score: 0.407450 },
+        { asset: 'TSLA', score: 0.331510 },
+      ],
+    }],
+  })
+  const sessions = buildYearReplay(raw, 2025).sessions
+  assert.equal(sessions[0].scores, null)
+  assert.equal(sessions[1].scores.before, 'AVGO')
+  assert.equal(sessions[1].scores.best, 'LLY')
+  assert.equal(sessions[1].scores.candidateCount, 75)
+  assert.deepEqual(sessions[1].scores.top.map((entry) => entry.asset), ['LLY', 'AVGO', 'TSLA'])
+})
+
+test('malformed scores never become fabricated zeroes or new candidates', () => {
+  const result = normalizeAnnualReplay({
+    equity: [{ timestamp: '2025-01-02', simulation_equity: 100 }],
+    decision_scores: [{ execution_date: '2025-01-02', top_scores: [
+      { asset: 'LLY', score: undefined },
+      { asset: 'AVGO', score: 0.1 },
+    ] }],
+  })
+  const row = buildYearReplay(result, 2025).sessions[0]
+  assert.deepEqual(row.scores.top, [{ asset: 'AVGO', score: 0.1 }])
+  assert.equal(row.scores.best, 'AVGO')
+  assert.equal(row.scores.candidateCount, null)
+})
