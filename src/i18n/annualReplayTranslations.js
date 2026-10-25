@@ -1,5 +1,6 @@
 // Dedicated translations for the historical, read-only Backtest replay tab.
 export const ANNUAL_REPLAY_PT_TRANSLATIONS = {
+  "rotations": "trocas",
   "Backtest playback": "Reprodução do Backtest",
   "One year of capital rotations": "Um ano de rotação de ativos",
   "Watch the saved trades and capital evolve session by session, as in the interactive example.": "Acompanhe, pregão por pregão, as operações e a evolução do capital do backtest selecionado.",
@@ -92,6 +93,7 @@ export const ANNUAL_REPLAY_PT_TRANSLATIONS = {
 }
 
 export const ANNUAL_REPLAY_ES_TRANSLATIONS = {
+  "rotations": "rotaciones",
   "Backtest playback": "Reproducción del Backtest",
   "One year of capital rotations": "Un año de rotación de activos",
   "Watch the saved trades and capital evolve session by session, as in the interactive example.": "Siga las operaciones y el capital registrados, sesión por sesión.",
