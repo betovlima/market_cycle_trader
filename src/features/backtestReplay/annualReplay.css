@@ -83,3 +83,12 @@
 @media(max-width:1100px){.annual-replay-two-column{grid-template-columns:1fr}.annual-replay-month-picker button{font-size:11px}.annual-replay-stats article{padding:16px}}
 @media(max-width:650px){.annual-replay-selectors{grid-template-columns:1fr}.annual-replay-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.annual-replay-three-cards{grid-template-columns:1fr 1fr}.annual-replay-three-cards>div:last-child{grid-column:1/-1}.annual-replay-panel{padding:15px}.annual-replay-month-picker{grid-template-columns:repeat(6,minmax(0,1fr))}.annual-replay-history-list button{grid-template-columns:1fr 1.2fr}.annual-replay-history-list button span:last-child{display:none}.annual-replay-buttons label{margin-left:0}}
 @media(prefers-reduced-motion:reduce){.annual-replay-page *{transition:none!important;animation:none!important}}
+
+
+.annual-replay-partial-count{font-weight:500;color:var(--muted);font-size:11px}
+.annual-replay-score-comparison{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:12px 0}
+.annual-replay-score-comparison>div{background:var(--panel-soft);border:1px solid var(--border);border-radius:8px;padding:10px;display:grid;gap:5px;min-width:0}
+.annual-replay-score-comparison small{color:var(--muted);font-size:10px}
+.annual-replay-score-comparison strong{font-size:12px;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.annual-replay-partial-notice{border-left:2px solid var(--accent);padding-left:10px;margin-top:10px}
+@media(max-width:540px){.annual-replay-score-comparison{grid-template-columns:1fr 1fr}.annual-replay-score-comparison>div:last-child{grid-column:1/-1}}
