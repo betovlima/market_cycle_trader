@@ -1,3 +1,9 @@
+## 2026-10-25 — Front v10.7.45 | Capital final do Backtest na Reprodução Anual
+
+Novo box no cabeçalho da Reprodução Anual com `metrics.ending_capital` do Backtest selecionado, abaixo do selo de histórico e acima do título. A métrica provém do mesmo resumo persistido exibido na tela Backtest, permanecendo fixa quando o usuário muda de ano ou pregão. O gráfico continua mostrando capital até o pregão animado. Quando a métrica falta, mostra `—` sem estimativa ou substituição por equity; tradução PT/ES e teste de contrato. Não alteramos API, acesso do professor, modelos, backtests, Alpaca nem operações. Branch `feature/v10.7.45-replay-backtest-final-capital`; docs `docs/changes/v10.7.45-backtest-final-capital-replay.md`.
+
+---
+
 ## 2026-10-25 — Front v10.7.44 | Acesso do professor e navegação
 
 Reprodução Anual com comandos explícitos para última rotação e último pregão; no exemplo 20/10/2026 é a última rotação, com 3 pregões restantes até 23/10/2026. Perfil de professor com shell de navegação exclusivo e formulário de convite por Google em Administração. Retirados aviso interpretativo e texto de fonte do rodapé da Reprodução Anual. Sem mudança de backtest ou operações. Depende da API v10.8.130. Docs `docs/changes/v10.7.44-professor-replay-and-final-navigation.md`.

@@ -16,6 +16,24 @@ const snapshot = normalizeAnnualReplay({
   ],
 })
 
+test('header final capital matches only the persisted Backtest summary across replay years', () => {
+  const full = normalizeAnnualReplay({
+    metrics: { ending_capital: 76800117.54 },
+    equity: [
+      { timestamp: '2025-12-31', simulation_equity: 200000 },
+      { timestamp: '2026-01-05', simulation_equity: 205000 },
+    ],
+  })
+  assert.equal(full.finalCapital, 76800117.54)
+  assert.equal(buildYearReplay(full, 2025).lastCapital, 200000)
+  assert.equal(buildYearReplay(full, 2026).lastCapital, 205000)
+  assert.equal(full.finalCapital, 76800117.54)
+  assert.equal(normalizeAnnualReplay({ metrics: {}, equity: [{timestamp:'2026-01-05',simulation_equity:205000}] }).finalCapital, null)
+  assert.equal(normalizeAnnualReplay({ metrics: {ending_capital:'invalid'} }).finalCapital, null)
+  assert.equal(normalizeAnnualReplay({ metrics: {ending_capital:'12345.67'} }).finalCapital, 12345.67)
+  assert.equal(normalizeAnnualReplay({ metrics: {ending_capital:0} }).finalCapital, 0)
+})
+
 test('annual replay preserves positions on sessions without trades', () => {
   const year = buildYearReplay(snapshot, 2025)
   assert.equal(year.sessions.length, 4)
