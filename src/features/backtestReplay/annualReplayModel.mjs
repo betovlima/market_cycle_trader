@@ -41,7 +41,34 @@ export function normalizeAnnualReplay(payload) {
     }))
     .filter((row) => row.date && row.from && row.to && row.from !== row.to)
     .sort((a, b) => a.timestamp.localeCompare(b.timestamp) || a.order - b.order)
-  return { equity: dailyEquity, rotations }
+  // Optional immutable decision snapshot for one EXECUTION date. Existing MCT analytics
+  // may not contain this data; never infer past utilities from later prices or trades.
+  const scoresByDate = new Map()
+  for (const item of (Array.isArray(payload?.decision_scores) ? payload.decision_scores : [])) {
+    const date = dayKey(item?.execution_date)
+    if (!date) continue
+    const top = (Array.isArray(item?.top_scores) ? item.top_scores : [])
+      .map((entry) => ({
+        asset: asset(entry?.asset || entry?.symbol),
+        score: finiteNumber(entry?.score),
+      }))
+      .filter((entry) => entry.asset && entry.score !== null)
+      .sort((a, b) => b.score - a.score || a.asset.localeCompare(b.asset))
+      .slice(0, 5)
+    scoresByDate.set(date, {
+      decisionDate: dayKey(item?.decision_date),
+      before: asset(item?.current_asset),
+      beforeScore: finiteNumber(item?.current_score),
+      best: asset(item?.best_asset) || top[0]?.asset || null,
+      bestScore: finiteNumber(item?.best_score),
+      candidateCount: Number.isInteger(Number(item?.finite_score_count)) && Number(item.finite_score_count) > 0
+        ? Number(item.finite_score_count)
+        : null,
+      top,
+      reason: typeof item?.decision_reason === 'string' ? item.decision_reason : null,
+    })
+  }
+  return { equity: dailyEquity, rotations, scoresByDate }
 }
 
 export function replayYears(analytics) {
@@ -68,7 +95,7 @@ export function buildYearReplay(analytics, year) {
       if (movement.date === row.date) events.push(movement)
       nextMovement += 1
     }
-    return { ...row, asset: currentAsset, events }
+    return { ...row, asset: currentAsset, events, scores: analytics.scoresByDate?.get(row.date) || null }
   })
   const lastCapital = sessions[sessions.length - 1].capital
   const change = baseline > 0 ? lastCapital / baseline - 1 : null
