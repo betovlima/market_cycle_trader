@@ -120,6 +120,40 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
   </div>
 }
 
+
+function ProfessorReplayApp({ session, onLogout, onSessionExpired, onSessionRefresh }) {
+  const capabilities = session?.capabilities || {}
+
+  useEffect(() => {
+    let active = true
+    const refresh = async () => {
+      try {
+        const value = await apiFetch(`${API}/auth/session`)
+        if (!active) return
+        if (!value?.authenticated) onSessionExpired()
+        else onSessionRefresh(value)
+      } catch (error) {
+        if (active && error?.status === 401) onSessionExpired()
+      }
+    }
+    const interval = window.setInterval(refresh, 60_000)
+    return () => { active = false; window.clearInterval(interval) }
+  }, [onSessionExpired, onSessionRefresh])
+
+  return <div className="app-frame">
+    <AppHeader
+      activeTab="annual-replay"
+      onTabChange={() => {}}
+      session={session}
+      capabilities={capabilities}
+      onLogout={onLogout}
+    />
+    <main className="workspace-main">
+      <AnnualReplayPage capabilities={capabilities} onSessionExpired={onSessionExpired} />
+    </main>
+  </div>
+}
+
 export default function App() {
   useI18n()
   const [state, setState] = useState('checking')
@@ -157,5 +191,8 @@ export default function App() {
 
   if (state === 'checking') return <div className="app-loading">{tr('Checking private session…')}</div>
   if (state !== 'authenticated' || !session) return <><LoginPage onAuthenticated={authenticated} />{error ? <div className="startup-error">{tr(error)}</div> : null}</>
+  if (session.role === 'replay_guest') {
+    return <ProfessorReplayApp session={session} onLogout={logout} onSessionExpired={expired} onSessionRefresh={setSession} />
+  }
   return <AuthenticatedApp session={session} onLogout={logout} onSessionExpired={expired} onSessionRefresh={setSession} />
 }

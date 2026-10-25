@@ -7,7 +7,7 @@ const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', Icon: DashboardIcon, capability: 'dashboard.view' },
   { id: 'decision-science', label: 'Decision Science', Icon: AnalyticsIcon, capability: 'decision_science.view' },
   { id: 'backtest', label: 'Backtest', Icon: BacktestIcon, capability: 'backtest.view' },
-  { id: 'annual-replay', label: 'Annual Replay', Icon: AnalyticsIcon, capability: 'backtest.view' },
+  { id: 'annual-replay', label: 'Annual Replay', Icon: AnalyticsIcon, capability: 'annual_replay.view' },
   { id: 'asset-discovery', label: 'Asset Discovery', Icon: SearchIcon, capability: 'asset_discovery.view' },
   { id: 'live', label: 'Live', Icon: PortfolioIcon, capability: 'portfolio.view', requiredCapability: 'admin.manage' },
   { id: 'trading', label: 'Trading (Paper)', Icon: PortfolioIcon, capability: 'portfolio.view' },

@@ -108,6 +108,14 @@ export function buildYearReplay(analytics, year) {
   return { sessions, rotations: withinYear, baseline, lastCapital, change }
 }
 
+// Differentiate the last recorded rotation from the last available session.
+export function lastRecordedRotationSessionIndex(sessions) {
+  for (let index = sessions.length - 1; index >= 0; index -= 1) {
+    if (Array.isArray(sessions[index]?.events) && sessions[index].events.length > 0) return index
+  }
+  return -1
+}
+
 export function replayChartPath(sessions, selectedIndex, width = 880, height = 195) {
   if (!sessions.length) return { path: '', area: '', dot: null }
   const last = Math.max(0, Math.min(sessions.length - 1, selectedIndex))

@@ -1,3 +1,9 @@
+## 2026-10-25 — Front v10.7.44 | Acesso do professor e navegação
+
+Reprodução Anual com comandos explícitos para última rotação e último pregão; no exemplo 20/10/2026 é a última rotação, com 3 pregões restantes até 23/10/2026. Perfil de professor com shell de navegação exclusivo e formulário de convite por Google em Administração. Retirados aviso interpretativo e texto de fonte do rodapé da Reprodução Anual. Sem mudança de backtest ou operações. Depende da API v10.8.130. Docs `docs/changes/v10.7.44-professor-replay-and-final-navigation.md`.
+
+---
+
 ## 2026-10-25 — Front v10.7.43 | ranking e margem históricos na aba Annual Replay
 
 Ranking até cinco ativos só com diagnósticos reais de `decision_scores[]` (API v10.8.128); mostrar ranking parcial dos legados como 3/5, sem fabricar dados. Informações de vantagem, margem e motivo de manter/trocar quando disponíveis; layouts, permissões e operações de Live/Paper preservados. Branch `feature/v10.7.43-backtest-replay-utility-scores`, documentação `docs/changes/v10.7.43-backtest-replay-utility-scores.md`. CI + PR antes de merge.
