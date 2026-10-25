@@ -61,7 +61,7 @@ function CapitalPanel({ sessions, index, annual, onSeek }) {
     const values = sessions.filter((item) => Number(item.date.slice(5, 7)) === i + 1)
     const year = sessions[0].date.slice(0, 4)
     const date = year + '-' + String(i + 1).padStart(2, '0') + '-01'
-    return { label: dateLabel(date, { month: 'short' }).replace('.', ''), start: values[0]?.date || null, count: values.length, month: i + 1 }
+    return { label: dateLabel(date, { month: 'short' }).replace('.', ''), start: values[0]?.date || null, count: values.reduce((total, entry) => total + entry.events.length, 0), month: i + 1 }
   }), [sessions])
   const min = chart.min || 0
   const max = chart.max || 0
@@ -85,7 +85,7 @@ function CapitalPanel({ sessions, index, annual, onSeek }) {
     <p className="annual-replay-help">{tr('Click a month to jump to its first available session')}</p>
     <div className="annual-replay-month-picker">
       {monthItems.map((m) => <button type="button" key={m.month} className={m.month === Number(current.date.slice(5, 7)) ? 'active' : ''} disabled={!m.start} onClick={() => onSeek(sessions.findIndex((item) => item.date === m.start))}>
-        <span>{m.label}</span><strong>{m.count}</strong><small>{tr('sessions')}</small>
+        <span>{m.label}</span><strong>{m.count}</strong><small>{tr('rotations')}</small>
       </button>)}
     </div>
   </section>
