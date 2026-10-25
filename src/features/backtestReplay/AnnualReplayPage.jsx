@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiFetch } from '../../api/http'
 import { API } from '../../config/env'
 import { buildYearReplay, lastRecordedRotationSessionIndex, normalizeAnnualReplay, replayChartPath, replayYears } from './annualReplayModel.mjs'
+import { AnnualReplayHelpModal } from './AnnualReplayHelpModal.jsx'
 import './annualReplay.css'
 
 const SPEEDS = [{ text: '1', ms: 1000 }, { text: '3', ms: 333 }, { text: '10', ms: 100 }, { text: '20', ms: 50 }]
@@ -18,7 +19,9 @@ const score = (value) => value == null || !Number.isFinite(Number(value)) ? '—
   : new Intl.NumberFormat(getIntlLocale(), { minimumFractionDigits: 6, maximumFractionDigits: 6 }).format(Number(value))
 const shortValue = (value) => new Intl.NumberFormat(getIntlLocale(), { notation: 'compact', maximumFractionDigits: 1 }).format(value)
 
-function ScorePanel({ session }) {
+function ScorePanel({ session, onPause }) {
+  const [helpOpen, setHelpOpen] = useState(false)
+  const closeHelp = useCallback(() => setHelpOpen(false), [])
   const signals = session?.scores || null
   const rotation = session?.events?.at(-1) || null
   const previous = signals?.before || rotation?.from || session?.asset || '—'
@@ -36,7 +39,11 @@ function ScorePanel({ session }) {
       <div className="annual-replay-card-accent"><span>{signals ? tr('Highest utility candidate') : tr('Asset acquired, if any')}</span><strong>{candidate}</strong><small>{tr('Utility')}: {score(signals?.bestScore)}</small></div>
       <div><span>{tr('Position at this session')}</span><strong>{session?.asset || '—'}</strong><small>{tr('Utility')}: {signals && session.asset === signals.best ? score(signals.bestScore) : signals && session.asset === signals.before ? score(signals.beforeScore) : '—'}</small></div>
     </div>
-    <h4>{tr('Top five estimated utilities')} {ranked.length ? <span className="annual-replay-partial-count">({ranked.length}/5 {tr('recorded')})</span> : null}</h4>
+    <div className="annual-replay-help-title">
+      <h4>{tr('Top five estimated utilities')} {ranked.length ? <span className="annual-replay-partial-count">({ranked.length}/5 {tr('recorded')})</span> : null}</h4>
+      <button type="button" className="annual-replay-help-trigger" aria-label={tr('Explain estimated utilities and asset selection')} title={tr('Explain estimated utilities and asset selection')} aria-haspopup="dialog" onClick={() => { onPause?.(); setHelpOpen(true) }}>?</button>
+    </div>
+    {helpOpen ? <AnnualReplayHelpModal signals={signals} onClose={closeHelp}/> : null}
     {ranked.length ? <div className="annual-replay-score-bars">
       {ranked.map((entry) => <div className="annual-replay-score-bar" key={entry.asset}>
         <strong>{entry.asset}</strong>
@@ -242,7 +249,7 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
         </div>
       </section>
       <div className="annual-replay-two-column">
-        <ScorePanel session={current}/>
+        <ScorePanel session={current} onPause={() => setPlaying(false)}/>
         <CapitalPanel sessions={sessions} index={safeIndex} annual={annual} onSeek={seek}/>
       </div>
       <section className="annual-replay-panel annual-replay-history">
