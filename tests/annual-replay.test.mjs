@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { normalizeAnnualReplay, replayYears, buildYearReplay, replayChartPath, lastRecordedRotationSessionIndex } from '../src/features/backtestReplay/annualReplayModel.mjs'
+import { replaySelectionHelpExample } from '../src/features/backtestReplay/annualReplayHelpModel.mjs'
 
 const snapshot = normalizeAnnualReplay({
   equity: [
@@ -162,4 +163,39 @@ test('last rotation is reachable even with three later trading sessions', () => 
   assert.equal(sessions[lastRecordedRotationSessionIndex(sessions)].date, '2026-10-20')
   assert.equal(sessions.at(-1).date, '2026-10-23')
   assert.equal(lastRecordedRotationSessionIndex([{ date: '2026-10-23', events: [] }]), -1)
+})
+
+test('selection help uses persisted scores, margin, holding period and decision reason', () => {
+  const values = replaySelectionHelpExample({
+    before: 'AVGO', beforeScore: 0.374561, best: 'LLY', bestScore: 0.407450,
+    margin: 0.01, holdingDays: 2, reason: 'ROTATE_TO_BEST_ASSET',
+    top: [{asset:'LLY', score:0.407450}, {asset:'AVGO', score:0.374561}],
+  })
+  assert.equal(values.recorded, true)
+  assert.equal(values.best, 'LLY')
+  assert.equal(values.before, 'AVGO')
+  assert.ok(Math.abs(values.advantage - 0.032889) < 1e-10)
+  assert.equal(values.margin, 0.01)
+  assert.equal(values.holdingDays, 2)
+  assert.equal(values.reason, 'ROTATE_TO_BEST_ASSET')
+})
+
+test('selection help may reuse actual saved ranking without inventing a decision margin', () => {
+  const values = replaySelectionHelpExample({
+    before: 'AVGO', best: 'LLY', margin: null,
+    top: [{asset:'LLY', score:0.4}, {asset:'AVGO', score:0.3}],
+  })
+  assert.equal(values.recorded, true)
+  assert.equal(values.bestScore, 0.4)
+  assert.equal(values.beforeScore, 0.3)
+  assert.equal(values.margin, null)
+})
+
+test('selection help falls back to an explicitly illustrative scenario when real scores are incomplete', () => {
+  const values = replaySelectionHelpExample({ before:'AVGO', best:'LLY', beforeScore:null, bestScore:null })
+  assert.equal(values.recorded, false)
+  assert.equal(values.before, 'AVGO')
+  assert.equal(values.best, 'LLY')
+  assert.equal(values.advantage, 0.032889)
+  assert.equal(replaySelectionHelpExample(null).recorded, false)
 })
