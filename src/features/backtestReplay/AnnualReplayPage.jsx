@@ -277,7 +277,7 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
             {evt.realizedPnl != null ? <span className="annual-replay-history-pnl">{tr('Realized P/L')}: <b className={evt.realizedPnl >= 0 ? 'positive' : 'negative'}>{usd(evt.realizedPnl)}</b></span> : null}
             {evt.fee != null ? <span className="annual-replay-history-fee">{tr('Transaction fees')}: <b>{usd(evt.fee)}</b></span> : null}
             <span className="annual-replay-history-action">{tr('View session')}</span>
-          </button>) : <p>{tr(month ? 'No rotations were recorded in the selected month.' : 'No recorded rotations up to this point.')}</p>
+          </button>) : <p>{tr(month ? 'No rotations were recorded in the selected month.' : 'No recorded rotations up to this point.')}</p>}
         </div>
         {!month && displayedEvents.length > 12 ? <p className="annual-replay-help">{tr('Showing the twelve latest rotations. Navigate the timeline to inspect older events.')}</p> : null}
       </section>
