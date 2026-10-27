@@ -4,6 +4,7 @@ import { apiFetch } from '../../../api/http'
 import { API } from '../../../config/env'
 import { getIntlLocale, tr } from '../../../i18n/runtime'
 import './LiveWorkflowMonitor.css'
+import { liveWorkflowDisplay, liveWorkflowAttemptStageKey } from '../liveWorkflowDisplay.mjs'
 
 const POLL_MS = 15_000
 
@@ -91,9 +92,8 @@ export function LiveWorkflowMonitor({ executionSession }) {
     }
   }, [session, refreshKey])
 
-  const attempts = Array.isArray(report?.attempts) ? report.attempts : []
-  const events = Array.isArray(report?.events) ? report.events : []
-  const recentErrors = events.filter((event) => event.level === 'error').slice(-3).reverse()
+  const presentation = liveWorkflowDisplay(report)
+  const { attempts, recentErrors } = presentation
   const isMissing = report?.status === 'no_live_session'
   const currentState = report?.status
   const recovery = report?.recovery
@@ -144,9 +144,9 @@ export function LiveWorkflowMonitor({ executionSession }) {
               <small>{tr('Actual persisted state determines the next step.')}</small>
             </div>
             <div className="live-workflow-metric">
-              <span>{tr('Calculation attempts')}</span>
+              <span>{tr('Signal preparations initiated')}</span>
               <strong>{Number(report.preparation_attempts || 0)} / {Number(report.open_preparation_attempts || 0)}</strong>
-              <small>{tr('Post-close / open-session')}</small>
+              <small>{tr('Post-close / open-session · cumulative')}</small>
             </div>
             <div className="live-workflow-metric">
               <span>{tr('Orders to reconcile')}</span>
@@ -154,13 +154,22 @@ export function LiveWorkflowMonitor({ executionSession }) {
               <small>{tr('Never resend orders as a calculation retry.')}</small>
             </div>
           </div>
-          {report.last_preparation_error_type || report.last_open_calibration_error_type || recentErrors.length ? (
-            <div className="live-workflow-diagnostics">
-              <strong>{tr('Recent failures')}</strong>
-              {report.last_preparation_error_type ? <span>{tr('Post-close')}: {report.last_preparation_error_type}</span> : null}
-              {report.last_open_calibration_error_type ? <span>{tr('Open-session')}: {report.last_open_calibration_error_type}</span> : null}
-              {recentErrors.map((event, i) => <span key={`${event.recorded_at || 'event'}-${i}`}>{formatTime(event.recorded_at)} · {event.stage || '—'} · {event.details?.error_type || event.message || '—'}</span>)}
-            </div>
+          {presentation.hasDiagnostics ? (
+            <details className={`live-workflow-diagnostics ${presentation.isHistorical ? 'historical' : 'active-errors'}`} open={!presentation.isHistorical}>
+              <summary>
+                <strong>{tr(presentation.isHistorical
+                  ? (presentation.preparedAfterFailures
+                      ? 'Previous failures · signal prepared afterwards'
+                      : 'Previous failures · decision currently ready')
+                  : 'Recent failures')}</strong>
+                {presentation.isHistorical ? <span>{tr('Historical records retained for audit; no active preparation failure is indicated by the current session status.')}</span> : null}
+              </summary>
+              <div className="live-workflow-diagnostic-lines">
+                {report.last_preparation_error_type ? <span>{tr('Post-close')}: {report.last_preparation_error_type}</span> : null}
+                {report.last_open_calibration_error_type ? <span>{tr('Open-session')}: {report.last_open_calibration_error_type}</span> : null}
+                {recentErrors.map((event, i) => <span key={`${event.recorded_at || 'event'}-${i}`}>{formatTime(event.recorded_at)} · {event.stage || '—'} · {event.details?.error_type || event.message || '—'}</span>)}
+              </div>
+            </details>
           ) : null}
           <div className="live-workflow-attempts">
             <div className="live-workflow-section-title">
@@ -174,7 +183,7 @@ export function LiveWorkflowMonitor({ executionSession }) {
                     <span className={`live-workflow-dot ${TONE[attempt.status] || 'neutral'}`} aria-hidden="true" />
                     <div className="live-workflow-attempt-content">
                       <div className="live-workflow-attempt-heading">
-                        <strong>{displayStage(attempt.stage)}</strong>
+                        <strong>{liveWorkflowAttemptStageKey(attempt) ? tr(liveWorkflowAttemptStageKey(attempt)) : displayStage(attempt.stage)}</strong>
                         <span className={`live-workflow-state ${TONE[attempt.status] || 'neutral'}`}>{displayState(attempt.status)}</span>
                       </div>
                       <small>{formatTime(attempt.started_at)}{attempt.finished_at ? ` → ${formatTime(attempt.finished_at)}` : ''}</small>
@@ -185,6 +194,9 @@ export function LiveWorkflowMonitor({ executionSession }) {
                 ))}
               </ol>
             ) : <p className="live-workflow-empty">{tr('No workflow attempts recorded for this session yet. Historical attempts before this feature cannot be reconstructed.')}</p>}
+            {attempts.some((attempt) => liveWorkflowAttemptStageKey(attempt)) ? (
+              <p className="live-workflow-attempt-note">{tr('A completed D-1 check can reuse a saved signal. The monitoring record alone does not prove another model training occurred.')}</p>
+            ) : null}
           </div>
         </>
       )}
