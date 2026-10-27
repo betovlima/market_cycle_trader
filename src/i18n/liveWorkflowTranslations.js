@@ -1,4 +1,11 @@
 export const LIVE_WORKFLOW_PT_TRANSLATIONS = {
+  "Signal preparations initiated": "Preparações do sinal iniciadas",
+  "Post-close / open-session · cumulative": "Pós-fechamento / abertura · acumuladas",
+  "Previous failures · signal prepared afterwards": "Falhas anteriores · sinal preparado posteriormente",
+  "Previous failures · decision currently ready": "Falhas anteriores · decisão atual pronta",
+  "Historical records retained for audit; no active preparation failure is indicated by the current session status.": "Registros históricos preservados para auditoria; o estado atual não indica falha ativa na preparação.",
+  "D-1 signal ready (calculation or verification)": "Sinal D−1 pronto (cálculo ou verificação)",
+  "A completed D-1 check can reuse a saved signal. The monitoring record alone does not prove another model training occurred.": "Uma verificação concluída pode reutilizar o sinal salvo. O monitor, isoladamente, não comprova que ocorreu outro treinamento.",
   'Last recorded trade': 'Última operação registrada',
   'Live broker execution': 'Execução na corretora Live',
   'Live decision not executed yet': 'Decisão Live ainda não executada',
@@ -73,6 +80,13 @@ export const LIVE_WORKFLOW_PT_TRANSLATIONS = {
 }
 
 export const LIVE_WORKFLOW_ES_TRANSLATIONS = {
+  "Signal preparations initiated": "Preparaciones de señal iniciadas",
+  "Post-close / open-session · cumulative": "Poscierre / apertura · acumuladas",
+  "Previous failures · signal prepared afterwards": "Errores anteriores · señal preparada posteriormente",
+  "Previous failures · decision currently ready": "Errores anteriores · decisión actual lista",
+  "Historical records retained for audit; no active preparation failure is indicated by the current session status.": "Registros históricos conservados para auditoría; el estado actual no indica un fallo activo de preparación.",
+  "D-1 signal ready (calculation or verification)": "Señal D−1 lista (cálculo o verificación)",
+  "A completed D-1 check can reuse a saved signal. The monitoring record alone does not prove another model training occurred.": "Una verificación terminada puede reutilizar una señal guardada. El monitor por sí solo no demuestra que se haya realizado otro entrenamiento.",
   'Last recorded trade': 'Última operación registrada',
   'Live broker execution': 'Ejecución en el bróker Live',
   'Live decision not executed yet': 'Decisión Live todavía no ejecutada',
