@@ -137,3 +137,7 @@
 .live-workflow-diagnostic-lines { display: grid; gap: 6px; padding: 9px 0 0 14px; }
 .live-workflow-diagnostic-lines span { color: var(--muted); }
 .live-workflow-attempt-note { color: var(--muted); font-size: .76rem; line-height: 1.5; margin: 10px 0 0; }
+
+/* Preserve native <details>/<summary> expansion and collapse. */
+details.live-workflow-diagnostics { display:block; }
+details.live-workflow-diagnostics:not([open]) .live-workflow-diagnostic-lines { display:none; }
