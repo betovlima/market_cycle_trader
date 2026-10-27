@@ -117,3 +117,23 @@
   .live-workflow-summary { grid-template-columns: 1fr; }
   .live-workflow-controls { justify-content: flex-start; }
 }
+
+/* Display-only distinction: a ready signal can have older audit failures. */
+.live-workflow-diagnostics.historical {
+  background: rgba(64, 118, 153, .08);
+  border-left-color: #6b9abb;
+}
+.live-workflow-diagnostics summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px 14px;
+  list-style-position: inside;
+}
+.live-workflow-diagnostics summary strong { color: var(--text); }
+.live-workflow-diagnostics.historical summary strong { color: #85c7d7; }
+.live-workflow-diagnostics summary span { font-size: .75rem; color: var(--muted); }
+.live-workflow-diagnostic-lines { display: grid; gap: 6px; padding: 9px 0 0 14px; }
+.live-workflow-diagnostic-lines span { color: var(--muted); }
+.live-workflow-attempt-note { color: var(--muted); font-size: .76rem; line-height: 1.5; margin: 10px 0 0; }
