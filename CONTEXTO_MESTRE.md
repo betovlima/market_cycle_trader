@@ -1,3 +1,9 @@
+## 2026-10-27 — Front v10.7.48 | Reprodução Anual com seleção Ano + Mês
+
+A Reprodução Anual agora permite selecionar o ano completo ou um mês com pregões registrados, preservando o gráfico de capital, o ranking de utilidades, a lista de trocas e o player existentes. O mês usa as mesmas observações de capital e rotações persistidas, com baseline do último fechamento anterior ao mês, e exibe capital inicial/final, variação e, nas trocas, capital no fechamento, P/L realizado e custos quando disponíveis. Os botões de meses também filtram o período (segundo clique retorna ao ano). Trocar o período reinicia/pausa a animação. Capital final do backtest permanece global. Sem downloads, reprocessamentos, alterações de API, backtest, estratégia, ordens ou base de dados. Branch `feature/v10.7.48-monthly-annual-replay`. Documentação: `docs/changes/v10.7.48-monthly-annual-replay.md`.
+
+---
+
 ## 2026-10-26 — Front v10.7.47 | Histórico de falhas no Monitor Live (somente visualização)
 
 **Contexto:** falhas antigas de preparo do sinal D−1 continuavam com aparência de falhas atuais mesmo após decisão pronta; chamadas idempotentes de verificação apareciam como novos cálculos. **Mudança:** distinção visual entre registros de erro históricos (dobráveis e preservados) e erros ainda ativos; a recuperação só é afirmada com evento posterior `signal_prepared`; registros concluídos que retornam `recalibrated_no_orders` são descritos como cálculo **ou** verificação, sem afirmar retreinamento; contador apresentado como preparações iniciadas, acumuladas. **Impacto:** frontend, traduções PT/EN/ES, testes de apresentação. **Nenhuma mudança:** API, agendador, dados MongoDB, Winner, ordens, Alpaca, retentativas e estados persistidos. **Próximo passo:** CI na branch e merge em `main`; deploy independente. **Detalhes:** `docs/changes/v10.7.47-live-monitor-recovered-history.md`.

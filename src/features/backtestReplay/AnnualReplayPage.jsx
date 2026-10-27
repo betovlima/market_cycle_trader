@@ -3,7 +3,7 @@ import { getIntlLocale, tr } from '../../i18n/runtime'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiFetch } from '../../api/http'
 import { API } from '../../config/env'
-import { buildYearReplay, lastRecordedRotationSessionIndex, normalizeAnnualReplay, replayChartPath, replayYears } from './annualReplayModel.mjs'
+import { buildMonthReplay, buildYearReplay, lastRecordedRotationSessionIndex, normalizeAnnualReplay, replayChartPath, replayMonths, replayYears } from './annualReplayModel.mjs'
 import { AnnualReplayHelpModal } from './AnnualReplayHelpModal.jsx'
 import './annualReplay.css'
 
@@ -67,15 +67,15 @@ function ScorePanel({ session, onPause }) {
   </section>
 }
 
-function CapitalPanel({ sessions, index, annual, onSeek }) {
+function CapitalPanel({ sessions, index, period, yearSessions, selectedMonth, onSelectMonth }) {
   const chart = useMemo(() => replayChartPath(sessions, index), [sessions, index])
   const current = sessions[index]
   const monthItems = useMemo(() => Array.from({ length: 12 }, (_, i) => {
-    const values = sessions.filter((item) => Number(item.date.slice(5, 7)) === i + 1)
-    const year = sessions[0].date.slice(0, 4)
+    const values = yearSessions.filter((item) => Number(item.date.slice(5, 7)) === i + 1)
+    const year = yearSessions[0]?.date.slice(0, 4) || '2000'
     const date = year + '-' + String(i + 1).padStart(2, '0') + '-01'
-    return { label: dateLabel(date, { month: 'short' }).replace('.', ''), start: values[0]?.date || null, count: values.reduce((total, entry) => total + entry.events.length, 0), month: i + 1 }
-  }), [sessions])
+    return { label: dateLabel(date, { month: 'short' }).replace('.', ''), available: values.length > 0, count: values.reduce((total, entry) => total + entry.events.length, 0), month: i + 1 }
+  }), [yearSessions])
   const min = chart.min || 0
   const max = chart.max || 0
   return <section className="annual-replay-panel annual-replay-capital-panel">
@@ -83,7 +83,12 @@ function CapitalPanel({ sessions, index, annual, onSeek }) {
       <div><h3>{tr('Accumulated capital')}</h3><p className="annual-replay-help">{tr('Historical simulated capital at market close')}</p></div>
       <strong className="annual-replay-capital-value">{usd(current.capital)}</strong>
     </div>
-    <p className="annual-replay-capital-change">{tr('Since beginning of selected year')}: <strong className={annual?.baseline && current.capital < annual.baseline ? 'negative' : 'positive'}>{annual.baseline > 0 ? pct(current.capital / annual.baseline - 1) : '—'}</strong></p>
+    <p className="annual-replay-capital-change">{tr(selectedMonth ? 'Since beginning of selected month' : 'Since beginning of selected year')}: <strong className={period?.baseline && current.capital < period.baseline ? 'negative' : 'positive'}>{period.baseline > 0 ? pct(current.capital / period.baseline - 1) : '—'}</strong></p>
+    {selectedMonth ? <div className="annual-replay-month-capital-summary">
+      <div><span>{tr('Capital at month start')}</span><strong>{usd(period.baseline)}</strong></div>
+      <div><span>{tr('Capital at month end')}</span><strong>{usd(period.lastCapital)}</strong></div>
+      <div><span>{tr('Month capital change')}</span><strong className={period.change == null ? '' : period.change >= 0 ? 'positive' : 'negative'}>{pct(period.change)}</strong></div>
+    </div> : null}
     <svg className="annual-replay-capital-chart" viewBox="0 0 880 215" aria-label={tr('Animated capital curve')} role="img">
       {[0, 1, 2, 3].map((row) => <g key={row}>
         <line x1="96" x2="864" y1={16 + row * 54} y2={16 + row * 54} className="annual-replay-gridline"/>
@@ -95,9 +100,9 @@ function CapitalPanel({ sessions, index, annual, onSeek }) {
       </g>
     </svg>
     <div className="annual-replay-curve-footer"><span>{tr('Capital up to current session')}</span><span>{index + 1} / {sessions.length} {tr('sessions')}</span></div>
-    <p className="annual-replay-help">{tr('Click a month to jump to its first available session')}</p>
+    <p className="annual-replay-help">{tr('Select a month to view only its daily capital and recorded rotations. Select it again to return to the full year.')}</p>
     <div className="annual-replay-month-picker">
-      {monthItems.map((m) => <button type="button" key={m.month} className={m.month === Number(current.date.slice(5, 7)) ? 'active' : ''} disabled={!m.start} onClick={() => onSeek(sessions.findIndex((item) => item.date === m.start))}>
+      {monthItems.map((m) => <button type="button" key={m.month} className={selectedMonth === String(m.month) ? 'active' : ''} aria-pressed={selectedMonth === String(m.month)} disabled={!m.available} onClick={() => onSelectMonth(selectedMonth === String(m.month) ? '' : String(m.month))}>
         <span>{m.label}</span><strong>{m.count}</strong><small>{tr('rotations')}</small>
       </button>)}
     </div>
@@ -112,6 +117,7 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
   const [error, setError] = useState('')
   const [analytics, setAnalytics] = useState(null)
   const [year, setYear] = useState('')
+  const [month, setMonth] = useState('')
   const [index, setIndex] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(333)
@@ -147,6 +153,7 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
       const years = replayYears(normalized)
       setAnalytics(normalized)
       setYear(years.length ? String(years[0]) : '')
+      setMonth('')
       setIndex(0)
     }).catch((reason) => {
       if (!active) return
@@ -158,11 +165,13 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
 
   const years = useMemo(() => analytics ? replayYears(analytics) : [], [analytics])
   const annual = useMemo(() => analytics && year ? buildYearReplay(analytics, year) : null, [analytics, year])
-  const sessions = annual?.sessions || []
+  const months = useMemo(() => replayMonths(annual), [annual])
+  const period = useMemo(() => !annual ? null : month ? buildMonthReplay(annual, month) : annual, [annual, month])
+  const sessions = period?.sessions || []
   const safeIndex = Math.min(index, Math.max(0, sessions.length - 1))
   const current = sessions[safeIndex] || null
-  const events = useMemo(() => sessions.flatMap((row, i) => row.events.map((evt) => ({ ...evt, sessionIndex: i }))), [sessions])
-  const pastEvents = useMemo(() => events.filter((evt) => evt.sessionIndex <= safeIndex).reverse(), [events, safeIndex])
+  const events = useMemo(() => sessions.flatMap((row, i) => row.events.map((evt) => ({ ...evt, capital: row.capital, sessionIndex: i }))), [sessions])
+  const displayedEvents = useMemo(() => (month ? events : events.filter((evt) => evt.sessionIndex <= safeIndex)).slice().reverse(), [events, safeIndex, month])
   const candidateCounts = [...new Set(sessions.map((row) => row.scores?.candidateCount).filter((value) => Number.isInteger(value) && value > 0))]
   const candidateCount = candidateCounts.length === 1 ? candidateCounts[0] : null
   const selectedEvent = current?.events?.at(-1) || null
@@ -184,7 +193,8 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
       : events.find((evt) => evt.sessionIndex > safeIndex)
     if (found) seek(found.sessionIndex)
   }
-  const changeYear = (value) => { setYear(value); setIndex(0); setPlaying(false) }
+  const changeYear = (value) => { setYear(value); setMonth(''); setIndex(0); setPlaying(false) }
+  const changeMonth = (value) => { setMonth(value); setIndex(0); setPlaying(false) }
   if (!canView) return null
   return <div className="annual-replay-page">
     <header className="annual-replay-heading">
@@ -209,17 +219,21 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
       <label>{tr('Year')}<select disabled={!years.length || loading} value={year} onChange={(e) => changeYear(e.target.value)}>
         {years.map((item) => <option key={item} value={item}>{item}</option>)}
       </select></label>
+      <label>{tr('Month')}<select disabled={!months.length || loading} value={month} onChange={(e) => changeMonth(e.target.value)}>
+        <option value="">{tr('Full year')}</option>
+        {months.map((item) => <option value={String(item)} key={item}>{dateLabel(year + '-' + String(item).padStart(2, '0') + '-01', { month: 'long' })}</option>)}
+      </select></label>
     </div>
     {error ? <div className="annual-replay-message error" role="alert">{error}</div> : null}
     {listLoading || loading ? <div className="annual-replay-message" role="status">{tr('Loading historical sessions…')}</div> : null}
     {!listLoading && !jobs.length && !error ? <div className="annual-replay-message">{tr('No completed backtests are available.')}</div> : null}
     {!listLoading && !loading && jobId && !sessions.length && !error ? <div className="annual-replay-message">{tr('This backtest has no saved daily equity history to animate.')}</div> : null}
     {current ? <>
-      <div className="annual-replay-stats" aria-label={tr('Year summary')}>
-        <article><strong>{sessions.length}</strong><span>{tr('Trading sessions')}</span></article>
+      <div className="annual-replay-stats" aria-label={tr(month ? 'Month summary' : 'Year summary')}>
+        <article><strong>{sessions.length}</strong><span>{tr(month ? 'Trading sessions in month' : 'Trading sessions')}</span></article>
         <article><strong>{events.length}</strong><span>{tr('Position rotations')}</span></article>
         <article><strong>{candidateCount ?? '—'}</strong><span>{tr('Assets with recorded utility scores')}</span></article>
-        <article><strong className={annual.change == null ? '' : annual.change >= 0 ? 'positive' : 'negative'}>{pct(annual.change)}</strong><span>{tr('Historical return for selected year')}</span></article>
+        <article><strong className={period.change == null ? '' : period.change >= 0 ? 'positive' : 'negative'}>{pct(period.change)}</strong><span>{tr(month ? 'Historical return for selected month' : 'Historical return for selected year')}</span></article>
       </div>
       <section className="annual-replay-panel annual-replay-playback">
         <div className="annual-replay-panel-titleline"><div><h3>{tr('Animation controls')}</h3>
@@ -250,17 +264,22 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
       </section>
       <div className="annual-replay-two-column">
         <ScorePanel session={current} onPause={() => setPlaying(false)}/>
-        <CapitalPanel sessions={sessions} index={safeIndex} annual={annual} onSeek={seek}/>
+        <CapitalPanel sessions={sessions} index={safeIndex} period={period} yearSessions={annual.sessions} selectedMonth={month} onSelectMonth={changeMonth}/>
       </div>
       <section className="annual-replay-panel annual-replay-history">
-        <h3>{tr('Rotations recorded up to this moment')}</h3>
+        <h3>{tr(month ? 'Rotations recorded in selected month' : 'Rotations recorded up to this moment')}</h3>
         <p className="annual-replay-help">{tr('Select a recorded rotation to inspect the corresponding trading session.')}</p>
         <div className="annual-replay-history-list">
-          {pastEvents.length ? pastEvents.slice(0, 12).map((evt, i) => <button key={evt.timestamp + ':' + i} type="button" onClick={() => seek(evt.sessionIndex)}>
-            <span>{dateLabel(evt.date)}</span><strong>{evt.from} <i>→</i> {evt.to}</strong><span>{tr('View session')}</span>
-          </button>) : <p>{tr('No recorded rotations up to this point.')}</p>}
+          {displayedEvents.length ? displayedEvents.slice(0, month ? displayedEvents.length : 12).map((evt, i) => <button key={evt.timestamp + ':' + i} type="button" onClick={() => seek(evt.sessionIndex)}>
+            <span>{dateLabel(evt.date)}</span>
+            <strong>{evt.from} <i>→</i> {evt.to}</strong>
+            <span className="annual-replay-history-capital">{tr('Capital at close')}: <b>{usd(evt.capital)}</b></span>
+            {evt.realizedPnl != null ? <span className="annual-replay-history-pnl">{tr('Realized P/L')}: <b className={evt.realizedPnl >= 0 ? 'positive' : 'negative'}>{usd(evt.realizedPnl)}</b></span> : null}
+            {evt.fee != null ? <span className="annual-replay-history-fee">{tr('Transaction fees')}: <b>{usd(evt.fee)}</b></span> : null}
+            <span className="annual-replay-history-action">{tr('View session')}</span>
+          </button>) : <p>{tr(month ? 'No rotations were recorded in the selected month.' : 'No recorded rotations up to this point.')}</p>}
         </div>
-        {pastEvents.length > 12 ? <p className="annual-replay-help">{tr('Showing the twelve latest rotations. Navigate the timeline to inspect older events.')}</p> : null}
+        {!month && displayedEvents.length > 12 ? <p className="annual-replay-help">{tr('Showing the twelve latest rotations. Navigate the timeline to inspect older events.')}</p> : null}
       </section>
 
 

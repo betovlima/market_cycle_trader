@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { normalizeAnnualReplay, replayYears, buildYearReplay, replayChartPath, lastRecordedRotationSessionIndex } from '../src/features/backtestReplay/annualReplayModel.mjs'
+import { normalizeAnnualReplay, replayYears, replayMonths, buildYearReplay, buildMonthReplay, replayChartPath, lastRecordedRotationSessionIndex } from '../src/features/backtestReplay/annualReplayModel.mjs'
 import { replaySelectionHelpExample } from '../src/features/backtestReplay/annualReplayHelpModel.mjs'
 
 const snapshot = normalizeAnnualReplay({
@@ -198,4 +198,68 @@ test('selection help falls back to an explicitly illustrative scenario when real
   assert.equal(values.best, 'LLY')
   assert.equal(values.advantage, 0.032889)
   assert.equal(replaySelectionHelpExample(null).recorded, false)
+})
+
+test('month drill-down isolates recorded trades and equity without changing the annual view', () => {
+  const data = normalizeAnnualReplay({
+    metrics: { ending_capital: 9876543 },
+    equity: [
+      { timestamp: '2024-12-31', simulation_equity: 1000 },
+      { timestamp: '2025-01-02', simulation_equity: 1030 },
+      { timestamp: '2025-01-31', simulation_equity: 1100 },
+      { timestamp: '2025-02-03', simulation_equity: 1060 },
+      { timestamp: '2025-02-04', simulation_equity: 1090 },
+      { timestamp: '2025-03-03', simulation_equity: 1210 },
+    ],
+    rotations: [
+      { executed_at: '2025-01-02T14:30:00Z', from_asset: 'CASH', to_asset: 'AVGO' },
+      { executed_at: '2025-02-03T14:30:00Z', from_asset: 'AVGO', to_asset: 'LLY', realized_pnl: -40, transaction_fees: 2 },
+      { executed_at: '2025-03-03T14:30:00Z', from_asset: 'LLY', to_asset: 'NVDA', realized_pnl: 120 },
+    ],
+    decision_scores: [{
+      execution_date: '2025-02-03', current_asset: 'AVGO',
+      best_asset: 'LLY', best_score: 0.4,
+    }],
+  })
+  const year = buildYearReplay(data, 2025)
+  const february = buildMonthReplay(year, '2')
+  assert.deepEqual(replayMonths(year), [1,2,3])
+  assert.equal(year.sessions.length, 5)
+  assert.equal(february.sessions.length, 2)
+  assert.deepEqual(february.sessions.map((row) => row.date), ['2025-02-03','2025-02-04'])
+  assert.deepEqual(february.sessions.map((row) => row.asset), ['LLY','LLY'])
+  assert.equal(february.rotations.length, 1)
+  assert.equal(february.rotations[0].realizedPnl, -40)
+  assert.equal(february.rotations[0].fee, 2)
+  assert.equal(february.sessions[0].scores.best, 'LLY')
+  assert.equal(february.baseline, 1100) // January 31 close, not Feb 03 close
+  assert.equal(february.lastCapital, 1090)
+  assert.ok(Math.abs(february.change - (1090/1100 - 1)) < 1e-12)
+  assert.equal(replayChartPath(february.sessions, 0).path.includes('L'), false)
+  assert.equal(replayChartPath(february.sessions, 1).path.includes('L'), true)
+  assert.equal(data.finalCapital, 9876543)
+  assert.equal(year.sessions.length, 5)
+  assert.equal(year.rotations.length, 3)
+})
+
+test('first selected month correctly inherits annual baseline when prior equity belongs to earlier year', () => {
+  const year = buildYearReplay(snapshot, 2025)
+  const january = buildMonthReplay(year, 1)
+  assert.equal(january.baseline, 1000)
+  assert.equal(january.lastCapital, 1040)
+  assert.equal(january.change, year.change)
+  assert.equal(january.sessions.length, year.sessions.length)
+})
+
+test('missing months do not fabricate observations, events, or capital amounts', () => {
+  const year = buildYearReplay(snapshot, 2025)
+  const empty = buildMonthReplay(year, 9)
+  assert.equal(empty.sessions.length, 0)
+  assert.equal(empty.rotations.length, 0)
+  assert.equal(empty.baseline, null)
+  assert.equal(empty.lastCapital, null)
+  assert.equal(empty.change, null)
+  assert.deepEqual(replayMonths(null), [])
+  assert.equal(buildMonthReplay(null, 1).sessions.length, 0)
+  assert.equal(buildMonthReplay(year, 'invalid').sessions.length, 0)
 })

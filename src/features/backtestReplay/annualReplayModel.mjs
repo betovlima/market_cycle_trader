@@ -110,6 +110,37 @@ export function buildYearReplay(analytics, year) {
   return { sessions, rotations: withinYear, baseline, lastCapital, change }
 }
 
+// Monthly drill-down projects the SAME persisted execution sessions used in
+// the annual view. Never rebuilds a decision, model or equity observation.
+export function replayMonths(annual) {
+  const sessions = Array.isArray(annual?.sessions) ? annual.sessions : []
+  return [...new Set(sessions.map((row) => Number(row.date.slice(5, 7))))]
+    .filter((month) => Number.isInteger(month) && month >= 1 && month <= 12)
+    .sort((a, b) => a - b)
+}
+
+export function buildMonthReplay(annual, month) {
+  const selected = Number(month)
+  const yearSessions = Array.isArray(annual?.sessions) ? annual.sessions : []
+  if (!Number.isInteger(selected) || selected < 1 || selected > 12) {
+    return { sessions: [], rotations: [], baseline: null, lastCapital: null, change: null }
+  }
+  const firstIndex = yearSessions.findIndex((row) => Number(row.date.slice(5, 7)) === selected)
+  if (firstIndex < 0) {
+    return { sessions: [], rotations: [], baseline: null, lastCapital: null, change: null }
+  }
+  const sessions = yearSessions.filter((row) => Number(row.date.slice(5, 7)) === selected)
+  // Use the prior REAL close, not the first close of the selected month,
+  // so the return includes the movement on the month's first recorded day.
+  const baseline = firstIndex > 0
+    ? yearSessions[firstIndex - 1].capital
+    : annual.baseline
+  const lastCapital = sessions.at(-1).capital
+  const change = baseline > 0 ? lastCapital / baseline - 1 : null
+  const rotations = sessions.flatMap((row) => row.events)
+  return { sessions, rotations, baseline, lastCapital, change }
+}
+
 // Differentiate the last recorded rotation from the last available session.
 export function lastRecordedRotationSessionIndex(sessions) {
   for (let index = sessions.length - 1; index >= 0; index -= 1) {
