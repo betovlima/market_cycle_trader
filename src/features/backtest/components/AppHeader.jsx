@@ -1,4 +1,5 @@
 import { tr } from '../../../i18n/runtime'
+import { canViewAnnualReplay } from '../../../auth/annualReplayAccess.mjs'
 import { LanguageSelector } from '../../../i18n/LanguageSelector'
 import { AnalyticsIcon, BacktestIcon, DashboardIcon, PortfolioIcon, SearchIcon, SettingsIcon } from '../../../shared/components/Icons'
 import appLogoUrl from '../../../assets/market-cycle-trader-logo.png'
@@ -17,8 +18,8 @@ const NAV_ITEMS = [
 ]
 
 export function AppHeader({ activeTab, onTabChange, session, capabilities = {}, onLogout }) {
-  const navItems = NAV_ITEMS.filter(({ capability, requiredCapability }) =>
-    capabilities?.[capability] === true
+  const navItems = NAV_ITEMS.filter(({ id, capability, requiredCapability }) =>
+    (id === 'annual-replay' ? canViewAnnualReplay(capabilities) : capabilities?.[capability] === true)
     && (!requiredCapability || capabilities?.[requiredCapability] === true))
   return (
     <header className="app-header">
