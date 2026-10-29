@@ -43,6 +43,8 @@ export function listLocalReplayFiles(analytics) {
 
 function csvCell(value) {
   if (value === null || value === undefined) return ''
+  // Keep numeric negatives numeric; formula escaping applies only to text cells.
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
   let text = typeof value === 'object' ? JSON.stringify(value) : String(value)
   if (/^[=+\-@\t\r\n]/.test(text)) text = "'" + text
   return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text
