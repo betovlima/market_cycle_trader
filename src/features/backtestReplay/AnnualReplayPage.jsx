@@ -5,6 +5,7 @@ import { apiFetch } from '../../api/http'
 import { API } from '../../config/env'
 import { buildMonthReplay, buildYearReplay, lastRecordedRotationSessionIndex, normalizeAnnualReplay, replayChartPath, replayMonths, replayYears } from './annualReplayModel.mjs'
 import { AnnualReplayHelpModal } from './AnnualReplayHelpModal.jsx'
+import { AnnualReplayFiles } from './AnnualReplayFiles.jsx'
 import './annualReplay.css'
 
 const SPEEDS = [{ text: '1', ms: 1000 }, { text: '3', ms: 333 }, { text: '10', ms: 100 }, { text: '20', ms: 50 }]
@@ -284,5 +285,6 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
 
 
     </> : null}
+    {jobId && analytics ? <AnnualReplayFiles key={jobId} jobId={jobId} onSessionExpired={onSessionExpired}/> : null}
   </div>
 }
