@@ -40,7 +40,7 @@ function ScorePanel({ session, onPause }) {
     <div className="annual-replay-three-cards">
       <div><span>{tr('Asset before decision')}</span><strong>{previous}</strong><small>{tr('Utility')}: {score(signals?.beforeScore)}</small></div>
       <div className="annual-replay-card-accent"><span>{signals ? tr('Highest utility candidate') : tr('Asset acquired, if any')}</span><strong>{candidate}</strong><small>{tr('Utility')}: {score(signals?.bestScore)}</small></div>
-      <div><span>{tr('Position at this session')}</span><strong>{session?.asset || '—'}</strong><small>{tr('Utility')}: {signals && session.asset === signals.best ? score(signals.bestScore) : signals && session.asset === signals.before ? score(signals.beforeScore) : '—'}</small></div>
+      <div><span>{tr('Position at this session')}</span><strong>{session?.closeAsset || '—'}</strong><small>{tr('Utility')}: {signals && session.closeAsset === signals.best ? score(signals.bestScore) : signals && session.closeAsset === signals.before ? score(signals.beforeScore) : '—'}</small></div>
     </div>
     <div className="annual-replay-help-title">
       <h4>{tr('Top five estimated utilities')} {ranked.length ? <span className="annual-replay-partial-count">({ranked.length}/5 {tr('recorded')})</span> : null}</h4>
