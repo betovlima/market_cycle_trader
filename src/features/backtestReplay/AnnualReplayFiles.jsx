@@ -50,7 +50,10 @@ export function AnnualReplayFiles({ jobId, onSessionExpired }) {
       .catch((reason) => {
         if (!active) return
         if (reason?.status === 401) onSessionExpired?.()
-        setError(reason?.message || tr('Unable to list replay files'))
+        const routeMissing = reason?.status === 404 && String(reason?.message || '').trim().toLowerCase() === 'not found'
+        setError(routeMissing
+          ? tr('The connected API does not provide historical backtest downloads. Run API v10.8.131 or newer; there is no need to repeat old backtests.')
+          : reason?.message || tr('Unable to list replay files'))
       })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
