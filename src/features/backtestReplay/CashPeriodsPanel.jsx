@@ -23,22 +23,22 @@ export function CashPeriodsPanel({ savedAnalytics, onInspectDate }) {
       <span className="annual-replay-tag">{tr('Read-only')}</span>
     </div>
     <div className="annual-replay-cash-stats">
-      <div><strong>{periods.length}</strong><span>{tr('Recorded entries into CASH')}</span></div>
+      <div><strong>{periods.length}</strong><span>{tr('Confirmed CASH periods')}</span></div>
       <div><strong>{observed}</strong><span>{tr('Recorded sessions closing in CASH')}</span></div>
     </div>
     {periods.length ? <div className="annual-replay-cash-list">
       {periods.map((period, index) => <div className="annual-replay-cash-entry" key={period.entered_at + ':' + index}>
         <div>
-          <span>{tr('Entered CASH')}</span>
+          <span>{tr('First confirmed CASH close')}</span>
           <strong>{dateLabel(period.entered_at)}</strong>
-          <small>{period.previous_asset} → CASH</small>
+          <small>{period.previous_asset ? period.previous_asset + ' → CASH' : tr('Prior position unknown')}</small>
         </div>
         <div>
-          <span>{tr('Returned to market')}</span>
+          <span>{tr('First later market close')}</span>
           <strong>{period.exited_at ? dateLabel(period.exited_at) : '—'}</strong>
           <small>{period.status === 'closed'
             ? 'CASH → ' + period.next_asset
-            : period.status === 'inconsistent_record'
+            : period.status === 'incomplete_record'
               ? tr('Incomplete rotation history')
               : tr('No subsequent market entry recorded')}</small>
         </div>
@@ -53,7 +53,7 @@ export function CashPeriodsPanel({ savedAnalytics, onInspectDate }) {
           {period.first_cash_session ? <button type="button" onClick={() => onInspectDate?.(period.first_cash_session)}>{tr('View CASH session')}</button> : null}
         </div>
       </div>)}
-    </div> : <p className="annual-replay-help">{tr('No asset-to-CASH movement was saved for this Backtest. This does not prove that historical CASH exposure never occurred.')}</p>}
-    <p className="annual-replay-help annual-replay-cash-footnote">{tr('A CASH entry is confirmed only by a saved asset-to-CASH rotation. Closing sessions come from recorded equity dates and subsequent rotations. Intraday durations and initial CASH holdings before the first rotation are not inferred.')}</p>
+    </div> : <p className="annual-replay-help">{tr('No confirmed CASH closing session is available for this backtest. Historical positions may be missing.')}</p>}
+    <p className="annual-replay-help annual-replay-cash-footnote">{tr('CASH periods use only positions saved at market close. Decision signals and rotations never substitute for missing closing positions; exit dates indicate the next recorded invested close, not execution times.')}</p>
   </section>
 }
