@@ -99,9 +99,19 @@ function CapitalPanel({ sessions, index, period, yearSessions, selectedMonth, on
       </g>)}
       <g transform="translate(88,0) scale(0.89,1)">
         <path d={chart.path} fill="none" stroke="var(--positive)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
-        {chart.dot ? <><line className="annual-replay-cursor" x1={chart.dot.x} x2={chart.dot.x} y1="16" y2="180"/><circle cx={chart.dot.x} cy={chart.dot.y} r="6" fill="var(--positive)" stroke="var(--panel)" strokeWidth="2"/></> : null}
+        {chart.cashPath ? <path d={chart.cashPath} fill="none" className="annual-replay-cash-curve" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/> : null}
+        {chart.cashPoints.map((point) => <circle key={point.index} cx={point.x} cy={point.y} r="3.8" className="annual-replay-cash-dot" strokeWidth="1.3">
+          <title>{tr('Position at market close')}: CASH · {dateLabel(point.date)}</title>
+        </circle>)}
+        {chart.dot ? <><line className="annual-replay-cursor" x1={chart.dot.x} x2={chart.dot.x} y1="16" y2="180"/><circle cx={chart.dot.x} cy={chart.dot.y} r="6" fill={current.closeAsset === 'CASH' ? '#f0ba59' : 'var(--positive)'} stroke="var(--panel)" strokeWidth="2"/></> : null}
       </g>
     </svg>
+    <div className="annual-replay-capital-legend">
+      <span><i className="annual-replay-legend-invested"/> {tr('Capital curve')}</span>
+      <span><i className="annual-replay-legend-cash"/> {tr('Confirmed CASH at market close')}</span>
+      <span>{tr('Recorded closing position')}: <strong>{current.closeAsset || tr('Unavailable')}</strong></span>
+    </div>
+    {!sessions.some((row) => row.closeAsset) ? <p className="annual-replay-help">{tr('Historical closing positions were not saved for this backtest; CASH periods cannot be confirmed.')}</p> : null}
     <div className="annual-replay-curve-footer"><span>{tr('Capital up to current session')}</span><span>{index + 1} / {sessions.length} {tr('sessions')}</span></div>
     <p className="annual-replay-help">{tr('Select a month to view only its daily capital and recorded rotations. Select it again to return to the full year.')}</p>
     <div className="annual-replay-month-picker">
