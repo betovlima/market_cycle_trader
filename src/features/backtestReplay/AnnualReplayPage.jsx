@@ -6,6 +6,7 @@ import { API } from '../../config/env'
 import { buildMonthReplay, buildYearReplay, lastRecordedRotationSessionIndex, normalizeAnnualReplay, replayChartPath, replayMonths, replayYears } from './annualReplayModel.mjs'
 import { AnnualReplayHelpModal } from './AnnualReplayHelpModal.jsx'
 import { AnnualReplayFiles } from './AnnualReplayFiles.jsx'
+import { canViewAnnualReplay } from '../../auth/annualReplayAccess.mjs'
 import './annualReplay.css'
 
 const SPEEDS = [{ text: '1', ms: 1000 }, { text: '3', ms: 333 }, { text: '10', ms: 100 }, { text: '20', ms: 50 }]
@@ -122,7 +123,7 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
   const [index, setIndex] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(333)
-  const canView = capabilities?.['annual_replay.view'] === true || capabilities?.['backtest.view'] === true
+  const canView = canViewAnnualReplay(capabilities)
 
   useEffect(() => {
     if (!canView) return undefined
