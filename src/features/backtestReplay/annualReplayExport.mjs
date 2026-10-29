@@ -4,9 +4,11 @@
  * or pretend to recreate original training data. It supports older servers without
  * /analytics/backtests/{job_id}/files and older completed jobs with sparse histories.
  */
+import { CASH_PERIOD_COLUMNS, cashPeriodsFromAnalytics } from './cashPeriodModel.mjs'
+
 const ENCODER = new TextEncoder()
 
-const EQUITY = ['timestamp', 'simulation_equity', 'reference_equity', 'drawdown']
+const EQUITY = ['timestamp', 'simulation_equity', 'reference_equity', 'selected_asset', 'drawdown']
 const ROTATIONS = ['executed_at', 'from_asset', 'to_asset', 'realized_pnl', 'transaction_fees', 'buy_reason', 'sell_reason']
 const SCORES = [
   'execution_date', 'decision_date', 'current_asset', 'current_score',
@@ -17,7 +19,7 @@ const SCORES = [
   ...Array.from({ length: 5 }, (_, i) => i + 1).flatMap(rank => ['top_' + rank + '_asset', 'top_' + rank + '_score']),
 ]
 export const REPLAY_EXPORT_NAMES = [
-  'equity_history.csv', 'rotations.csv', 'decision_scores.csv',
+  'equity_history.csv', 'rotations.csv', 'cash_periods.csv', 'decision_scores.csv',
   'metrics.json', 'analytics.json', 'manifest.json', 'package.zip',
 ]
 
@@ -30,6 +32,7 @@ export function listLocalReplayFiles(analytics) {
   const names = []
   if (hasRows(analytics.equity)) names.push('equity_history.csv')
   if (hasRows(analytics.rotations)) names.push('rotations.csv')
+  if (cashPeriodsFromAnalytics(analytics).length) names.push('cash_periods.csv')
   if (hasRows(analytics.decision_scores)) names.push('decision_scores.csv')
   if (analytics.metrics && Object.keys(analytics.metrics).length ||
       analytics.rotation_summary && Object.keys(analytics.rotation_summary).length) names.push('metrics.json')
@@ -87,6 +90,11 @@ async function makeFiles(analytics) {
     files.set('rotations.csv', csvBytes(analytics.rotations, ROTATIONS))
     rows.set('rotations.csv', analytics.rotations.length)
   }
+  const cashPeriods = cashPeriodsFromAnalytics(analytics)
+  if (cashPeriods.length) {
+    files.set('cash_periods.csv', csvBytes(cashPeriods, CASH_PERIOD_COLUMNS))
+    rows.set('cash_periods.csv', cashPeriods.length)
+  }
   if (hasRows(analytics.decision_scores)) {
     files.set('decision_scores.csv', csvBytes(scoreRows(analytics.decision_scores), SCORES))
     rows.set('decision_scores.csv', analytics.decision_scores.length)
@@ -115,7 +123,7 @@ async function makeFiles(analytics) {
     source: 'persisted_backtest_analytics',
     export_method: 'browser_from_read_only_analytics_api',
     scope: 'One completed Backtest selected in Annual Replay; all available years',
-    limitations: 'Generated from persisted analytics, not original research inputs, training datasets, model binaries or source code. Does not by itself establish scientific reproducibility. Missing records are not reconstructed.',
+    limitations: 'Generated from persisted analytics, not original research inputs, training datasets, model binaries or source code. Does not by itself establish scientific reproducibility. Missing records are not reconstructed. CASH sessions are confirmed solely by selected_asset values persisted at each market close; missing close positions are unknown and are not derived from rotation decisions.',
     csv_note: 'Spreadsheet formula-like strings are escaped; analytics.json contains the response values as received.',
     files: checksums,
   }

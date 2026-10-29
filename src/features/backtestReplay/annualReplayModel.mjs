@@ -21,6 +21,9 @@ export function normalizeAnnualReplay(payload) {
     .map((row) => ({
       date: dayKey(row?.timestamp || row?.recorded_at),
       capital: finiteNumber(row?.simulation_equity),
+      // Actual end-of-session position as persisted by the Backtest engine.
+      // Never infer CASH from the model's preceding close-of-day decision.
+      closeAsset: asset(row?.selected_asset),
       drawdown: finiteNumber(row?.drawdown),
     }))
     .filter((row) => row.date && row.capital !== null && row.capital >= 0)
@@ -103,7 +106,7 @@ export function buildYearReplay(analytics, year) {
       if (movement.date === row.date) events.push(movement)
       nextMovement += 1
     }
-    return { ...row, asset: currentAsset, events, scores: analytics.scoresByDate?.get(row.date) || null }
+    return { ...row, asset: row.closeAsset || currentAsset, events, scores: analytics.scoresByDate?.get(row.date) || null }
   })
   const lastCapital = sessions[sessions.length - 1].capital
   const change = baseline > 0 ? lastCapital / baseline - 1 : null
@@ -150,7 +153,7 @@ export function lastRecordedRotationSessionIndex(sessions) {
 }
 
 export function replayChartPath(sessions, selectedIndex, width = 880, height = 195) {
-  if (!sessions.length) return { path: '', area: '', dot: null }
+  if (!sessions.length) return { path: '', cashPath: '', cashPoints: [], dot: null }
   const last = Math.max(0, Math.min(sessions.length - 1, selectedIndex))
   const values = sessions.map((row) => row.capital)
   const min = Math.min(...values)
@@ -162,6 +165,15 @@ export function replayChartPath(sessions, selectedIndex, width = 880, height = 1
     y: height - padding - ((row.capital - min) / spread) * (height - 2 * padding),
   }))
   const path = points.map((point, i) => `${i ? 'L' : 'M'}${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' ')
+  // Only color a segment when BOTH recorded closing positions are CASH.
+  // Transition segments into/out of CASH retain the standard curve color.
+  const cashPoints = points.flatMap((point, i) =>
+    sessions[i]?.closeAsset === 'CASH' ? [{ ...point, date: sessions[i].date, index: i }] : [])
+  const cashPath = points.slice(1).map((point, i) => {
+    if (sessions[i]?.closeAsset !== 'CASH' || sessions[i + 1]?.closeAsset !== 'CASH') return ''
+    const previous = points[i]
+    return `M${previous.x.toFixed(2)} ${previous.y.toFixed(2)} L${point.x.toFixed(2)} ${point.y.toFixed(2)}`
+  }).filter(Boolean).join(' ')
   const dot = points[points.length - 1]
-  return { path, dot, min, max }
+  return { path, cashPath, cashPoints, dot, min, max }
 }

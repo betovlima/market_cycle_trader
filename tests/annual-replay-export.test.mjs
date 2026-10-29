@@ -59,7 +59,7 @@ test('old completed backtest offers historical files without rerunning', () => {
 
 test('CSV uses recorded numbers and escapes spreadsheet formulas', async () => {
   const csv = await (await buildLocalReplayDownload(HISTORICAL, 'equity_history.csv')).text()
-  assert.match(csv, /2020-03-20,1500\.75,990,-0\.01/)
+  assert.match(csv, /2020-03-20,1500\.75,990,,-0\.01/)
   const rot = await (await buildLocalReplayDownload(HISTORICAL, 'rotations.csv')).text()
   assert.match(rot, /"'=SUM\(1,1\)"/)
   const json = JSON.parse(await (await buildLocalReplayDownload(HISTORICAL, 'analytics.json')).text())

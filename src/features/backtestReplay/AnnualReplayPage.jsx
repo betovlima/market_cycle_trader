@@ -6,6 +6,7 @@ import { API } from '../../config/env'
 import { buildMonthReplay, buildYearReplay, lastRecordedRotationSessionIndex, normalizeAnnualReplay, replayChartPath, replayMonths, replayYears } from './annualReplayModel.mjs'
 import { AnnualReplayHelpModal } from './AnnualReplayHelpModal.jsx'
 import { AnnualReplayFiles } from './AnnualReplayFiles.jsx'
+import { CashPeriodsPanel } from './CashPeriodsPanel.jsx'
 import { canViewAnnualReplay } from '../../auth/annualReplayAccess.mjs'
 import './annualReplay.css'
 
@@ -39,7 +40,7 @@ function ScorePanel({ session, onPause }) {
     <div className="annual-replay-three-cards">
       <div><span>{tr('Asset before decision')}</span><strong>{previous}</strong><small>{tr('Utility')}: {score(signals?.beforeScore)}</small></div>
       <div className="annual-replay-card-accent"><span>{signals ? tr('Highest utility candidate') : tr('Asset acquired, if any')}</span><strong>{candidate}</strong><small>{tr('Utility')}: {score(signals?.bestScore)}</small></div>
-      <div><span>{tr('Position at this session')}</span><strong>{session?.asset || '—'}</strong><small>{tr('Utility')}: {signals && session.asset === signals.best ? score(signals.bestScore) : signals && session.asset === signals.before ? score(signals.beforeScore) : '—'}</small></div>
+      <div><span>{tr('Position at this session')}</span><strong>{session?.closeAsset || '—'}</strong><small>{tr('Utility')}: {signals && session.closeAsset === signals.best ? score(signals.bestScore) : signals && session.closeAsset === signals.before ? score(signals.beforeScore) : '—'}</small></div>
     </div>
     <div className="annual-replay-help-title">
       <h4>{tr('Top five estimated utilities')} {ranked.length ? <span className="annual-replay-partial-count">({ranked.length}/5 {tr('recorded')})</span> : null}</h4>
@@ -98,9 +99,19 @@ function CapitalPanel({ sessions, index, period, yearSessions, selectedMonth, on
       </g>)}
       <g transform="translate(88,0) scale(0.89,1)">
         <path d={chart.path} fill="none" stroke="var(--positive)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
-        {chart.dot ? <><line className="annual-replay-cursor" x1={chart.dot.x} x2={chart.dot.x} y1="16" y2="180"/><circle cx={chart.dot.x} cy={chart.dot.y} r="6" fill="var(--positive)" stroke="var(--panel)" strokeWidth="2"/></> : null}
+        {chart.cashPath ? <path d={chart.cashPath} fill="none" className="annual-replay-cash-curve" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/> : null}
+        {chart.cashPoints.map((point) => <circle key={point.index} cx={point.x} cy={point.y} r="3.8" className="annual-replay-cash-dot" strokeWidth="1.3">
+          <title>{tr('Position at market close')}: CASH · {dateLabel(point.date)}</title>
+        </circle>)}
+        {chart.dot ? <><line className="annual-replay-cursor" x1={chart.dot.x} x2={chart.dot.x} y1="16" y2="180"/><circle cx={chart.dot.x} cy={chart.dot.y} r="6" fill={current.closeAsset === 'CASH' ? '#f0ba59' : 'var(--positive)'} stroke="var(--panel)" strokeWidth="2"/></> : null}
       </g>
     </svg>
+    <div className="annual-replay-capital-legend">
+      <span><i className="annual-replay-legend-invested"/> {tr('Capital curve')}</span>
+      <span><i className="annual-replay-legend-cash"/> {tr('Confirmed CASH at market close')}</span>
+      <span>{tr('Recorded closing position')}: <strong>{current.closeAsset || tr('Unavailable')}</strong></span>
+    </div>
+    {!sessions.some((row) => row.closeAsset) ? <p className="annual-replay-help">{tr('Historical closing positions were not saved for this backtest; CASH periods cannot be confirmed.')}</p> : null}
     <div className="annual-replay-curve-footer"><span>{tr('Capital up to current session')}</span><span>{index + 1} / {sessions.length} {tr('sessions')}</span></div>
     <p className="annual-replay-help">{tr('Select a month to view only its daily capital and recorded rotations. Select it again to return to the full year.')}</p>
     <div className="annual-replay-month-picker">
@@ -200,6 +211,17 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
   }
   const changeYear = (value) => { setYear(value); setMonth(''); setIndex(0); setPlaying(false) }
   const changeMonth = (value) => { setMonth(value); setIndex(0); setPlaying(false) }
+  const inspectCashSession = (date) => {
+    const selectedYear = Number(String(date).slice(0, 4))
+    if (!analytics || !years.includes(selectedYear)) return
+    const next = buildYearReplay(analytics, selectedYear)
+    const targetIndex = next.sessions.findIndex((row) => row.date === date)
+    if (targetIndex < 0) return
+    setPlaying(false)
+    setYear(String(selectedYear))
+    setMonth('')
+    setIndex(targetIndex)
+  }
   if (!canView) return null
   return <div className="annual-replay-page">
     <header className="annual-replay-heading">
@@ -264,7 +286,7 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
         <div className="annual-replay-track"><span style={{ width: String((safeIndex + 1) / sessions.length * 100) + '%' }}/></div>
         <div className={selectedEvent ? 'annual-replay-banner rotated' : 'annual-replay-banner'}>
           <b>{selectedEvent ? tr('ROTATION EXECUTED') : tr('NO ROTATION RECORDED')}</b>
-          <strong>{selectedEvent ? selectedEvent.from + ' → ' + selectedEvent.to + ' · ' + dateLabel(current.date) : (current.asset || '—') + ' · ' + dateLabel(current.date)}</strong>
+          <strong>{selectedEvent ? selectedEvent.from + ' → ' + selectedEvent.to + ' · ' + dateLabel(current.date) : (current.closeAsset || '—') + ' · ' + dateLabel(current.date)}</strong>
         </div>
       </section>
       <div className="annual-replay-two-column">
@@ -289,6 +311,7 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
 
 
     </> : null}
+    {jobId && analytics ? <CashPeriodsPanel savedAnalytics={savedAnalytics} onInspectDate={inspectCashSession}/> : null}
     {jobId && analytics ? <AnnualReplayFiles key={jobId} jobId={jobId} analytics={savedAnalytics} onSessionExpired={onSessionExpired}/> : null}
   </div>
 }

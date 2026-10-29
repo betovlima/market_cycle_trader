@@ -164,3 +164,30 @@
 .annual-replay-export-item button:disabled{opacity:.55;cursor:wait}
 .annual-replay-export-note{margin-top:12px}
 @media(max-width:530px){.annual-replay-export-item{align-items:flex-start;flex-direction:column}.annual-replay-export-item button{width:100%}}
+
+/* Explicit, read-only CASH intervals from recorded portfolio rotations. */
+.annual-replay-cash-panel{margin-top:16px}
+.annual-replay-cash-stats{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+.annual-replay-cash-stats>div{display:grid;gap:4px;padding:10px 14px;min-width:170px;background:var(--panel-soft);border:1px solid var(--border);border-radius:9px}
+.annual-replay-cash-stats strong{font-size:19px;font-variant-numeric:tabular-nums}
+.annual-replay-cash-stats span{font-size:11px;color:var(--muted)}
+.annual-replay-cash-list{display:grid;gap:7px;max-height:330px;overflow:auto}
+.annual-replay-cash-entry{display:grid;grid-template-columns:minmax(135px,1fr) minmax(150px,1fr) minmax(150px,1fr) auto;gap:12px;align-items:center;padding:12px;border:1px solid var(--border);border-radius:9px;background:var(--panel-soft)}
+.annual-replay-cash-entry>div{display:grid;gap:4px;min-width:0}
+.annual-replay-cash-entry span,.annual-replay-cash-entry small{font-size:11px;color:var(--muted)}
+.annual-replay-cash-entry strong{font-size:13px;font-variant-numeric:tabular-nums}
+.annual-replay-cash-entry button{border:1px solid var(--border-strong);border-radius:8px;background:var(--panel);color:var(--text);cursor:pointer;padding:9px 12px;font-weight:650;font-size:11px}
+.annual-replay-cash-entry button:hover{border-color:var(--accent)}
+.annual-replay-cash-footnote{margin-top:12px;line-height:1.6}
+@media(max-width:860px){.annual-replay-cash-entry{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.annual-replay-cash-entry{grid-template-columns:1fr}.annual-replay-cash-entry button{width:100%}}
+
+/* Observed portfolio close in CASH: amber is deliberately distinct from green. */
+.annual-replay-cash-curve{stroke:#f0ba59}
+.annual-replay-cash-dot{fill:#f0ba59;stroke:var(--panel)}
+.annual-replay-capital-legend{display:flex;flex-wrap:wrap;gap:8px 19px;align-items:center;margin:7px 0 10px;color:var(--muted);font-size:11px}
+.annual-replay-capital-legend span{display:inline-flex;align-items:center;gap:6px}
+.annual-replay-capital-legend strong{color:var(--text)}
+.annual-replay-legend-invested,.annual-replay-legend-cash{display:inline-block;height:4px;width:20px;border-radius:3px}
+.annual-replay-legend-invested{background:var(--positive)}
+.annual-replay-legend-cash{background:#f0ba59}
