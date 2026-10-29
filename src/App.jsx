@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { apiFetch } from './api/http'
 import { hasCapability } from './auth/capabilities'
+import { canViewAnnualReplay } from './auth/annualReplayAccess.mjs'
 import { API, FRONT_VERSION } from './config/env'
 import { useI18n } from './i18n/I18nProvider'
 import { AppHeader } from './features/backtest/components/AppHeader'
@@ -47,7 +48,7 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
   const capabilities = session?.capabilities || {}
   const allowedTabs = useMemo(
     () => Object.entries(TAB_CAPABILITIES)
-      .filter(([tab, capability]) => hasCapability(capabilities, capability)
+      .filter(([tab, capability]) => (tab === 'annual-replay' ? canViewAnnualReplay(capabilities) : hasCapability(capabilities, capability))
         && (tab !== 'live' || hasCapability(capabilities, 'admin.manage')))
       .map(([tab]) => tab),
     [capabilities],
@@ -102,7 +103,7 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
       {activeTab === 'dashboard' && hasCapability(capabilities, 'dashboard.view') ? <DashboardPage workspace={workspace} capabilities={capabilities} onOpenBacktest={() => setActiveTab('backtest')} initialProcessingId={dashboardProcessingId} /> : null}
       {activeTab === 'decision-science' && hasCapability(capabilities, 'decision_science.view') ? <DecisionSciencePage capabilities={capabilities} /> : null}
       {activeTab === 'backtest' && hasCapability(capabilities, 'backtest.view') ? <BacktestPage workspace={workspace} capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
-      {activeTab === 'annual-replay' && hasCapability(capabilities, 'backtest.view') ? <AnnualReplayPage capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
+      {activeTab === 'annual-replay' && canViewAnnualReplay(capabilities) ? <AnnualReplayPage capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'asset-discovery' && hasCapability(capabilities, 'asset_discovery.view') ? <AssetDiscoveryExecutionPage capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'live' && hasCapability(capabilities, 'portfolio.view') && hasCapability(capabilities, 'admin.manage') ? <PaperPortfolioDashboard market="live" capabilities={capabilities} /> : null}
       {activeTab === 'trading' && hasCapability(capabilities, 'portfolio.view') ? <PaperPortfolioDashboard market="trading" capabilities={capabilities} /> : null}
