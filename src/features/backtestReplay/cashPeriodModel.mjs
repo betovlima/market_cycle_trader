@@ -1,93 +1,67 @@
-/** Cash exposure periods derived only from saved, executed portfolio rotations.
+/** Audited CASH exposure exclusively from saved end-of-session portfolio positions.
  *
- * The explicit asset -> CASH event establishes an entry into full CASH.
- * CASH -> asset establishes the exit. No new model decisions are inferred.
- * Session counts use persisted end-of-day equity observation dates; intraday
- * time-in-CASH cannot be measured from daily equity and is not estimated.
+ * selected_asset is produced by the backtest execution engine after next-open
+ * order execution. A decision made at close(t) is not a position at close(t).
+ * This module does not infer position from rotation events or fill missing dates.
  */
 function utcDate(value) {
   if (!value) return null
   const d = new Date(value)
   return Number.isFinite(d.getTime()) ? d.toISOString().slice(0, 10) : null
 }
-
-function normalizeAsset(value) {
-  return String(value || '').trim().toUpperCase()
+function knownPosition(value) {
+  const text = String(value || '').trim().toUpperCase()
+  return text || null
 }
-
 export const CASH_PERIOD_COLUMNS = [
   'entered_at', 'previous_asset', 'exited_at', 'next_asset',
   'observed_cash_sessions', 'first_cash_session', 'last_cash_session', 'status',
 ]
 
 export function cashPeriodsFromAnalytics(payload) {
-  const movements = (Array.isArray(payload?.rotations) ? payload.rotations : [])
-    .map((item, index) => ({
-      index,
-      entered: String(item?.executed_at || ''),
-      date: utcDate(item?.executed_at),
-      from: normalizeAsset(item?.from_asset),
-      to: normalizeAsset(item?.to_asset),
+  const equity = (Array.isArray(payload?.equity) ? payload.equity : [])
+    .filter(row => row?.simulation_equity != null && Number.isFinite(Number(row.simulation_equity)))
+    .map(row => ({
+      date: utcDate(row?.timestamp || row?.recorded_at),
+      asset: knownPosition(row?.selected_asset),
     }))
-    .filter(item => item.date && item.from && item.to && item.from !== item.to)
-    .sort((a, b) => a.entered.localeCompare(b.entered) || a.index - b.index)
-
+    .filter(row => row.date)
+    .sort((a, b) => a.date.localeCompare(b.date))
+  // The last saved observation for a session is authoritative.
+  const dedup = [...new Map(equity.map(row => [row.date, row])).values()]
+    .sort((a, b) => a.date.localeCompare(b.date))
   const periods = []
-  let open = null
-  for (const event of movements) {
-    if (event.to === 'CASH' && event.from !== 'CASH') {
-      if (open) {
-        open.status = 'inconsistent_record'
-        open.interrupted_at = event.entered
+  let active = null
+  let previous = null
+  for (const row of dedup) {
+    if (row.asset === 'CASH') {
+      if (!active) {
+        active = {
+          entered_at: row.date,
+          previous_asset: previous?.asset && previous.asset !== 'CASH' ? previous.asset : null,
+          exited_at: null,
+          next_asset: null,
+          observed_cash_sessions: 0,
+          first_cash_session: row.date,
+          last_cash_session: row.date,
+          status: 'open_at_last_record',
+        }
+        periods.push(active)
       }
-      open = {
-        entered_at: event.entered,
-        previous_asset: event.from,
-        exited_at: null,
-        next_asset: null,
-        observed_cash_sessions: 0,
-        first_cash_session: null,
-        last_cash_session: null,
-        status: 'open_at_last_record',
-        interrupted_at: null,
+      active.observed_cash_sessions += 1
+      active.last_cash_session = row.date
+    } else if (active) {
+      if (row.asset) {
+        active.exited_at = row.date
+        active.next_asset = row.asset
+        active.status = 'closed'
+      } else {
+        // Missing position metadata breaks continuity. Do not assume CASH.
+        active.status = 'incomplete_record'
       }
-      periods.push(open)
-    } else if (event.from === 'CASH' && event.to !== 'CASH') {
-      if (open) {
-        open.exited_at = event.entered
-        open.next_asset = event.to
-        open.status = 'closed'
-        open = null
-      }
-    } else if (open) {
-      // An asset-to-asset transaction is inconsistent with a preceding CASH
-      // entry that has no matching exit; do not extrapolate CASH beyond it.
-      open.status = 'inconsistent_record'
-      open.interrupted_at = event.entered
-      open = null
+      active = null
     }
+    previous = row
   }
-
-  const recordedDays = [...new Set(
-    (Array.isArray(payload?.equity) ? payload.equity : [])
-      .filter(row => row?.simulation_equity != null && Number.isFinite(Number(row.simulation_equity)))
-      .map(row => utcDate(row?.timestamp || row?.recorded_at))
-      .filter(Boolean),
-  )].sort()
-
-  for (const day of recordedDays) {
-    // Compare by dates because equity is one observation at the market close.
-    // Exits executed on the same date remove that date from CASH-close counts.
-    const period = periods.findLast(item =>
-      item.entered_at.slice(0, 10) <= day
-      && (!item.exited_at || item.exited_at.slice(0, 10) > day)
-      && (!item.interrupted_at || item.interrupted_at.slice(0, 10) > day),
-    )
-    if (!period) continue
-    period.observed_cash_sessions += 1
-    period.first_cash_session ||= day
-    period.last_cash_session = day
-  }
-
-  return periods.map(({ interrupted_at, ...record }) => ({ ...record }))
+  return periods
 }
