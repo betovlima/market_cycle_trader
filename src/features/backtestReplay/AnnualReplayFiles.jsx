@@ -7,6 +7,7 @@ import { buildLocalReplayDownload, listLocalReplayFiles } from './annualReplayEx
 const LABELS = {
   'equity_history.csv': 'Equity history',
   'rotations.csv': 'Recorded rotations',
+  'cash_periods.csv': 'Cash exposure periods',
   'decision_scores.csv': 'Saved decision scores',
   'metrics.json': 'Performance metrics',
   'analytics.json': 'Complete replay analytics',
@@ -17,6 +18,7 @@ const LABELS = {
 const DETAILS = {
   'equity_history.csv': 'Recorded capital, reference and drawdown per session',
   'rotations.csv': 'Executed reallocations and recorded transaction values',
+  'cash_periods.csv': 'Recorded entry, exit and market-close sessions spent in CASH',
   'decision_scores.csv': 'Only the decision scores that were saved for this backtest',
   'metrics.json': 'Metrics and diagnostics stored for this backtest',
   'analytics.json': 'All analytics returned for the selected backtest',
@@ -84,7 +86,7 @@ export function AnnualReplayFiles({ jobId, analytics, onSessionExpired }) {
     setError('')
     const name = 'backtest_' + jobId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 70) + '_' + filename
     try {
-      if (usingLocal) {
+      if (usingLocal || (analytics && ['cash_periods.csv', 'manifest.json', 'package.zip'].includes(filename))) {
         if (!analytics) throw new Error('Saved analytics are unavailable.')
         downloadBlob(await buildLocalReplayDownload(analytics, filename), name)
       } else {
@@ -106,7 +108,11 @@ export function AnnualReplayFiles({ jobId, analytics, onSessionExpired }) {
     }
   }, [jobId, downloading, selected, usingLocal, analytics, local, onSessionExpired])
 
-  const files = selected?.job_id === jobId ? selected.files || [] : []
+  const selectedFiles = selected?.job_id === jobId ? selected.files || [] : []
+  const additionalCash = local?.files?.find(file => file.name === 'cash_periods.csv')
+  const files = additionalCash && !selectedFiles.some(file => file.name === 'cash_periods.csv')
+    ? [...selectedFiles, additionalCash]
+    : selectedFiles
   return <section className="annual-replay-panel annual-replay-export" aria-label={tr('Execution files')}>
     <div className="annual-replay-panel-titleline">
       <div>
