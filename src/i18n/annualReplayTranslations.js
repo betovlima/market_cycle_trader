@@ -1,5 +1,6 @@
 // Dedicated translations for the historical, read-only Backtest replay tab.
 export const ANNUAL_REPLAY_PT_TRANSLATIONS = {
+  "Downloads are prepared from the stored backtest data already shown on this page; no new backtest or updated API endpoint is required.": "Os arquivos são preparados a partir dos dados históricos já exibidos nesta página. Não é necessário executar um novo backtest nem atualizar o endpoint da API.",
   "The connected API does not provide historical backtest downloads. Run API v10.8.131 or newer; there is no need to repeat old backtests.": "A API conectada não oferece downloads de backtests históricos. Inicie a API v10.8.131 ou superior; não é necessário executar novamente os backtests antigos.",
   "Execution files": "Arquivos da execução",
   "Read-only": "Somente leitura",
@@ -185,6 +186,7 @@ export const ANNUAL_REPLAY_PT_TRANSLATIONS = {
 }
 
 export const ANNUAL_REPLAY_ES_TRANSLATIONS = {
+  "Downloads are prepared from the stored backtest data already shown on this page; no new backtest or updated API endpoint is required.": "Los archivos se preparan con los datos históricos que ya aparecen en esta página. No es necesario ejecutar otro backtest ni actualizar el endpoint de la API.",
   "The connected API does not provide historical backtest downloads. Run API v10.8.131 or newer; there is no need to repeat old backtests.": "La API conectada no ofrece descargas de backtests históricos. Inicie la API v10.8.131 o posterior; no es necesario repetir los backtests anteriores.",
   "Execution files": "Archivos de la ejecución",
   "Read-only": "Solo lectura",
