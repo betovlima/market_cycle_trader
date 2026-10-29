@@ -6,6 +6,7 @@ import { API } from '../../config/env'
 import { buildMonthReplay, buildYearReplay, lastRecordedRotationSessionIndex, normalizeAnnualReplay, replayChartPath, replayMonths, replayYears } from './annualReplayModel.mjs'
 import { AnnualReplayHelpModal } from './AnnualReplayHelpModal.jsx'
 import { AnnualReplayFiles } from './AnnualReplayFiles.jsx'
+import { CashPeriodsPanel } from './CashPeriodsPanel.jsx'
 import { canViewAnnualReplay } from '../../auth/annualReplayAccess.mjs'
 import './annualReplay.css'
 
@@ -200,6 +201,17 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
   }
   const changeYear = (value) => { setYear(value); setMonth(''); setIndex(0); setPlaying(false) }
   const changeMonth = (value) => { setMonth(value); setIndex(0); setPlaying(false) }
+  const inspectCashSession = (date) => {
+    const selectedYear = Number(String(date).slice(0, 4))
+    if (!analytics || !years.includes(selectedYear)) return
+    const next = buildYearReplay(analytics, selectedYear)
+    const targetIndex = next.sessions.findIndex((row) => row.date === date)
+    if (targetIndex < 0) return
+    setPlaying(false)
+    setYear(String(selectedYear))
+    setMonth('')
+    setIndex(targetIndex)
+  }
   if (!canView) return null
   return <div className="annual-replay-page">
     <header className="annual-replay-heading">
@@ -289,6 +301,7 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
 
 
     </> : null}
+    {jobId && analytics ? <CashPeriodsPanel savedAnalytics={savedAnalytics} onInspectDate={inspectCashSession}/> : null}
     {jobId && analytics ? <AnnualReplayFiles key={jobId} jobId={jobId} analytics={savedAnalytics} onSessionExpired={onSessionExpired}/> : null}
   </div>
 }
