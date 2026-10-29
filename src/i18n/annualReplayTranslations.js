@@ -1,5 +1,17 @@
 // Dedicated translations for the historical, read-only Backtest replay tab.
 export const ANNUAL_REPLAY_PT_TRANSLATIONS = {
+  "Position at market close": "Posição no fechamento do pregão",
+  "Capital curve": "Evolução do capital",
+  "Confirmed CASH at market close": "CASH confirmado no fechamento",
+  "Recorded closing position": "Posição efetiva registrada no fechamento",
+  "Unavailable": "Indisponível",
+  "Historical closing positions were not saved for this backtest; CASH periods cannot be confirmed.": "Este backtest não possui posições de fechamento registradas; não é possível confirmar os períodos em CASH.",
+  "Confirmed CASH periods": "Períodos confirmados em CASH",
+  "First confirmed CASH close": "Primeiro fechamento confirmado em CASH",
+  "Prior position unknown": "Posição anterior não registrada",
+  "First later market close": "Primeiro fechamento posterior investido",
+  "No confirmed CASH closing session is available for this backtest. Historical positions may be missing.": "Nenhum fechamento em CASH está confirmado neste backtest. Podem faltar posições históricas registradas.",
+  "CASH periods use only positions saved at market close. Decision signals and rotations never substitute for missing closing positions; exit dates indicate the next recorded invested close, not execution times.": "Os períodos em CASH usam apenas posições registradas no fechamento. Sinais e rotações não substituem posições ausentes; a data de saída indica o primeiro fechamento investido registrado, não o horário da ordem.",
   "Cash exposure periods": "Períodos em CASH",
   "Recorded entry, exit and market-close sessions spent in CASH": "Entradas, saídas e pregões encerrados em CASH registrados",
   "Full historical Backtest, not only the selected year or month.": "Backtest histórico completo, não apenas o ano ou mês selecionado.",
@@ -200,6 +212,18 @@ export const ANNUAL_REPLAY_PT_TRANSLATIONS = {
 }
 
 export const ANNUAL_REPLAY_ES_TRANSLATIONS = {
+  "Position at market close": "Posición al cierre de la sesión",
+  "Capital curve": "Curva de capital",
+  "Confirmed CASH at market close": "CASH confirmado al cierre",
+  "Recorded closing position": "Posición real registrada al cierre",
+  "Unavailable": "No disponible",
+  "Historical closing positions were not saved for this backtest; CASH periods cannot be confirmed.": "Este backtest no contiene posiciones de cierre guardadas; no se pueden confirmar los períodos en CASH.",
+  "Confirmed CASH periods": "Períodos confirmados en CASH",
+  "First confirmed CASH close": "Primer cierre confirmado en CASH",
+  "Prior position unknown": "Posición anterior no registrada",
+  "First later market close": "Primer cierre posterior invertido",
+  "No confirmed CASH closing session is available for this backtest. Historical positions may be missing.": "Ningún cierre en CASH está confirmado en este backtest. Pueden faltar posiciones históricas registradas.",
+  "CASH periods use only positions saved at market close. Decision signals and rotations never substitute for missing closing positions; exit dates indicate the next recorded invested close, not execution times.": "Los períodos en CASH usan solo posiciones guardadas al cierre. Las señales y rotaciones no sustituyen posiciones faltantes; la fecha de salida indica el primer cierre invertido registrado, no la hora de la orden.",
   "Cash exposure periods": "Períodos en efectivo (CASH)",
   "Recorded entry, exit and market-close sessions spent in CASH": "Entradas, salidas y sesiones de cierre registradas en efectivo (CASH)",
   "Full historical Backtest, not only the selected year or month.": "Backtest histórico completo, no solo el año o mes seleccionado.",
