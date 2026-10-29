@@ -5,6 +5,8 @@ import { apiFetch } from '../../api/http'
 import { API } from '../../config/env'
 import { buildMonthReplay, buildYearReplay, lastRecordedRotationSessionIndex, normalizeAnnualReplay, replayChartPath, replayMonths, replayYears } from './annualReplayModel.mjs'
 import { AnnualReplayHelpModal } from './AnnualReplayHelpModal.jsx'
+import { AnnualReplayFiles } from './AnnualReplayFiles.jsx'
+import { canViewAnnualReplay } from '../../auth/annualReplayAccess.mjs'
 import './annualReplay.css'
 
 const SPEEDS = [{ text: '1', ms: 1000 }, { text: '3', ms: 333 }, { text: '10', ms: 100 }, { text: '20', ms: 50 }]
@@ -116,12 +118,13 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [analytics, setAnalytics] = useState(null)
+  const [savedAnalytics, setSavedAnalytics] = useState(null)
   const [year, setYear] = useState('')
   const [month, setMonth] = useState('')
   const [index, setIndex] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(333)
-  const canView = capabilities?.['annual_replay.view'] === true || capabilities?.['backtest.view'] === true
+  const canView = canViewAnnualReplay(capabilities)
 
   useEffect(() => {
     if (!canView) return undefined
@@ -141,17 +144,19 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
   }, [canView, onSessionExpired])
 
   useEffect(() => {
-    if (!canView || !jobId) { setAnalytics(null); return undefined }
+    if (!canView || !jobId) { setAnalytics(null); setSavedAnalytics(null); return undefined }
     let active = true
     setLoading(true)
     setError('')
     setPlaying(false)
     setAnalytics(null)
+    setSavedAnalytics(null)
     apiFetch(API + '/analytics/backtests/' + encodeURIComponent(jobId)).then((payload) => {
       if (!active) return
       const normalized = normalizeAnnualReplay(payload)
       const years = replayYears(normalized)
       setAnalytics(normalized)
+      setSavedAnalytics(payload)
       setYear(years.length ? String(years[0]) : '')
       setMonth('')
       setIndex(0)
@@ -284,5 +289,6 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
 
 
     </> : null}
+    {jobId && analytics ? <AnnualReplayFiles key={jobId} jobId={jobId} analytics={savedAnalytics} onSessionExpired={onSessionExpired}/> : null}
   </div>
 }

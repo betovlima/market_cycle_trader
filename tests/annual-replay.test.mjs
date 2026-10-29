@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { normalizeAnnualReplay, replayYears, replayMonths, buildYearReplay, buildMonthReplay, replayChartPath, lastRecordedRotationSessionIndex } from '../src/features/backtestReplay/annualReplayModel.mjs'
 import { replaySelectionHelpExample } from '../src/features/backtestReplay/annualReplayHelpModel.mjs'
+import { canViewAnnualReplay } from '../src/auth/annualReplayAccess.mjs'
 
 const snapshot = normalizeAnnualReplay({
   equity: [
@@ -262,4 +263,14 @@ test('missing months do not fabricate observations, events, or capital amounts',
   assert.deepEqual(replayMonths(null), [])
   assert.equal(buildMonthReplay(null, 1).sessions.length, 0)
   assert.equal(buildMonthReplay(year, 'invalid').sessions.length, 0)
+})
+
+test('annual replay tab remains available when legacy API grants backtest.view only', () => {
+  assert.equal(canViewAnnualReplay({ 'backtest.view': true }), true)
+  assert.equal(canViewAnnualReplay({ 'backtest.view': true, 'annual_replay.view': false }), true)
+  assert.equal(canViewAnnualReplay({ 'annual_replay.view': true }), true)
+  assert.equal(canViewAnnualReplay({ 'annual_replay.view': true, 'backtest.view': false }), true)
+  assert.equal(canViewAnnualReplay({ 'backtest.view': false, 'annual_replay.view': false }), false)
+  assert.equal(canViewAnnualReplay({}), false)
+  assert.equal(canViewAnnualReplay(null), false)
 })
