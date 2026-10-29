@@ -118,6 +118,7 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [analytics, setAnalytics] = useState(null)
+  const [savedAnalytics, setSavedAnalytics] = useState(null)
   const [year, setYear] = useState('')
   const [month, setMonth] = useState('')
   const [index, setIndex] = useState(0)
@@ -143,17 +144,19 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
   }, [canView, onSessionExpired])
 
   useEffect(() => {
-    if (!canView || !jobId) { setAnalytics(null); return undefined }
+    if (!canView || !jobId) { setAnalytics(null); setSavedAnalytics(null); return undefined }
     let active = true
     setLoading(true)
     setError('')
     setPlaying(false)
     setAnalytics(null)
+    setSavedAnalytics(null)
     apiFetch(API + '/analytics/backtests/' + encodeURIComponent(jobId)).then((payload) => {
       if (!active) return
       const normalized = normalizeAnnualReplay(payload)
       const years = replayYears(normalized)
       setAnalytics(normalized)
+      setSavedAnalytics(payload)
       setYear(years.length ? String(years[0]) : '')
       setMonth('')
       setIndex(0)
@@ -286,6 +289,6 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
 
 
     </> : null}
-    {jobId && analytics ? <AnnualReplayFiles key={jobId} jobId={jobId} onSessionExpired={onSessionExpired}/> : null}
+    {jobId && analytics ? <AnnualReplayFiles key={jobId} jobId={jobId} analytics={savedAnalytics} onSessionExpired={onSessionExpired}/> : null}
   </div>
 }
