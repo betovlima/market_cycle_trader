@@ -286,7 +286,7 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
         <div className="annual-replay-track"><span style={{ width: String((safeIndex + 1) / sessions.length * 100) + '%' }}/></div>
         <div className={selectedEvent ? 'annual-replay-banner rotated' : 'annual-replay-banner'}>
           <b>{selectedEvent ? tr('ROTATION EXECUTED') : tr('NO ROTATION RECORDED')}</b>
-          <strong>{selectedEvent ? selectedEvent.from + ' → ' + selectedEvent.to + ' · ' + dateLabel(current.date) : (current.asset || '—') + ' · ' + dateLabel(current.date)}</strong>
+          <strong>{selectedEvent ? selectedEvent.from + ' → ' + selectedEvent.to + ' · ' + dateLabel(current.date) : (current.closeAsset || '—') + ' · ' + dateLabel(current.date)}</strong>
         </div>
       </section>
       <div className="annual-replay-two-column">
