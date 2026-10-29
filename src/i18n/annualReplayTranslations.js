@@ -1,5 +1,6 @@
 // Dedicated translations for the historical, read-only Backtest replay tab.
 export const ANNUAL_REPLAY_PT_TRANSLATIONS = {
+  "The connected API does not provide historical backtest downloads. Run API v10.8.131 or newer; there is no need to repeat old backtests.": "A API conectada não oferece downloads de backtests históricos. Inicie a API v10.8.131 ou superior; não é necessário executar novamente os backtests antigos.",
   "Execution files": "Arquivos da execução",
   "Read-only": "Somente leitura",
   "Downloads belong to the selected backtest, including all available years, regardless of the month on screen.": "Os arquivos pertencem ao backtest escolhido e incluem todos os anos disponíveis, independentemente do mês exibido.",
@@ -184,6 +185,7 @@ export const ANNUAL_REPLAY_PT_TRANSLATIONS = {
 }
 
 export const ANNUAL_REPLAY_ES_TRANSLATIONS = {
+  "The connected API does not provide historical backtest downloads. Run API v10.8.131 or newer; there is no need to repeat old backtests.": "La API conectada no ofrece descargas de backtests históricos. Inicie la API v10.8.131 o posterior; no es necesario repetir los backtests anteriores.",
   "Execution files": "Archivos de la ejecución",
   "Read-only": "Solo lectura",
   "Downloads belong to the selected backtest, including all available years, regardless of the month on screen.": "Los archivos corresponden al backtest seleccionado e incluyen todos los años disponibles, independientemente del mes mostrado.",
