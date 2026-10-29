@@ -8,7 +8,7 @@ import { CASH_PERIOD_COLUMNS, cashPeriodsFromAnalytics } from './cashPeriodModel
 
 const ENCODER = new TextEncoder()
 
-const EQUITY = ['timestamp', 'simulation_equity', 'reference_equity', 'drawdown']
+const EQUITY = ['timestamp', 'simulation_equity', 'reference_equity', 'selected_asset', 'drawdown']
 const ROTATIONS = ['executed_at', 'from_asset', 'to_asset', 'realized_pnl', 'transaction_fees', 'buy_reason', 'sell_reason']
 const SCORES = [
   'execution_date', 'decision_date', 'current_asset', 'current_score',
@@ -123,7 +123,7 @@ async function makeFiles(analytics) {
     source: 'persisted_backtest_analytics',
     export_method: 'browser_from_read_only_analytics_api',
     scope: 'One completed Backtest selected in Annual Replay; all available years',
-    limitations: 'Generated from persisted analytics, not original research inputs, training datasets, model binaries or source code. Does not by itself establish scientific reproducibility. Missing records are not reconstructed. CASH closing sessions are derived only from recorded rotations and end-of-day equity dates, not intraday positions.',
+    limitations: 'Generated from persisted analytics, not original research inputs, training datasets, model binaries or source code. Does not by itself establish scientific reproducibility. Missing records are not reconstructed. CASH sessions are confirmed solely by selected_asset values persisted at each market close; missing close positions are unknown and are not derived from rotation decisions.',
     csv_note: 'Spreadsheet formula-like strings are escaped; analytics.json contains the response values as received.',
     files: checksums,
   }
