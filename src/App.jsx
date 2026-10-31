@@ -92,6 +92,12 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
     setActiveTab(allowedTabs.includes('dashboard') ? 'dashboard' : (allowedTabs[0] || 'dashboard'))
   }, [activeTab, allowedTabs])
 
+  // After selecting a compatible Strategy in Settings, show the new Research
+  // selection when the user returns to the Backtest tab.
+  useEffect(() => {
+    if (activeTab === 'backtest') void workspace.refreshDashboard()
+  }, [activeTab, workspace.refreshDashboard])
+
   return <div
     className="app-frame"
     data-asset-discovery-execute={canExecuteAssetDiscovery ? 'true' : 'false'}
