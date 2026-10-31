@@ -1,4 +1,8 @@
 export const ES_TRANSLATIONS = {
+  "Selected Strategy cannot run a new Backtest": "La estrategia seleccionada no puede iniciar un nuevo backtest",
+  "The selected Strategy uses a retired execution mode. Your saved Backtests are still available. Choose a supported Strategy in System Settings, then select it for Strategy Research. No automatic conversion was performed.": "La estrategia seleccionada utiliza un modo antiguo que ya no es compatible. Sus backtests guardados siguen disponibles. En Configuración del Sistema, elija una estrategia compatible y selecciónela para Investigación de Estrategias. No se realizó ninguna conversión automática.",
+  "Open System Settings": "Abrir Configuración del Sistema",
+  "Dismiss error": "Cerrar aviso",
   'MODEL FIT DIAGNOSTICS': 'DIAGNÓSTICO DE AJUSTE DEL MODELO',
   'Training × validation × unseen-period diagnosis': 'Diagnóstico: entrenamiento × validación × período no visto',
   'High diagnostic confidence': 'Alta confianza del diagnóstico',
