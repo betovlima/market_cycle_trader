@@ -1,3 +1,7 @@
+## 2026-10-31 — Front v10.7.50 | Replay CASH efetivo
+
+Branch `feature/v10.7.50-persisted-cash-replay`. Gráfico anual/mensal usa posições efetivas persistidas via API v10.8.133: segmento âmbar quando comprovadamente CASH, linha neutra quando posição desconhecida, azul/verde para alocação em ativo. Liquidação final não colore o período anterior como CASH. Painel de auditoria com duração, origem e destino de cada episódio e motivo apenas se salvo. Replay preserva capital e rotações originais; não recompõe decisões. Testes `tests/annual-replay.test.mjs`. Documentação `docs/changes/v10.7.50-persisted-cash-replay.md`.
+
 ## 2026-10-27 — Front v10.7.48 | Reprodução Anual com seleção Ano + Mês
 
 A Reprodução Anual agora permite selecionar o ano completo ou um mês com pregões registrados, preservando o gráfico de capital, o ranking de utilidades, a lista de trocas e o player existentes. O mês usa as mesmas observações de capital e rotações persistidas, com baseline do último fechamento anterior ao mês, e exibe capital inicial/final, variação e, nas trocas, capital no fechamento, P/L realizado e custos quando disponíveis. Os botões de meses também filtram o período (segundo clique retorna ao ano). Trocar o período reinicia/pausa a animação. Capital final do backtest permanece global. Sem downloads, reprocessamentos, alterações de API, backtest, estratégia, ordens ou base de dados. Branch `feature/v10.7.48-monthly-annual-replay`. Documentação: `docs/changes/v10.7.48-monthly-annual-replay.md`.

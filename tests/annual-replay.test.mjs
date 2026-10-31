@@ -274,3 +274,84 @@ test('annual replay tab remains available when legacy API grants backtest.view o
   assert.equal(canViewAnnualReplay({}), false)
   assert.equal(canViewAnnualReplay(null), false)
 })
+
+
+test('verified two-session CASH audit overrides rotation inference without altering capital', () => {
+  const payload = normalizeAnnualReplay({
+    equity: [
+      { timestamp: '2022-06-16T04:00:00Z', simulation_equity: 100 },
+      { timestamp: '2022-06-17T04:00:00Z', simulation_equity: 100 },
+      { timestamp: '2022-06-21T04:00:00Z', simulation_equity: 110 },
+      { timestamp: '2024-04-18T04:00:00Z', simulation_equity: 180 },
+      { timestamp: '2024-04-19T04:00:00Z', simulation_equity: 180 },
+      { timestamp: '2024-04-22T04:00:00Z', simulation_equity: 200 },
+    ],
+    // Conflicting rotations must not rewrite stored positions.
+    rotations: [{ executed_at: '2022-06-17T04:00:00Z', from_asset: 'AVGO', to_asset: 'MSFT' }],
+    position_history: [
+      { timestamp: '2022-06-16T04:00:00Z', asset: 'AVGO', recorded: true },
+      { timestamp: '2022-06-17T04:00:00Z', asset: 'CASH', recorded: true, cash_weight: 1 },
+      { timestamp: '2022-06-21T04:00:00Z', asset: 'NVDA', recorded: true },
+      { timestamp: '2024-04-18T04:00:00Z', asset: 'MSFT', recorded: true },
+      { timestamp: '2024-04-19T04:00:00Z', asset: 'CASH', recorded: true, cash_weight: 1 },
+      { timestamp: '2024-04-22T04:00:00Z', asset: 'AAPL', recorded: true },
+    ],
+    position_coverage: { total_sessions: 6, recorded_sessions: 6, cash_sessions: 2, complete: true },
+    cash_investigation: [{ start_at: '2022-06-17T04:00:00Z', sessions: 1 }],
+  })
+  const y2022 = buildYearReplay(payload, 2022)
+  const y2024 = buildYearReplay(payload, 2024)
+  assert.deepEqual(y2022.sessions.map((s) => s.asset), ['AVGO', 'CASH', 'NVDA'])
+  assert.deepEqual(y2024.sessions.map((s) => s.asset), ['MSFT', 'CASH', 'AAPL'])
+  assert.equal(y2022.lastCapital, 110)
+  assert.equal(y2024.lastCapital, 200)
+  assert.equal(payload.positionCoverage.cash_sessions, 2)
+  assert.equal(payload.cashInvestigation.length, 1)
+  assert.deepEqual(replayChartPath(y2022.sessions, 2).segments.map((s) => s.state), ['cash', 'invested'])
+  assert.deepEqual(replayChartPath(y2024.sessions, 2).segments.map((s) => s.state), ['cash', 'invested'])
+})
+
+test('missing persisted position stays unverified, never inferred from rotations', () => {
+  const result = normalizeAnnualReplay({
+    equity: [
+      { timestamp: '2025-01-02', simulation_equity: 100 },
+      { timestamp: '2025-01-03', simulation_equity: 110 },
+      { timestamp: '2025-01-06', simulation_equity: 111 },
+    ],
+    rotations: [
+      { executed_at: '2025-01-03', from_asset: 'AAPL', to_asset: 'CASH' },
+    ],
+    position_history: [
+      { timestamp: '2025-01-02', asset: 'AAPL', recorded: true },
+      { timestamp: '2025-01-03', asset: null, recorded: false },
+      { timestamp: '2025-01-06', asset: 'MSFT', recorded: true },
+    ],
+  })
+  const year = buildYearReplay(result, 2025)
+  assert.deepEqual(year.sessions.map((s) => s.asset), ['AAPL', null, 'MSFT'])
+  assert.deepEqual(year.sessions.map((s) => s.positionRecorded), [true, false, true])
+  assert.deepEqual(replayChartPath(year.sessions, 2).segments.map((s) => s.state), ['unknown', 'invested'])
+})
+
+test('final liquidation is not drawn as a full intraday CASH interval', () => {
+  const data = normalizeAnnualReplay({
+    equity: [
+      { timestamp: '2026-10-28', simulation_equity: 100 },
+      { timestamp: '2026-10-29', simulation_equity: 130 },
+    ],
+    position_history: [
+      { timestamp: '2026-10-28', asset: 'NVDA', recorded: true },
+      { timestamp: '2026-10-29', asset: 'CASH', recorded: true, terminal_liquidation: true },
+    ],
+  })
+  const year = buildYearReplay(data, 2026)
+  assert.equal(year.sessions[1].asset, 'CASH')
+  assert.equal(year.sessions[1].terminalLiquidation, true)
+  assert.equal(replayChartPath(year.sessions, 1).segments[0].state, 'invested')
+})
+
+test('legacy data is readable but never pretends that inferred positions are verified', () => {
+  const year = buildYearReplay(snapshot, 2025)
+  assert.deepEqual(year.sessions.map((s) => s.positionRecorded), [false, false, false, false])
+  assert.equal(replayChartPath(year.sessions, 3).positionComplete, false)
+})

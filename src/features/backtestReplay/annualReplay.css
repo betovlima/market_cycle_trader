@@ -164,3 +164,20 @@
 .annual-replay-export-item button:disabled{opacity:.55;cursor:wait}
 .annual-replay-export-note{margin-top:12px}
 @media(max-width:530px){.annual-replay-export-item{align-items:flex-start;flex-direction:column}.annual-replay-export-item button{width:100%}}
+
+
+/* Backtest execution position audit. Distinct from simulated equity movement. */
+.annual-replay-page{--cash-replay:#d99a36}
+.annual-replay-position-legend{display:flex;gap:16px;flex-wrap:wrap;margin:4px 0 10px;color:var(--muted);font-size:11px}
+.annual-replay-position-legend span{display:inline-flex;align-items:center;gap:6px}
+.annual-replay-position-legend i{display:inline-block;width:19px;height:4px;border-radius:3px;background:var(--muted)}
+.annual-replay-position-legend i.invested{background:var(--positive)}
+.annual-replay-position-legend i.cash{background:var(--cash-replay)}
+.annual-replay-cash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:14px}
+.annual-replay-cash-episode{border:1px solid var(--border-strong);border-left:3px solid var(--cash-replay);background:var(--panel-soft);padding:14px;border-radius:10px;min-width:0}
+.annual-replay-cash-episode-title{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.annual-replay-cash-episode-title strong{color:var(--text);font-size:14px}
+.annual-replay-cash-episode-title button{cursor:pointer;background:var(--panel);color:var(--text);border:1px solid var(--border-strong);border-radius:8px;padding:7px 10px;font-size:12px}
+.annual-replay-cash-episode-title button:hover{border-color:var(--cash-replay)}
+.annual-replay-cash-episode p{font-size:12px;color:var(--muted);line-height:1.5;margin:8px 0 0}
+.annual-replay-cash-episode b{color:var(--text)}
