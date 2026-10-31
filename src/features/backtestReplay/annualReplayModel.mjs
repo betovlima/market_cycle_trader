@@ -74,9 +74,32 @@ export function normalizeAnnualReplay(payload) {
       target: asset(item?.final_action_asset),
     })
   }
+  // Explicit, execution-sourced state; missing dates must never be filled from
+  // the next signal or from an asset->CASH rotation.
+  const positionRows = Array.isArray(payload?.position_history) ? payload.position_history : null
+  const positionsByDate = new Map()
+  if (positionRows) {
+    for (const item of positionRows) {
+      const date = dayKey(item?.timestamp)
+      if (!date) continue
+      const recordedAsset = item?.recorded === false ? null : asset(item?.asset)
+      positionsByDate.set(date, {
+        asset: recordedAsset,
+        recorded: Boolean(recordedAsset && item?.recorded !== false),
+        terminalLiquidation: item?.terminal_liquidation === true,
+        cashWeight: finiteNumber(item?.cash_weight),
+      })
+    }
+  }
   // Match the stored final-capital metric displayed on the Backtest result screen.
   // The yearly replay and selected session do not determine this total.
-  return { equity: dailyEquity, rotations, scoresByDate, finalCapital: finiteNumber(payload?.metrics?.ending_capital) }
+  return {
+    equity: dailyEquity, rotations, scoresByDate,
+    positionsByDate, hasPositionHistory: positionRows !== null,
+    positionCoverage: payload?.position_coverage || null,
+    cashInvestigation: Array.isArray(payload?.cash_investigation) ? payload.cash_investigation : [],
+    finalCapital: finiteNumber(payload?.metrics?.ending_capital),
+  }
 }
 
 export function replayYears(analytics) {
@@ -103,7 +126,17 @@ export function buildYearReplay(analytics, year) {
       if (movement.date === row.date) events.push(movement)
       nextMovement += 1
     }
-    return { ...row, asset: currentAsset, events, scores: analytics.scoresByDate?.get(row.date) || null }
+    const actual = analytics.positionsByDate?.get(row.date)
+    // Legacy APIs do not expose stored positions. Keep the old replay
+    // visible, but never mark a guessed position as verified on the chart.
+    const selectedAsset = analytics.hasPositionHistory ? (actual?.asset || null) : currentAsset
+    return {
+      ...row, asset: selectedAsset,
+      positionRecorded: actual?.recorded === true,
+      terminalLiquidation: actual?.terminalLiquidation === true,
+      cashWeight: actual?.cashWeight ?? null,
+      events, scores: analytics.scoresByDate?.get(row.date) || null,
+    }
   })
   const lastCapital = sessions[sessions.length - 1].capital
   const change = baseline > 0 ? lastCapital / baseline - 1 : null
@@ -163,5 +196,16 @@ export function replayChartPath(sessions, selectedIndex, width = 880, height = 1
   }))
   const path = points.map((point, i) => `${i ? 'L' : 'M'}${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' ')
   const dot = points[points.length - 1]
-  return { path, dot, min, max }
+  // Segment ending at session i represents that execution session. An
+  // end-of-backtest liquidation is a closing state, NOT intraday cash.
+  const segments = points.slice(1).map((point, offset) => {
+    const i = offset + 1
+    const session = sessions[i]
+    return {
+      d: `M${points[i - 1].x.toFixed(2)} ${points[i - 1].y.toFixed(2)} L${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
+      state: !session.positionRecorded ? 'unknown'
+        : session.asset === 'CASH' && !session.terminalLiquidation ? 'cash' : 'invested',
+    }
+  })
+  return { path, dot, min, max, segments, positionComplete: sessions.slice(0, last + 1).every((row) => row.positionRecorded) }
 }
