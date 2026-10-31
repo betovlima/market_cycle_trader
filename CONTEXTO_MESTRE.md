@@ -1,3 +1,7 @@
+## 2026-10-31 — Front v10.7.51 | Aviso de estratégia histórica
+
+Branch `fix/v10.7.51-retired-backtest-message`, baseada na Front v10.7.50. Ao receber HTTP 409 `RETIRED_BACKTEST_STRATEGY_MODE`, apresenta aviso específico e acesso a Configurações do Sistema, preserva último resultado carregado e não tenta recuperar/recriar job inútil. Histórico e políticas inalterados. Dependência API v10.8.134. Documentação `docs/changes/v10.7.51-retired-backtest-mode.md`.
+
 ## 2026-10-31 — Front v10.7.50 | Replay CASH efetivo
 
 Branch `feature/v10.7.50-persisted-cash-replay`. Gráfico anual/mensal usa posições efetivas persistidas via API v10.8.133: segmento âmbar quando comprovadamente CASH, linha neutra quando posição desconhecida, azul/verde para alocação em ativo. Liquidação final não colore o período anterior como CASH. Painel de auditoria com duração, origem e destino de cada episódio e motivo apenas se salvo. Replay preserva capital e rotações originais; não recompõe decisões. Testes `tests/annual-replay.test.mjs`. Documentação `docs/changes/v10.7.50-persisted-cash-replay.md`.
