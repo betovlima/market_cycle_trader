@@ -178,7 +178,7 @@ export function useBacktestWorkspace() {
     }
 
     setError('')
-    setDetail(null)
+    // Keep the last completed Backtest visible if a new run is rejected.
     setStartingBacktest(true)
     try {
       const latest = await loadLatestJob({ strategy, reusable: reuseCompleted, quiet: true })
@@ -192,9 +192,18 @@ export function useBacktestWorkspace() {
       if (!allowCreate) throw new Error('A compatible completed reference Backtest is required for this Strategy.')
 
       const created = await apiFetch(`${API}/jobs`, { method: 'POST' })
+      setDetail(null)
       setJob(created)
       return created
     } catch (requestError) {
+      // A deterministic 409 never created a job. Do not retry or replace
+      // the existing completed result with an unrelated saved execution.
+      if (requestError?.status === 409
+        && String(requestError.message || '').startsWith('RETIRED_BACKTEST_STRATEGY_MODE:')) {
+        setError(requestError.message)
+        if (throwOnError) throw requestError
+        return null
+      }
       let recovered = null
       for (const delayMs of [0, 400, 1000]) {
         if (delayMs) await wait(delayMs)
