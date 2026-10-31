@@ -6,6 +6,7 @@ import { API } from '../../config/env'
 import { buildMonthReplay, buildYearReplay, lastRecordedRotationSessionIndex, normalizeAnnualReplay, replayChartPath, replayMonths, replayYears } from './annualReplayModel.mjs'
 import { AnnualReplayHelpModal } from './AnnualReplayHelpModal.jsx'
 import { AnnualReplayFiles } from './AnnualReplayFiles.jsx'
+import { CashInvestigationPanel } from './CashInvestigationPanel.jsx'
 import { canViewAnnualReplay } from '../../auth/annualReplayAccess.mjs'
 import './annualReplay.css'
 
@@ -97,11 +98,18 @@ function CapitalPanel({ sessions, index, period, yearSessions, selectedMonth, on
         <text className="annual-replay-axis-label" x="88" y={20 + row * 54} textAnchor="end">{shortValue(max - (max - min) * row / 3)}</text>
       </g>)}
       <g transform="translate(88,0) scale(0.89,1)">
-        <path d={chart.path} fill="none" stroke="var(--positive)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
-        {chart.dot ? <><line className="annual-replay-cursor" x1={chart.dot.x} x2={chart.dot.x} y1="16" y2="180"/><circle cx={chart.dot.x} cy={chart.dot.y} r="6" fill="var(--positive)" stroke="var(--panel)" strokeWidth="2"/></> : null}
+        <path d={chart.path} fill="none" stroke={chart.positionComplete ? 'var(--positive)' : 'var(--muted)'} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
+        {chart.segments?.map((segment, i) => segment.state === 'unknown' ? null : <path key={i} d={segment.d} fill="none" stroke={segment.state === 'cash' ? 'var(--cash-replay)' : 'var(--positive)'} strokeWidth="4.5" strokeLinecap="round"/>)}
+        {chart.dot ? <><line className="annual-replay-cursor" x1={chart.dot.x} x2={chart.dot.x} y1="16" y2="180"/><circle cx={chart.dot.x} cy={chart.dot.y} r="6" fill={current.positionRecorded && current.asset === 'CASH' ? 'var(--cash-replay)' : current.positionRecorded ? 'var(--positive)' : 'var(--muted)'} stroke="var(--panel)" strokeWidth="2"/></> : null}
       </g>
     </svg>
     <div className="annual-replay-curve-footer"><span>{tr('Capital up to current session')}</span><span>{index + 1} / {sessions.length} {tr('sessions')}</span></div>
+    <div className="annual-replay-position-legend">
+      <span><i className="invested"/>{tr('Invested position')}</span>
+      <span><i className="cash"/>{tr('Confirmed CASH')}</span>
+      {!chart.positionComplete ? <span><i className="unknown"/>{tr('Unverified position')}</span> : null}
+    </div>
+    <p className="annual-replay-help">{tr('Line color represents the recorded execution-session position. Final liquidation is marked at close, not treated as intraday CASH.')}</p>
     <p className="annual-replay-help">{tr('Select a month to view only its daily capital and recorded rotations. Select it again to return to the full year.')}</p>
     <div className="annual-replay-month-picker">
       {monthItems.map((m) => <button type="button" key={m.month} className={selectedMonth === String(m.month) ? 'active' : ''} aria-pressed={selectedMonth === String(m.month)} disabled={!m.available} onClick={() => onSelectMonth(selectedMonth === String(m.month) ? '' : String(m.month))}>
@@ -200,6 +208,17 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
   }
   const changeYear = (value) => { setYear(value); setMonth(''); setIndex(0); setPlaying(false) }
   const changeMonth = (value) => { setMonth(value); setIndex(0); setPlaying(false) }
+  const inspectCash = (timestamp) => {
+    const date = String(timestamp || '').slice(0, 10)
+    const targetYear = date.slice(0, 4)
+    const rows = analytics?.equity?.filter((row) => row.date.startsWith(targetYear)) || []
+    const position = rows.findIndex((row) => row.date === date)
+    if (position < 0) return
+    setPlaying(false)
+    setYear(targetYear)
+    setMonth('')
+    setIndex(position)
+  }
   if (!canView) return null
   return <div className="annual-replay-page">
     <header className="annual-replay-heading">
@@ -271,6 +290,7 @@ export function AnnualReplayPage({ capabilities = {}, onSessionExpired }) {
         <ScorePanel session={current} onPause={() => setPlaying(false)}/>
         <CapitalPanel sessions={sessions} index={safeIndex} period={period} yearSessions={annual.sessions} selectedMonth={month} onSelectMonth={changeMonth}/>
       </div>
+      <CashInvestigationPanel coverage={analytics?.positionCoverage} episodes={analytics?.cashInvestigation} onInspect={inspectCash}/>
       <section className="annual-replay-panel annual-replay-history">
         <h3>{tr(month ? 'Rotations recorded in selected month' : 'Rotations recorded up to this moment')}</h3>
         <p className="annual-replay-help">{tr('Select a recorded rotation to inspect the corresponding trading session.')}</p>
