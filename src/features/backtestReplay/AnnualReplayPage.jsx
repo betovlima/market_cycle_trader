@@ -84,7 +84,7 @@ function CapitalPanel({ sessions, index, period, yearSessions, selectedMonth, on
   const max = chart.max || 0
   const timeLabel = (date) => {
     if (selectedMonth) return dateLabel(date, { day: '2-digit', month: '2-digit', year: '2-digit' })
-    return dateLabel(date, { month: 'short' }).replace('.', '') + '/' + date.slice(2, 4)
+    return dateLabel(date, { month: 'short' }).replace('.', '') + '/' + date.slice(0, 4)
   }
   return <section className="annual-replay-panel annual-replay-capital-panel">
     <div className="annual-replay-panel-titleline">
