@@ -209,3 +209,35 @@ export function replayChartPath(sessions, selectedIndex, width = 880, height = 1
   })
   return { path, dot, min, max, segments, positionComplete: sessions.slice(0, last + 1).every((row) => row.positionRecorded) }
 }
+
+
+/**
+ * Calendar ticks for the persisted capital curve.
+ * The SVG draws its curve in a group translated 88px and scaled 0.89 on x.
+ * Keep the labels in exactly the same coordinate system, independently of
+ * playback position. Dates originate exclusively in recorded sessions.
+ */
+export function replayChartTimeTicks(sessions, selectedMonth = false, width = 880) {
+  if (!Array.isArray(sessions) || !sessions.length) return []
+  const count = sessions.length
+  let indices = []
+  if (selectedMonth) {
+    const ticks = Math.min(5, count)
+    indices = Array.from({ length: ticks }, (_, i) =>
+      ticks === 1 ? 0 : Math.round(i * (count - 1) / (ticks - 1)))
+  } else {
+    const seen = new Set()
+    sessions.forEach((session, index) => {
+      const monthKey = String(session.date || '').slice(0, 7)
+      if (/^\d{4}-\d{2}$/.test(monthKey) && !seen.has(monthKey)) {
+        indices.push(index)
+        seen.add(monthKey)
+      }
+    })
+  }
+  const unique = [...new Set(indices)]
+  return unique.map((index) => ({
+    date: sessions[index].date,
+    x: 88 + 0.89 * (15 + index / Math.max(1, count - 1) * (width - 30)),
+  }))
+}
