@@ -55,6 +55,7 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
   )
   const canExecuteAssetDiscovery = hasCapability(capabilities, 'asset_discovery.start') || hasCapability(capabilities, 'asset_discovery.stop')
   const canMutateAssetDiscovery = hasCapability(capabilities, 'asset_discovery.create_strategy')
+  const retiredBacktestMode = String(workspace.error || '').startsWith('RETIRED_BACKTEST_STRATEGY_MODE:')
 
   useEffect(() => {
     const openDashboardProcessing = (event) => {
@@ -91,6 +92,12 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
     setActiveTab(allowedTabs.includes('dashboard') ? 'dashboard' : (allowedTabs[0] || 'dashboard'))
   }, [activeTab, allowedTabs])
 
+  // After selecting a compatible Strategy in Settings, show the new Research
+  // selection when the user returns to the Backtest tab.
+  useEffect(() => {
+    if (activeTab === 'backtest') void workspace.refreshDashboard()
+  }, [activeTab, workspace.refreshDashboard])
+
   return <div
     className="app-frame"
     data-asset-discovery-execute={canExecuteAssetDiscovery ? 'true' : 'false'}
@@ -98,7 +105,16 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
   >
     <AppHeader activeTab={activeTab} onTabChange={setActiveTab} session={session} capabilities={capabilities} onLogout={onLogout} />
     {idleRemaining !== null && idleRemaining <= 300 ? <div className="session-expiration-warning">{tr('Your session will expire soon.')}</div> : null}
-    {workspace.error && !isPermissionDeniedMessage(workspace.error) ? <div className="global-error"><strong>{tr('Unable to load data')}</strong><span>{tr(workspace.error)}</span><button type="button" onClick={() => workspace.setError('')}>×</button></div> : null}
+    {workspace.error && !isPermissionDeniedMessage(workspace.error) ? <div className="global-error" role="alert">
+      <strong>{tr(retiredBacktestMode ? 'Selected Strategy cannot run a new Backtest' : 'Unable to load data')}</strong>
+      {retiredBacktestMode
+        ? <>
+          <span>{tr('The selected Strategy uses a retired execution mode. Your saved Backtests are still available. Choose a supported Strategy in System Settings, then select it for Strategy Research. No automatic conversion was performed.')}</span>
+          {hasCapability(capabilities, 'settings.view') ? <button type="button" onClick={() => { workspace.setError(''); setActiveTab('system-settings') }}>{tr('Open System Settings')}</button> : null}
+        </>
+        : <span>{tr(workspace.error)}</span>}
+      <button type="button" onClick={() => workspace.setError('')} aria-label={tr('Dismiss error')}>×</button>
+    </div> : null}
     <main className="workspace-main">
       {activeTab === 'dashboard' && hasCapability(capabilities, 'dashboard.view') ? <DashboardPage workspace={workspace} capabilities={capabilities} onOpenBacktest={() => setActiveTab('backtest')} initialProcessingId={dashboardProcessingId} /> : null}
       {activeTab === 'decision-science' && hasCapability(capabilities, 'decision_science.view') ? <DecisionSciencePage capabilities={capabilities} /> : null}
