@@ -1,3 +1,7 @@
+## 2026-10-31 — Front v10.7.52 | Eixo de mês/ano na Reprodução Anual
+
+Branch `feature/v10.7.52-annual-replay-date-axis`, baseada na Front v10.7.51. A curva de patrimônio passa a indicar o mês/ano da sessão efetiva no eixo horizontal; ao selecionar um mês, exibe datas (dia/mês/ano) dos pregões. O alinhamento é exatamente o mesmo da curva SVG; nenhuma data sem pregão ou posição em CASH é inferida. Preservadas as cores de INVESTIDO/CASH e todo o backend. Testes em `src/features/backtestReplay/annualReplayTimeAxis.test.mjs`, documentação `docs/changes/v10.7.52-annual-replay-date-axis.md`. Ainda não integrado à main.
+
 ## 2026-10-31 — Front v10.7.51 | Aviso para identificadores realmente inválidos
 
 Branch `fix/v10.7.51-retired-backtest-message`, baseada na Front v10.7.50. A estratégia U75 `COMPOUND_ROTATION_SWING_TCC_U75_DAILY_CASH_V101` é válida na API integrada v10.8.134, após recuperar a implementação original. Ao receber HTTP 409 `RETIRED_BACKTEST_STRATEGY_MODE`, apresenta aviso específico e acesso a Configurações do Sistema, preserva último resultado carregado e não tenta recuperar/recriar job inútil. Histórico e políticas inalterados. Dependência API v10.8.134. Documentação `docs/changes/v10.7.51-retired-backtest-mode.md`.

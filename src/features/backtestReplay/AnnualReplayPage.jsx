@@ -3,7 +3,7 @@ import { getIntlLocale, tr } from '../../i18n/runtime'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiFetch } from '../../api/http'
 import { API } from '../../config/env'
-import { buildMonthReplay, buildYearReplay, lastRecordedRotationSessionIndex, normalizeAnnualReplay, replayChartPath, replayMonths, replayYears } from './annualReplayModel.mjs'
+import { buildMonthReplay, buildYearReplay, lastRecordedRotationSessionIndex, normalizeAnnualReplay, replayChartPath, replayChartTimeTicks, replayMonths, replayYears } from './annualReplayModel.mjs'
 import { AnnualReplayHelpModal } from './AnnualReplayHelpModal.jsx'
 import { AnnualReplayFiles } from './AnnualReplayFiles.jsx'
 import { CashInvestigationPanel } from './CashInvestigationPanel.jsx'
@@ -72,6 +72,7 @@ function ScorePanel({ session, onPause }) {
 
 function CapitalPanel({ sessions, index, period, yearSessions, selectedMonth, onSelectMonth }) {
   const chart = useMemo(() => replayChartPath(sessions, index), [sessions, index])
+  const dateTicks = useMemo(() => replayChartTimeTicks(sessions, Boolean(selectedMonth)), [sessions, selectedMonth])
   const current = sessions[index]
   const monthItems = useMemo(() => Array.from({ length: 12 }, (_, i) => {
     const values = yearSessions.filter((item) => Number(item.date.slice(5, 7)) === i + 1)
@@ -81,6 +82,10 @@ function CapitalPanel({ sessions, index, period, yearSessions, selectedMonth, on
   }), [yearSessions])
   const min = chart.min || 0
   const max = chart.max || 0
+  const timeLabel = (date) => {
+    if (selectedMonth) return dateLabel(date, { day: '2-digit', month: '2-digit', year: '2-digit' })
+    return dateLabel(date, { month: 'short' }).replace('.', '') + '/' + date.slice(0, 4)
+  }
   return <section className="annual-replay-panel annual-replay-capital-panel">
     <div className="annual-replay-panel-titleline">
       <div><h3>{tr('Accumulated capital')}</h3><p className="annual-replay-help">{tr('Historical simulated capital at market close')}</p></div>
@@ -102,6 +107,11 @@ function CapitalPanel({ sessions, index, period, yearSessions, selectedMonth, on
         {chart.segments?.map((segment, i) => segment.state === 'unknown' ? null : <path key={i} d={segment.d} fill="none" stroke={segment.state === 'cash' ? 'var(--cash-replay)' : 'var(--positive)'} strokeWidth="4.5" strokeLinecap="round"/>)}
         {chart.dot ? <><line className="annual-replay-cursor" x1={chart.dot.x} x2={chart.dot.x} y1="16" y2="180"/><circle cx={chart.dot.x} cy={chart.dot.y} r="6" fill={current.positionRecorded && current.asset === 'CASH' ? 'var(--cash-replay)' : current.positionRecorded ? 'var(--positive)' : 'var(--muted)'} stroke="var(--panel)" strokeWidth="2"/></> : null}
       </g>
+      <line x1="101.35" x2="857.85" y1="184" y2="184" className="annual-replay-time-axis"/>
+      {dateTicks.map((tick, i) => <g key={tick.date}>
+        <line x1={tick.x} x2={tick.x} y1="184" y2="189" className="annual-replay-time-axis"/>
+        <text className="annual-replay-time-label" x={tick.x} y="208" textAnchor={i === 0 ? 'start' : i === dateTicks.length - 1 ? 'end' : 'middle'}>{timeLabel(tick.date)}</text>
+      </g>)}
     </svg>
     <div className="annual-replay-curve-footer"><span>{tr('Capital up to current session')}</span><span>{index + 1} / {sessions.length} {tr('sessions')}</span></div>
     <div className="annual-replay-position-legend">
