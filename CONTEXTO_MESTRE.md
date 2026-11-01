@@ -1,6 +1,6 @@
-## 2026-10-31 — Front v10.7.51 | Aviso de estratégia histórica
+## 2026-10-31 — Front v10.7.51 | Aviso para identificadores realmente inválidos
 
-Branch `fix/v10.7.51-retired-backtest-message`, baseada na Front v10.7.50. Ao receber HTTP 409 `RETIRED_BACKTEST_STRATEGY_MODE`, apresenta aviso específico e acesso a Configurações do Sistema, preserva último resultado carregado e não tenta recuperar/recriar job inútil. Histórico e políticas inalterados. Dependência API v10.8.134. Documentação `docs/changes/v10.7.51-retired-backtest-mode.md`.
+Branch `fix/v10.7.51-retired-backtest-message`, baseada na Front v10.7.50. A estratégia U75 `COMPOUND_ROTATION_SWING_TCC_U75_DAILY_CASH_V101` é válida na API integrada v10.8.134, após recuperar a implementação original. Ao receber HTTP 409 `RETIRED_BACKTEST_STRATEGY_MODE`, apresenta aviso específico e acesso a Configurações do Sistema, preserva último resultado carregado e não tenta recuperar/recriar job inútil. Histórico e políticas inalterados. Dependência API v10.8.134. Documentação `docs/changes/v10.7.51-retired-backtest-mode.md`.
 
 ## 2026-10-31 — Front v10.7.50 | Replay CASH efetivo
 
