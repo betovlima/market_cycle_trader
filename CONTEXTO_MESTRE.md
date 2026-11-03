@@ -1,3 +1,13 @@
+## 2026-11-03 — Winner OAuth, etapa 2 experimental | Consentimento explícito, sem ordens
+
+**Branch:** `feature/alpaca-oauth-winner-trading-v1`, criada a partir da `main` frontend `v10.7.50`. API da mesma branch, base `v10.8.133`. **Sem novo versionamento/tag ou implantação em produção nesta fase.** Documento: `docs/changes/alpaca-oauth-winner-stage2.md`.
+
+**Interface:** o painel Alpaca OAuth mostra **Autorizar permissão de negociação** somente quando o backend habilita `ALPACA_OAUTH_TRADING_CONSENT_ENABLED=1`, quando já existe uma conta vinculada e quando ainda falta o escopo `trading`. Há confirmação explícita do usuário. O callback diferencia escopo autorizado de envio de ordens: a Winner permanece com **execução OAuth desativada**, sem ordens reais. O botão **Verificar vínculo OAuth com a Winner** lê o estado da conta/estratégia/planejamento pelo endpoint read-only `/api/alpaca-oauth/winner/readiness`. Atualiza traduções PT/ES e mensagens. A leitura de Portfolio Live da etapa 1 continua ativa.
+
+**Pendências:** operação multiusuário exige reestruturação do agendador, das sessões, estados e controles por conta, e validação de permissões/compliance Alpaca antes de liberar Live. Backend, front e ordens originais na `main` permanecem intactos.
+
+---
+
 ## 2026-11-03 — Front v10.7.50 | Conexão Alpaca Connect OAuth e Portfolio Live
 
 **Rastreabilidade:** origem `feature/alpaca-connect-oauth-current-user-v1`, PR #42 (https://github.com/betovlima/market_cycle_trader/pull/42), destino `main`, tag anotada `v10.7.50`. API correspondente `market_cycle_trader_api` `v10.8.133`. Publicação da tag e GitHub Release via `.github/workflows/publish-version-tag.yml` após CI verde da `main`. Descrição detalhada: `docs/releases/v10.7.50.md`.
