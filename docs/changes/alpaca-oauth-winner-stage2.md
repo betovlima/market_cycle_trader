@@ -1,6 +1,6 @@
 # Frontend MCT | Etapa 2 de integração Alpaca OAuth à Winner
 
-**Data:** 03/11/2026. **Branch de trabalho:** `feature/alpaca-oauth-winner-trading-v1`. **Base:** `main`, versão `10.7.50`. **Branch da API:** `feature/alpaca-oauth-winner-trading-v1`, base `10.8.133`. **Estado:** experimental, sem merge na `main` ou tag de release.
+**Data:** 03/11/2026. **Branch de trabalho:** `feature/alpaca-oauth-winner-trading-v1` · [PR draft #43](https://github.com/betovlima/market_cycle_trader/pull/43). **Base:** `main`, versão `10.7.50`. **Branch da API:** `feature/alpaca-oauth-winner-trading-v1`, base `10.8.133`. **Estado:** experimental, sem merge na `main` ou tag de release.
 
 ## O que a tela permite
 
