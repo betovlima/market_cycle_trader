@@ -1,6 +1,6 @@
 ## 2026-11-03 — Front v10.7.50 | Conexão Alpaca Connect OAuth e Portfolio Live
 
-**Rastreabilidade:** origem `feature/alpaca-connect-oauth-current-user-v1`, destino `main`, tag anotada `v10.7.50`. API correspondente `market_cycle_trader_api` `v10.8.133`. Publicação da tag e GitHub Release via `.github/workflows/publish-version-tag.yml` após CI verde da `main`. Descrição detalhada: `docs/releases/v10.7.50.md`.
+**Rastreabilidade:** origem `feature/alpaca-connect-oauth-current-user-v1`, PR #42 (https://github.com/betovlima/market_cycle_trader/pull/42), destino `main`, tag anotada `v10.7.50`. API correspondente `market_cycle_trader_api` `v10.8.133`. Publicação da tag e GitHub Release via `.github/workflows/publish-version-tag.yml` após CI verde da `main`. Descrição detalhada: `docs/releases/v10.7.50.md`.
 
 **Interface:** novo painel `AlpacaOAuthConnection.jsx` em Live, restrito ao administrador; conectar, verificar e desconectar a conta Alpaca, com mensagens de status, callback seguro e tradução PT-BR/ES. `App.jsx` reabre Live no retorno de `alpaca_oauth`; o painel apresenta somente o sufixo da conta, sem tokens. Cabeçalho do Portfolio Live indica `broker_authentication` (`OAuth da Alpaca (somente leitura)` ou `Chaves da Alpaca`). Verificar/desconectar atualiza o portfólio, e erro na leitura Live elimina valores desatualizados da tela. Exportação de auditoria usa o contexto da conta autorizado na API.
 
