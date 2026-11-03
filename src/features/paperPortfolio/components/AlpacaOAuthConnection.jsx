@@ -61,6 +61,7 @@ export function AlpacaOAuthConnection() {
       const result = await apiFetch(`${API}/alpaca-oauth/verify`)
       setStatus(result)
       setMessage('Read-only Alpaca connection verified.')
+      window.dispatchEvent(new Event('mct:alpaca-oauth-updated'))
     } catch (e) {
       setError(e.message)
     } finally {
@@ -75,6 +76,7 @@ export function AlpacaOAuthConnection() {
     try {
       await apiFetch(`${API}/alpaca-oauth/disconnect`, { method: 'POST' })
       await refresh()
+      window.dispatchEvent(new Event('mct:alpaca-oauth-updated'))
       setMessage('The OAuth token was removed from the MCT. You can also revoke the app in Alpaca.')
     } catch (e) {
       setError(e.message)
