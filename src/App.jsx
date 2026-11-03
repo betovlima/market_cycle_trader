@@ -43,7 +43,7 @@ function isPermissionDeniedMessage(message) {
 
 function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefresh }) {
   const workspace = useBacktestWorkspace()
-  const [activeTab, setActiveTab] = useState('dashboard')
+  const [activeTab, setActiveTab] = useState(() => (new URLSearchParams(window.location.search).has('alpaca_oauth') ? 'live' : 'dashboard'))
   const [dashboardProcessingId, setDashboardProcessingId] = useState('')
   const capabilities = session?.capabilities || {}
   const allowedTabs = useMemo(
