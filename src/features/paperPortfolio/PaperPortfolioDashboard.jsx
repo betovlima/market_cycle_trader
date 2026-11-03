@@ -19,6 +19,7 @@ import { POLL_MS, ROBOT_POLL_MS } from './portfolioConfig'
 import { CurrentPosition, PortfolioMetricsStrip, TradingSessionStrip, LiveSessionStrip } from './components/PortfolioPrimitives'
 import { WinnerOperationMonitor } from './components/WinnerOperationMonitor'
 import { LiveWinnerEvents } from './components/LiveWinnerEvents'
+import { AlpacaOAuthConnection } from './components/AlpacaOAuthConnection'
 import { LiveWorkflowMonitor } from './components/LiveWorkflowMonitor'
 
 
@@ -678,6 +679,7 @@ export function PaperPortfolioDashboard({ market = 'trading', capabilities = {} 
 
   return (
     <section className="page-stack portfolio-page" aria-label={tr(market === 'live' ? 'Live' : 'Trading (Paper)')}>
+      {market === 'live' ? <AlpacaOAuthConnection /> : null}
       <PortfolioMarketView key={market} market={market} />
     </section>
   )
