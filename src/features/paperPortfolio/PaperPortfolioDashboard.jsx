@@ -36,7 +36,7 @@ export function defaultLiveAuditDates(now = new Date()) {
 }
 
 export function liveAuditExportUrl(baseUrl, startDate, endDate) {
-  const isoDay = /^\\d{4}-\\d{2}-\\d{2}$/
+  const isoDay = /^\d{4}-\d{2}-\d{2}$/
   if (!isoDay.test(startDate) || !isoDay.test(endDate) || startDate > endDate) return null
   const span = (Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / 86400000
   if (!Number.isFinite(span) || span > 365) return null
