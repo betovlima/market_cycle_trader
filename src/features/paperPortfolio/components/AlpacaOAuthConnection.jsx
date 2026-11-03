@@ -11,6 +11,9 @@ const CALLBACK_MESSAGES = {
   permission_failed: 'The authorization returned trading permissions and was rejected.',
   verification_failed: 'Unable to verify the connected Alpaca account.',
   account_mismatch: 'The authorized Alpaca account does not match the current MCT Live account.',
+  trading_connected: 'Alpaca trading permission authorized. OAuth Winner execution remains disabled.',
+  trading_permission_failed: 'Alpaca did not grant the requested trading permission.',
+  trading_unavailable: 'Trading authorization is disabled on the MCT API.',
 }
 
 export function AlpacaOAuthConnection() {
@@ -18,6 +21,7 @@ export function AlpacaOAuthConnection() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [winnerReadiness, setWinnerReadiness] = useState(null)
 
   const refresh = useCallback(async () => {
     const next = await apiFetch(`${API}/alpaca-oauth/status`)
@@ -60,7 +64,9 @@ export function AlpacaOAuthConnection() {
     try {
       const result = await apiFetch(`${API}/alpaca-oauth/verify`)
       setStatus(result)
-      setMessage('Read-only Alpaca connection verified.')
+      setMessage(result?.trading_authorized
+        ? 'Alpaca trading permission authorized. OAuth Winner execution remains disabled.'
+        : 'Read-only Alpaca connection verified.')
       window.dispatchEvent(new Event('mct:alpaca-oauth-updated'))
     } catch (e) {
       setError(e.message)
@@ -70,14 +76,43 @@ export function AlpacaOAuthConnection() {
   }
 
   async function disconnect() {
-    if (!window.confirm(tr('Disconnect this read-only Alpaca OAuth connection?'))) return
+    if (!window.confirm(tr('Disconnect this Alpaca OAuth connection?'))) return
     setBusy(true)
     setError('')
     try {
       await apiFetch(`${API}/alpaca-oauth/disconnect`, { method: 'POST' })
       await refresh()
+      setWinnerReadiness(null)
       window.dispatchEvent(new Event('mct:alpaca-oauth-updated'))
       setMessage('The OAuth token was removed from the MCT. You can also revoke the app in Alpaca.')
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function authorizeTrading() {
+    if (!window.confirm(tr('Authorize trading access at Alpaca? This grants broker permission, but does not activate Winner trading.'))) return
+    setBusy(true)
+    setError('')
+    try {
+      const result = await apiFetch(`${API}/alpaca-oauth/start-trading`, { method: 'POST' })
+      if (!result?.authorization_url?.startsWith('https://app.alpaca.markets/oauth/authorize?')) {
+        throw new Error('The authorization destination is invalid.')
+      }
+      window.location.assign(result.authorization_url)
+    } catch (e) {
+      setError(e.message)
+      setBusy(false)
+    }
+  }
+
+  async function checkWinnerReadiness() {
+    setBusy(true)
+    setError('')
+    try {
+      setWinnerReadiness(await apiFetch(`${API}/alpaca-oauth/winner/readiness`))
     } catch (e) {
       setError(e.message)
     } finally {
@@ -100,6 +135,14 @@ export function AlpacaOAuthConnection() {
               <button className="secondary-action compact" type="button" onClick={verify} disabled={busy}>
                 {tr('Verify connection')}
               </button>
+              {status.trading_consent_available && !status.trading_authorized ? (
+                <button className="secondary-action compact" type="button" onClick={authorizeTrading} disabled={busy}>
+                  {tr('Authorize trading permission')}
+                </button>
+              ) : null}
+              <button className="secondary-action compact" type="button" onClick={checkWinnerReadiness} disabled={busy}>
+                {tr('Check Winner OAuth readiness')}
+              </button>
               <button className="secondary-action compact" type="button" onClick={disconnect} disabled={busy}>
                 {tr('Disconnect OAuth')}
               </button>
@@ -112,12 +155,17 @@ export function AlpacaOAuthConnection() {
       </div>
       <p>
         {status?.connected
-          ? `${tr('Alpaca connected')} · Live · ${tr('Account')} ...${status.account_id_suffix || ''} · ${tr('Read-only')}`
+          ? `${tr('Alpaca connected')} · Live · ${tr('Account')} ...${status.account_id_suffix || ''} · ${tr(status.trading_authorized ? 'Trading scope authorized · Winner OAuth execution disabled' : 'Read-only')}`
           : status?.configured
             ? tr('Alpaca OAuth is ready to authorize the existing Live account.')
             : tr('Alpaca OAuth setup is missing on the API service.')}
       </p>
       <p>{tr('This connection does not enable Winner orders or replace the current Live keys.')}</p>
+      {winnerReadiness ? (
+        <p role="status">
+          {tr('Winner OAuth check')}: {tr(winnerReadiness.status)} · {tr('Trading authorized')}: {winnerReadiness.trading_authorized ? tr('Yes') : tr('No')} · {tr('OAuth order execution')}: {tr('Disabled')}
+        </p>
+      ) : null}
       {message ? <p role="status">{tr(message)}</p> : null}
       {error ? <p role="alert" className="global-error">{tr(error)}</p> : null}
     </section>
