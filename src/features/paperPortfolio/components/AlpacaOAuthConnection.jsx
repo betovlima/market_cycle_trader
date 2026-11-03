@@ -1,0 +1,123 @@
+import { useCallback, useEffect, useState } from 'react'
+import { tr } from '../../../i18n/runtime'
+import { apiFetch } from '../../../api/http'
+import { API } from '../../../config/env'
+
+const CALLBACK_MESSAGES = {
+  connected: 'Alpaca OAuth connected and verified in read-only mode.',
+  denied: 'Alpaca authorization was cancelled.',
+  invalid_state: 'The authorization session expired or was invalid. Try again.',
+  token_failed: 'Alpaca did not issue the authorization token.',
+  permission_failed: 'The authorization returned trading permissions and was rejected.',
+  verification_failed: 'Unable to verify the connected Alpaca account.',
+  account_mismatch: 'The authorized Alpaca account does not match the current MCT Live account.',
+}
+
+export function AlpacaOAuthConnection() {
+  const [status, setStatus] = useState(null)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const refresh = useCallback(async () => {
+    const next = await apiFetch(`${API}/alpaca-oauth/status`)
+    setStatus(next)
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    const url = new URL(window.location.href)
+    const result = url.searchParams.get('alpaca_oauth')
+    if (result) {
+      if (CALLBACK_MESSAGES[result]) setMessage(CALLBACK_MESSAGES[result])
+      url.searchParams.delete('alpaca_oauth')
+      window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`)
+    }
+    apiFetch(`${API}/alpaca-oauth/status`)
+      .then((next) => { if (active) setStatus(next) })
+      .catch(() => { if (active) setError('Unable to read the Alpaca OAuth connection status.') })
+    return () => { active = false }
+  }, [])
+
+  async function connect() {
+    setBusy(true)
+    setError('')
+    try {
+      const result = await apiFetch(`${API}/alpaca-oauth/start`, { method: 'POST' })
+      if (!result?.authorization_url?.startsWith('https://app.alpaca.markets/oauth/authorize?')) {
+        throw new Error('The authorization destination is invalid.')
+      }
+      window.location.assign(result.authorization_url)
+    } catch (e) {
+      setError(e.message)
+      setBusy(false)
+    }
+  }
+
+  async function verify() {
+    setBusy(true)
+    setError('')
+    try {
+      const result = await apiFetch(`${API}/alpaca-oauth/verify`)
+      setStatus(result)
+      setMessage('Read-only Alpaca connection verified.')
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function disconnect() {
+    if (!window.confirm(tr('Disconnect this read-only Alpaca OAuth connection?'))) return
+    setBusy(true)
+    setError('')
+    try {
+      await apiFetch(`${API}/alpaca-oauth/disconnect`, { method: 'POST' })
+      await refresh()
+      setMessage('The OAuth token was removed from the MCT. You can also revoke the app in Alpaca.')
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="data-panel portfolio-workspace-panel" aria-label={tr('Alpaca OAuth connection')}>
+      <div className="portfolio-workspace-header">
+        <div className="portfolio-workspace-title">
+          <div>
+            <h3>{tr('Alpaca OAuth connection')}</h3>
+            <p>{tr('Current MCT administrator · Live account · Read-only pilot')}</p>
+          </div>
+        </div>
+        <div className="portfolio-workspace-actions">
+          {status?.connected
+            ? <>
+              <button className="secondary-action compact" type="button" onClick={verify} disabled={busy}>
+                {tr('Verify connection')}
+              </button>
+              <button className="secondary-action compact" type="button" onClick={disconnect} disabled={busy}>
+                {tr('Disconnect OAuth')}
+              </button>
+            </>
+            : <button className="secondary-action compact" type="button"
+                onClick={connect} disabled={busy || !status?.configured}>
+                {tr('Connect with Alpaca')}
+              </button>}
+        </div>
+      </div>
+      <p>
+        {status?.connected
+          ? `${tr('Alpaca connected')} · Live · ${tr('Account')} ...${status.account_id_suffix || ''} · ${tr('Read-only')}`
+          : status?.configured
+            ? tr('Alpaca OAuth is ready to authorize the existing Live account.')
+            : tr('Alpaca OAuth setup is missing on the API service.')}
+      </p>
+      <p>{tr('This connection does not enable Winner orders or replace the current Live keys.')}</p>
+      {message ? <p role="status">{tr(message)}</p> : null}
+      {error ? <p role="alert" className="global-error">{tr(error)}</p> : null}
+    </section>
+  )
+}
