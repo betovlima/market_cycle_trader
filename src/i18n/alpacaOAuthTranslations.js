@@ -1,5 +1,8 @@
 export const ALPACA_OAUTH_PT_TRANSLATIONS = {
   'Alpaca OAuth connection': 'Conexão OAuth com a Alpaca',
+  'Broker access': 'Acesso à corretora',
+  'Alpaca OAuth (read-only)': 'OAuth da Alpaca (somente leitura)',
+  'Alpaca API keys (read-only)': 'Chaves da Alpaca (somente leitura)',
   'Current MCT administrator · Live account · Read-only pilot': 'Administrador atual do MCT · Conta Live · Teste somente de leitura',
   'Verify connection': 'Verificar conexão',
   'Disconnect OAuth': 'Desconectar OAuth',
@@ -24,6 +27,9 @@ export const ALPACA_OAUTH_PT_TRANSLATIONS = {
 }
 export const ALPACA_OAUTH_ES_TRANSLATIONS = {
   'Alpaca OAuth connection': 'Conexión OAuth con Alpaca',
+  'Broker access': 'Acceso al bróker',
+  'Alpaca OAuth (read-only)': 'OAuth de Alpaca (solo lectura)',
+  'Alpaca API keys (read-only)': 'Claves de Alpaca (solo lectura)',
   'Current MCT administrator · Live account · Read-only pilot': 'Administrador actual del MCT · Cuenta Live · Prueba de solo lectura',
   'Verify connection': 'Verificar conexión',
   'Disconnect OAuth': 'Desconectar OAuth',
