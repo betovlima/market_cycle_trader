@@ -1,3 +1,13 @@
+## 2026-11-03 — Front v10.7.50 | Conexão Alpaca Connect OAuth e Portfolio Live
+
+**Rastreabilidade:** origem `feature/alpaca-connect-oauth-current-user-v1`, PR #42 (https://github.com/betovlima/market_cycle_trader/pull/42), destino `main`, tag anotada `v10.7.50`. API correspondente `market_cycle_trader_api` `v10.8.133`. Publicação da tag e GitHub Release via `.github/workflows/publish-version-tag.yml` após CI verde da `main`. Descrição detalhada: `docs/releases/v10.7.50.md`.
+
+**Interface:** novo painel `AlpacaOAuthConnection.jsx` em Live, restrito ao administrador; conectar, verificar e desconectar a conta Alpaca, com mensagens de status, callback seguro e tradução PT-BR/ES. `App.jsx` reabre Live no retorno de `alpaca_oauth`; o painel apresenta somente o sufixo da conta, sem tokens. Cabeçalho do Portfolio Live indica `broker_authentication` (`OAuth da Alpaca (somente leitura)` ou `Chaves da Alpaca`). Verificar/desconectar atualiza o portfólio, e erro na leitura Live elimina valores desatualizados da tela. Exportação de auditoria usa o contexto da conta autorizado na API.
+
+**Validação:** em 03/11/2026, conexão Live autenticada e resposta da API local com `status=ready` e `broker_authentication=oauth`; build e testes de frontend validados na branch. **Sem ordens via OAuth**, sem liberar multiusuário, sem mudanças na Winner, Paper, TCC ou decisões; depende da API v10.8.133. Merge e tag não são comprovantes de deploy no Railway.
+
+---
+
 ## 2026-10-27 — Front v10.7.48 | Reprodução Anual com seleção Ano + Mês
 
 A Reprodução Anual agora permite selecionar o ano completo ou um mês com pregões registrados, preservando o gráfico de capital, o ranking de utilidades, a lista de trocas e o player existentes. O mês usa as mesmas observações de capital e rotações persistidas, com baseline do último fechamento anterior ao mês, e exibe capital inicial/final, variação e, nas trocas, capital no fechamento, P/L realizado e custos quando disponíveis. Os botões de meses também filtram o período (segundo clique retorna ao ano). Trocar o período reinicia/pausa a animação. Capital final do backtest permanece global. Sem downloads, reprocessamentos, alterações de API, backtest, estratégia, ordens ou base de dados. Branch `feature/v10.7.48-monthly-annual-replay`. Documentação: `docs/changes/v10.7.48-monthly-annual-replay.md`.

@@ -19,6 +19,7 @@ import { POLL_MS, ROBOT_POLL_MS } from './portfolioConfig'
 import { CurrentPosition, PortfolioMetricsStrip, TradingSessionStrip, LiveSessionStrip } from './components/PortfolioPrimitives'
 import { WinnerOperationMonitor } from './components/WinnerOperationMonitor'
 import { LiveWinnerEvents } from './components/LiveWinnerEvents'
+import { AlpacaOAuthConnection } from './components/AlpacaOAuthConnection'
 import { LiveWorkflowMonitor } from './components/LiveWorkflowMonitor'
 
 
@@ -481,7 +482,9 @@ function PortfolioMarketView({ market }) {
     } catch (requestError) {
       if (!mountedRef.current) return
       setConnection({ status: 'unavailable', checkedAt: new Date() })
-      if (!silent) setError(requestError.message)
+      // Never show stale Live financial values if a connected OAuth token fails.
+      if (live) setData(null)
+      if (live || !silent) setError(requestError.message)
     } finally {
       portfolioRequestRef.current = false
       if (mountedRef.current) setRefreshing(false)
@@ -536,15 +539,18 @@ function PortfolioMarketView({ market }) {
   useEffect(() => {
     mountedRef.current = true
     refreshPortfolio({ includeRobot: true })
+    const onOAuthUpdated = () => refreshPortfolio({ includeRobot: false })
+    if (live) window.addEventListener('mct:alpaca-oauth-updated', onOAuthUpdated)
     const robotTimer = window.setInterval(() => loadRobotStatus({ silent: true }), ROBOT_POLL_MS)
     const clockTimer = window.setInterval(() => setClockNow(Date.now()), 1000)
     return () => {
       mountedRef.current = false
+      if (live) window.removeEventListener('mct:alpaca-oauth-updated', onOAuthUpdated)
       if (portfolioTimerRef.current) window.clearTimeout(portfolioTimerRef.current)
       window.clearInterval(robotTimer)
       window.clearInterval(clockTimer)
     }
-  }, [loadRobotStatus, refreshPortfolio])
+  }, [live, loadRobotStatus, refreshPortfolio])
 
   const position = data?.position
   const audit = data?.audit || {}
@@ -585,6 +591,7 @@ function PortfolioMarketView({ market }) {
               <div><h2>{tr(live ? 'Live' : 'Trading (Paper)')}</h2></div>
             </div>
             <div className="portfolio-workspace-actions">
+              {live ? <span>{tr('Broker access')}: {tr(data.broker_authentication === 'oauth' ? 'Alpaca OAuth (read-only)' : 'Alpaca API keys (read-only)')}</span> : null}
               <span>{lastUpdated ? tr('Updated {time}', { time: lastUpdated.toLocaleTimeString(getIntlLocale()) }) : tr('Read-only snapshot')}</span>
               <div className="portfolio-audit-export-controls" role="group" aria-label={tr('Audit export period')}>
                 {live ? (
@@ -678,6 +685,7 @@ export function PaperPortfolioDashboard({ market = 'trading', capabilities = {} 
 
   return (
     <section className="page-stack portfolio-page" aria-label={tr(market === 'live' ? 'Live' : 'Trading (Paper)')}>
+      {market === 'live' ? <AlpacaOAuthConnection /> : null}
       <PortfolioMarketView key={market} market={market} />
     </section>
   )
