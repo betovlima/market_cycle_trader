@@ -36,9 +36,12 @@ export function defaultLiveAuditDates(now = new Date()) {
 }
 
 export function liveAuditExportUrl(baseUrl, startDate, endDate) {
-  if (!startDate || !endDate || startDate > endDate) return null
+  const isoDay = /^\\d{4}-\\d{2}-\\d{2}$/
+  if (!isoDay.test(startDate) || !isoDay.test(endDate) || startDate > endDate) return null
+  const span = (Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / 86400000
+  if (!Number.isFinite(span) || span > 365) return null
   const params = new URLSearchParams({ start_date: startDate, end_date: endDate })
-  return `${baseUrl}? ${params.toString()}`.replace('? ', '?')
+  return `${baseUrl}?${params.toString()}`
 }
 
 const DECISION_REASON_LABELS = {
