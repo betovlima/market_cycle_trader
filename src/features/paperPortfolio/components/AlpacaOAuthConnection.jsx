@@ -126,7 +126,7 @@ export function AlpacaOAuthConnection() {
         <div className="portfolio-workspace-title">
           <div>
             <h3>{tr('Alpaca OAuth connection')}</h3>
-            <p>{tr('Current MCT administrator · Live account · Read-only pilot')}</p>
+            <p>{tr(status?.trading_authorized ? 'Current MCT administrator · Live account · Trading consent pilot' : 'Current MCT administrator · Live account · Read-only pilot')}</p>
           </div>
         </div>
         <div className="portfolio-workspace-actions">
