@@ -2284,6 +2284,53 @@ a { color: inherit; }
   font-size: .69rem;
 }
 
+.portfolio-audit-export-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: 8px;
+  min-width: 0;
+}
+.portfolio-audit-date-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: .68rem;
+}
+.portfolio-audit-date-field input[type="date"] {
+  min-width: 0;
+  width: 123px;
+  min-height: 31px;
+  padding: 4px 6px;
+  border: 1px solid rgba(82, 132, 190, .34);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--panel, #111e2c);
+  font: inherit;
+  color-scheme: dark;
+}
+.portfolio-audit-date-field input[type="date"]:focus-visible {
+  outline: 2px solid var(--accent, #69cde6);
+  outline-offset: 2px;
+}
+@media (max-width: 1130px) {
+  .portfolio-workspace-header {
+    flex-wrap: wrap;
+  }
+  .portfolio-workspace-actions {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 760px) {
+  .portfolio-audit-export-controls {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}
+
 .portfolio-workspace-metrics {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

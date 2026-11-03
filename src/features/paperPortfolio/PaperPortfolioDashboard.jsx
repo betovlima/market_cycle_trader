@@ -22,6 +22,28 @@ import { LiveWinnerEvents } from './components/LiveWinnerEvents'
 import { LiveWorkflowMonitor } from './components/LiveWorkflowMonitor'
 
 
+// Date inputs refer to US market decision dates, not the browser's locale.
+export function defaultLiveAuditDates(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', year: 'numeric',
+    month: '2-digit', day: '2-digit',
+  }).formatToParts(now)
+  const part = (name) => parts.find((item) => item.type === name)?.value
+  const end = `${part('year')}-${part('month')}-${part('day')}`
+  const start = new Date(Date.parse(`${end}T00:00:00Z`) - 6 * 86400000)
+    .toISOString().slice(0, 10)
+  return { start_date: start, end_date: end }
+}
+
+export function liveAuditExportUrl(baseUrl, startDate, endDate) {
+  const isoDay = /^\d{4}-\d{2}-\d{2}$/
+  if (!isoDay.test(startDate) || !isoDay.test(endDate) || startDate > endDate) return null
+  const span = (Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / 86400000
+  if (!Number.isFinite(span) || span > 365) return null
+  const params = new URLSearchParams({ start_date: startDate, end_date: endDate })
+  return `${baseUrl}?${params.toString()}`
+}
+
 const DECISION_REASON_LABELS = {
   raw_best_selected: 'The highest-utility asset was selected.',
   current_asset_best: 'The current asset is still the highest-utility candidate.',
@@ -416,6 +438,7 @@ function PortfolioMarketView({ market }) {
   const [clockNow, setClockNow] = useState(() => Date.now())
   const [selectedDecision, setSelectedDecision] = useState(null)
   const [exporting, setExporting] = useState(false)
+  const [auditDates, setAuditDates] = useState(defaultLiveAuditDates)
   const mountedRef = useRef(false)
   const portfolioTimerRef = useRef(null)
   const portfolioRequestRef = useRef(false)
@@ -485,16 +508,21 @@ function PortfolioMarketView({ market }) {
   scheduleNextRefreshRef.current = scheduleNextPortfolioRefresh
 
   const exportTransactionAudit = useCallback(async () => {
+    const baseUrl = `${API}/${marketApi}/${live ? 'portfolio/export.zip' : 'public-portfolio/export.zip'}`
+    const url = live
+      ? liveAuditExportUrl(baseUrl, auditDates.start_date, auditDates.end_date)
+      : baseUrl
+    if (!url) return
     setExporting(true)
     try {
-      await downloadFile(`${API}/${marketApi}/${live ? 'portfolio/export.zip' : 'public-portfolio/export.zip'}`, live ? 'mct_live_transaction_audit.zip' : 'mct_paper_transaction_audit.zip')
+      await downloadFile(url, live ? 'mct_live_transaction_audit.zip' : 'mct_paper_transaction_audit.zip')
       if (mountedRef.current) setError('')
     } catch (requestError) {
       if (mountedRef.current) setError(requestError.message)
     } finally {
       if (mountedRef.current) setExporting(false)
     }
-  }, [live, marketApi])
+  }, [auditDates, live, marketApi])
 
   const refreshPortfolio = useCallback(async ({ silent = false, includeRobot = false } = {}) => {
     if (portfolioTimerRef.current) window.clearTimeout(portfolioTimerRef.current)
@@ -558,10 +586,32 @@ function PortfolioMarketView({ market }) {
             </div>
             <div className="portfolio-workspace-actions">
               <span>{lastUpdated ? tr('Updated {time}', { time: lastUpdated.toLocaleTimeString(getIntlLocale()) }) : tr('Read-only snapshot')}</span>
-              <button type="button" className="secondary-action portfolio-export-button compact" disabled={exporting} onClick={exportTransactionAudit}>
-                {exporting ? <span className="portfolio-button-spinner" aria-hidden="true" /> : null}
-                {tr(exporting ? 'Exporting…' : 'Export audit')}
-              </button>
+              <div className="portfolio-audit-export-controls" role="group" aria-label={tr('Audit export period')}>
+                {live ? (
+                  <>
+                    <label className="portfolio-audit-date-field">
+                      <span>{tr('Start date')}</span>
+                      <input type="date" value={auditDates.start_date}
+                        max={auditDates.end_date}
+                        onChange={(event) => setAuditDates((current) => ({ ...current, start_date: event.target.value }))}
+                        disabled={exporting} />
+                    </label>
+                    <label className="portfolio-audit-date-field">
+                      <span>{tr('End date')}</span>
+                      <input type="date" value={auditDates.end_date}
+                        min={auditDates.start_date}
+                        onChange={(event) => setAuditDates((current) => ({ ...current, end_date: event.target.value }))}
+                        disabled={exporting} />
+                    </label>
+                  </>
+                ) : null}
+                <button type="button" className="secondary-action portfolio-export-button compact"
+                  disabled={exporting || (live && !liveAuditExportUrl('audit', auditDates.start_date, auditDates.end_date))}
+                  onClick={exportTransactionAudit}>
+                  {exporting ? <span className="portfolio-button-spinner" aria-hidden="true" /> : null}
+                  {tr(exporting ? 'Exporting…' : 'Export audit')}
+                </button>
+              </div>
               <button type="button" className="secondary-action portfolio-refresh-button compact" disabled={refreshing} onClick={() => refreshPortfolio({ includeRobot: true })}>
                 {refreshing ? <span className="portfolio-button-spinner" aria-hidden="true" /> : null}
                 {tr(refreshing ? 'Refreshing…' : 'Refresh')}
