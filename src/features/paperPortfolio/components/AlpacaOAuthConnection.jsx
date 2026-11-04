@@ -162,9 +162,14 @@ export function AlpacaOAuthConnection() {
       </p>
       <p>{tr('This connection does not enable Winner orders or replace the current Live keys.')}</p>
       {winnerReadiness ? (
-        <p role="status">
-          {tr('Winner OAuth check')}: {tr(winnerReadiness.status)} · {tr('Trading authorized')}: {winnerReadiness.trading_authorized ? tr('Yes') : tr('No')} · {tr('OAuth order execution')}: {tr('Disabled')}
-        </p>
+        <div role="status">
+          <p>
+            {tr('Winner OAuth check')}: {tr(winnerReadiness.status)} · {tr('Trading authorized')}: {winnerReadiness.trading_authorized ? tr('Yes') : tr('No')} · {tr('OAuth order execution')}: {tr('Disabled')}
+          </p>
+          {winnerReadiness.shared_winner && winnerReadiness.winner_name ? (
+            <p>{tr('Shared Winner')}: {winnerReadiness.winner_name} · {tr('Individual portfolio via Alpaca')}</p>
+          ) : null}
+        </div>
       ) : null}
       {message ? <p role="status">{tr(message)}</p> : null}
       {error ? <p role="alert" className="global-error">{tr(error)}</p> : null}
