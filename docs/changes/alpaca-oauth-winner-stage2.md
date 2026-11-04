@@ -40,9 +40,9 @@ A aba **Live** distingue agora duas situações:
 
 ## O que a tela permite
 
-Em **Live → Conexão OAuth com a Alpaca**, a conexão de leitura atual permanece como antes. O botão adicional **Autorizar permissão de negociação** só aparece quando a API retorna `trading_consent_available=true` e há uma conta Live já vinculada e ainda sem escopo de negociação.
+Em **Live → Conexão OAuth com a Alpaca**, o administrador mantém o fluxo anterior de leitura e upgrade com o botão **Autorizar permissão de negociação**. Para um Trader convidado sem conta vinculada, quando a API retorna `trading_consent_available=true`, aparece diretamente **Conectar e autorizar operações na Alpaca**, sem exigir leitura OAuth prévia.
 
-A interface pede confirmação antes de encaminhar o navegador para o consentimento oficial da Alpaca (`scope=trading`). A API controla o callback, o estado de dez minutos, a cifragem do token e a associação com a sessão do administrador do MCT.
+A interface pede confirmação antes de encaminhar o navegador ao consentimento oficial da Alpaca (`scope=trading`). A API controla o callback, o estado de dez minutos, a cifragem do token e a associação à identidade autenticada do usuário. O administrador preserva o vínculo original da sua conta principal.
 
 Quando a Alpaca concede a autorização, o painel distingue o **escopo autorizado** do **estado operacional da Winner**: a permissão permite operar quando o modo Live existente está ATIVO e a conta não é a principal. Na configuração local com Live PARADO, a execução continua desativada. O usuário pode clicar em **Verificar vínculo OAuth com a Winner** para consultar o novo endpoint read-only `GET /api/alpaca-oauth/winner/readiness`, que identifica a conta Alpaca e a **Winner compartilhada** sem inferir um sinal particular por usuário nem enviar ordens. A tela identifica o nome da Winner global, quando disponível.
 
