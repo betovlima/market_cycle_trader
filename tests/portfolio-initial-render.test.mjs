@@ -76,10 +76,10 @@ test('main navigation replaces Portfolio with distinct Live and Trading tabs', (
   assert.doesNotMatch(html, /data-nav-tab="portfolio"/)
 })
 
-test('Live menu retains both portfolio and admin permissions; Trading retains portfolio permission', () => {
+test('Live is available for portfolio users; legacy Live admin dashboard stays restricted', () => {
   const trader = renderNavigation({ 'portfolio.view': true })
   assert.match(trader, /data-nav-tab="trading"/)
-  assert.doesNotMatch(trader, /data-nav-tab="live"/)
+  assert.match(trader, /data-nav-tab="live"/)
 
   const adminWithoutPortfolio = renderNavigation({ 'admin.manage': true })
   assert.doesNotMatch(adminWithoutPortfolio, /data-nav-tab="trading"/)
@@ -89,7 +89,9 @@ test('Live menu retains both portfolio and admin permissions; Trading retains po
 test('top-level routing enforces access restrictions independently of menu rendering', async () => {
   const { readFileSync } = await import('node:fs')
   const app = readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8')
-  assert.match(app, /activeTab === 'live' && hasCapability\(capabilities, 'portfolio.view'\) && hasCapability\(capabilities, 'admin.manage'\)/)
+  assert.match(app, /activeTab === 'live' && hasCapability\(capabilities, 'portfolio.view'\)/)
+  assert.match(app, /hasCapability\(capabilities, 'admin.manage'\)/)
+  assert.match(app, /AlpacaPersonalPortfolio/)
   assert.match(app, /activeTab === 'trading' && hasCapability\(capabilities, 'portfolio.view'\)/)
   assert.doesNotMatch(app, /activeTab === 'portfolio'/)
 })
