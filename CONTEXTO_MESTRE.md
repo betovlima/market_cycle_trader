@@ -1,3 +1,11 @@
+## 2026-11-04 — Front da etapa 2: carteira Alpaca por usuário + Winner global (experimental)
+
+**Branch/PR:** `feature/alpaca-oauth-winner-trading-v1` · [front PR #43](https://github.com/betovlima/market_cycle_trader/pull/43) e [API PR #90](https://github.com/betovlima/market_cycle_trader_api/pull/90), ambos draft. `main` permanece nas tags `v10.7.50` (front) e `v10.8.133` (API), sem merge/deploy desta etapa. Detalhes em `docs/changes/alpaca-oauth-winner-stage2.md`.
+
+**Interface:** administradores mantêm Portfolio Live original; usuários com `portfolio.view` recebem `AlpacaPersonalPortfolio.jsx`, que lê `GET /api/alpaca-oauth/portfolio` e apresenta patrimônio, caixa, poder de compra, P/L, posições e ordens da **própria Alpaca**. Não há saldos financeiros mantidos pelo MCT. A mesma Winner gera um alvo canônico D−1; cada conta o converte em ação conforme posição e caixa corretora. O painel OAuth diferencia consentimento `trading` de Live ATIVO/PARADO. A confirmação informa que autorização de trading pode habilitar operações automáticas na conta se o Live estiver ATIVO. Local e produção usam MongoDBs separados; Live local PARADO e produção ATIVA. Sem travas adicionais.
+
+---
+
 ## 2026-11-03 — Winner OAuth, etapa 2 experimental | Consentimento explícito, sem ordens
 
 **Branch:** `feature/alpaca-oauth-winner-trading-v1`, PR draft [#43](https://github.com/betovlima/market_cycle_trader/pull/43), criada a partir da `main` frontend `v10.7.50`. API da mesma branch, base `v10.8.133`. **Sem novo versionamento/tag ou implantação em produção nesta fase.** Documento: `docs/changes/alpaca-oauth-winner-stage2.md`.
