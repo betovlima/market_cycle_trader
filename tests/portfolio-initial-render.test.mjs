@@ -148,7 +148,7 @@ test('top-level routing enforces access restrictions independently of menu rende
   assert.match(app, /activeTab === 'live' && hasCapability\(capabilities, 'portfolio.view'\)/)
   assert.match(app, /hasCapability\(capabilities, 'admin.manage'\)/)
   assert.match(app, /AlpacaPersonalPortfolio/)
-  assert.match(app, /activeTab === 'trading' && hasCapability\(capabilities, 'portfolio.view'\)/)
+  assert.match(app, /activeTab === 'trading' && hasCapability\(capabilities, 'admin.manage'\)/)
   assert.ok(app.includes("if (session.role === 'trader')"))
   assert.ok(app.includes('return <TraderLiveApp session={session}'))
   const traderShell = app.split('function TraderLiveApp(')[1].split('function ProfessorReplayApp(')[0]
