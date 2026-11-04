@@ -132,6 +132,45 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
 }
 
 
+// An invited Trader must not mount the research dashboard/workspace at all.
+// Only their account-specific Alpaca OAuth Live portfolio is available.
+function TraderLiveApp({ session, onLogout, onSessionExpired, onSessionRefresh }) {
+  const capabilities = session?.capabilities || {}
+
+  useEffect(() => {
+    let active = true
+    const refresh = async () => {
+      try {
+        const value = await apiFetch(`${API}/auth/session`)
+        if (!active) return
+        if (!value?.authenticated) onSessionExpired()
+        else onSessionRefresh(value)
+      } catch (error) {
+        if (active && error?.status === 401) onSessionExpired()
+      }
+    }
+    const interval = window.setInterval(refresh, 60_000)
+    return () => { active = false; window.clearInterval(interval) }
+  }, [onSessionExpired, onSessionRefresh])
+
+  return <div className="app-frame">
+    <AppHeader
+      activeTab="live"
+      onTabChange={() => {}}
+      session={session}
+      capabilities={capabilities}
+      onLogout={onLogout}
+    />
+    <main className="workspace-main">
+      <AlpacaPersonalPortfolio />
+    </main>
+    <footer className="app-footer">
+      <span className="app-footer-versions">{tr('Front v')}{FRONT_VERSION}</span>
+    </footer>
+  </div>
+}
+
+
 function ProfessorReplayApp({ session, onLogout, onSessionExpired, onSessionRefresh }) {
   const capabilities = session?.capabilities || {}
 
@@ -204,6 +243,9 @@ export default function App() {
   if (state !== 'authenticated' || !session) return <><LoginPage onAuthenticated={authenticated} />{error ? <div className="startup-error">{tr(error)}</div> : null}</>
   if (session.role === 'replay_guest') {
     return <ProfessorReplayApp session={session} onLogout={logout} onSessionExpired={expired} onSessionRefresh={setSession} />
+  }
+  if (session.role === 'trader') {
+    return <TraderLiveApp session={session} onLogout={logout} onSessionExpired={expired} onSessionRefresh={setSession} />
   }
   return <AuthenticatedApp session={session} onLogout={logout} onSessionExpired={expired} onSessionRefresh={setSession} />
 }
