@@ -10,6 +10,19 @@ O patrimônio, caixa, poder de compra, posição e P/L apresentados no Portfolio
 
 **Ambientes:** os bancos local e produção são diferentes. O Live local permanece PARADO, e a Winner de produção permanece ATIVA. Não acrescentar novas travas de operação nem usar a configuração do consentimento como controle de execução.
 
+## Entrada por convite e autorização direta (04/11/2026)
+
+O fluxo aprovado para novos usuários é **convite Trader → login Google → Live individual → autorização OAuth Alpaca `trading` → aguardar próximo ciclo elegível da Winner**.
+
+- O convite já é gerado em **Administração** e identifica previamente o e-mail Google autorizado.
+- Ao autenticar como `trader`, o MCT abre a aba Live individual, sem apresentar a carteira do administrador.
+- Para um Trader ainda sem conexão, o botão único **Conectar e autorizar operações na Alpaca** solicita `scope=trading`, sem exigir antes a etapa de somente leitura. O titular autoriza explicitamente no site oficial da Alpaca e retorna ao MCT.
+- A interface informa que a conta participará do próximo ciclo de negociação elegível. Nenhuma compra, venda ou cancelamento de ordem é disparado pelo botão ou pelo callback. A partir da autorização concedida, o scheduler Live existente poderá atuar de forma independente do navegador quando Live estiver ATIVO.
+- O fluxo da conta principal do administrador permanece com leitura verificada e permissão `trading` opcional separada, sem mudar a Winner principal que executa por API Keys.
+- A UI não guarda nem inventa saldos. Caixa, patrimônio, posição e ordens são consultados na Alpaca do usuário.
+
+Este fluxo ainda está na branch experimental, sem merge ou deploy na produção. `ALPACA_OAUTH_TRADING_CONSENT_ENABLED=1` é a configuração **já existente** necessária para exibir a autorização; não é uma nova trava de execução.
+
 ## Implementação atual na branch (04/11/2026)
 
 A aba **Live** distingue agora duas situações:
