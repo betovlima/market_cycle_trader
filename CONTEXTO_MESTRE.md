@@ -1,3 +1,9 @@
+## 2026-11-04 — Front v10.7.51, Trader vê apenas Live
+
+A sessão com perfil `trader` monta **`TraderLiveApp`**, uma tela exclusiva `AlpacaPersonalPortfolio`, sem `useBacktestWorkspace`, Dashboard, Backtest, Trading Paper, Analytics, Decision Science ou administração. `AppHeader` apresenta um único item **Live** mesmo quando as capabilities da sessão são antigas. Administrador continua com o painel Live completo e todos os demais painéis, viewer/reviewer mantêm a experiência anterior. A API v10.8.134 complementa a mudança com `trader` apenas `portfolio.view` e fronteira HTTP de rotas Alpaca pessoais. OAuth, Winner global e ordens não foram alterados. Correção em PR #44, branch `fix/trader-live-only-access-20261104`; API PR #91.
+
+---
+
 ## 2026-11-04 — Onboarding de Trader convidado: autorizar Alpaca e aguardar Winner (branch experimental)
 
 **Experiência:** convite verificado criado na Administração → login Google → Trader abre diretamente **Live pessoal** → clica uma vez em **Conectar e autorizar operações na Alpaca** (OAuth `trading` na primeira conexão, sem etapa read-only) → retorna ao MCT e vê dados reais da sua corretora, com texto **Aguardando próximo ciclo elegível da Winner**. A autorização não dispara operações no callback; a conta participará do scheduler Live se autorizada e durante ciclo elegível. Admin mantém painel e fluxo anteriores. Front usa só `/api/alpaca-oauth/portfolio` para contas individuais. Sem saldo próprio MCT, travas novas ou mudanças de produção; PR draft #43, docs `docs/changes/alpaca-oauth-winner-stage2.md`.
