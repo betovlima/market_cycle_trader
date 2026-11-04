@@ -135,6 +135,12 @@ export function PortfolioMetric({ label, value, detail, tone = '' }) {
 
 export function PortfolioMetricsStrip({ data, position, auditSummary = {} }) {
   const signedTone = (value) => value == null || !Number.isFinite(Number(value)) ? '' : Number(value) >= 0 ? 'positive' : 'negative'
+  const live = data?.environment === 'live'
+  const winnerPerformance = live ? data?.winner_performance : null
+  const cumulativeTone = signedTone(winnerPerformance?.return_pct)
+  const cumulativeDetail = winnerPerformance?.status === 'available'
+    ? `${tr('Since')} ${winnerPerformance.start_date} · ${money(winnerPerformance.profit_loss)}${winnerPerformance.coverage === 'from_first_daily_close' ? ` · ${tr('Partial Alpaca history')}` : ''}`
+    : tr('Alpaca history not yet sufficient to calculate accumulated return')
   const returnTone = signedTone(data.total_return)
   const realizedTone = signedTone(data.realized_pnl)
   const unrealizedTone = signedTone(data.unrealized_pnl)
@@ -146,7 +152,10 @@ export function PortfolioMetricsStrip({ data, position, auditSummary = {} }) {
       <PortfolioMetric label={tr("Portfolio Value")} value={money(data.portfolio_value)} detail={percent(data.total_return)} tone="blue" />
       <PortfolioMetric label={tr("Realized P/L")} value={money(data.realized_pnl)} tone={realizedTone} />
       <PortfolioMetric label={tr("Unrealized P/L")} value={money(data.unrealized_pnl)} tone={unrealizedTone} />
-      <PortfolioMetric label={tr("Total P/L")} value={money(data.total_pnl)} detail={percent(data.total_return)} tone={returnTone} />
+      {live
+        ? <PortfolioMetric label={tr('Accumulated Live return')} value={percent(winnerPerformance?.return_pct)}
+            detail={cumulativeDetail} tone={cumulativeTone} />
+        : <PortfolioMetric label={tr("Total P/L")} value={money(data.total_pnl)} detail={percent(data.total_return)} tone={returnTone} />}
       <PortfolioMetric label={tr("Cash")} value={money(data.strategy_cash)} tone="purple" />
       <PortfolioMetric label={tr("Position")} value={position ? position.symbol : livePositionCount > 0 ? `${livePositionCount} ${tr('positions')}` : tr('Cash')} detail={position ? `${number(position.quantity, 4)} ${tr('shares')}` : livePositionCount > 0 ? tr('Multiple Live positions') : tr('No open position.')} tone="gold" />
       <PortfolioMetric label={tr("Distance to peak")} value={percent(auditSummary.distance_to_peak)} detail={auditSummary.peak_portfolio_value == null ? '' : money(auditSummary.peak_portfolio_value)} tone={distanceTone} />
@@ -201,8 +210,9 @@ export function CurrentPosition({ position, cash, lastExecutionSession = null, l
       ) : null}
 
       <div className={`current-trade-return current-position-return ${returnPositive ? 'positive' : 'negative'}`}>
-        <span>{tr("Unrealized return")}</span>
+        <span>{tr("Current position return (unrealized)")}</span>
         <strong>{percent(position.unrealized_return)}</strong>
+        <small>{tr("Since the average entry price of the current position, not the Winner's total return.")}</small>
       </div>
     </aside>
   )
