@@ -93,7 +93,7 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
   }
 
   async function authorizeTrading() {
-    if (!window.confirm(tr('Authorize trading access at Alpaca? This grants broker permission, but does not activate Winner trading.'))) return
+    if (!window.confirm(tr('Authorize Alpaca trading? When MCT Live is ACTIVE, the shared Winner can trade through this account. The primary account keeps its current API keys.'))) return
     setBusy(true)
     setError('')
     try {
