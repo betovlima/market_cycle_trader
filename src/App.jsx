@@ -28,7 +28,7 @@ const TAB_CAPABILITIES = {
   'annual-replay': 'backtest.view',
   'asset-discovery': 'asset_discovery.view',
   live: 'portfolio.view',
-  trading: 'portfolio.view',
+  trading: 'admin.manage',
   administration: 'administration.view',
   'reviewer-access': 'admin.manage',
   'system-settings': 'settings.view',
@@ -116,7 +116,7 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
           ? <PaperPortfolioDashboard market="live" capabilities={capabilities} />
           : <AlpacaPersonalPortfolio />)
         : null}
-      {activeTab === 'trading' && hasCapability(capabilities, 'portfolio.view') ? <PaperPortfolioDashboard market="trading" capabilities={capabilities} /> : null}
+      {activeTab === 'trading' && hasCapability(capabilities, 'admin.manage') ? <PaperPortfolioDashboard market="trading" capabilities={capabilities} /> : null}
       {activeTab === 'administration' && hasCapability(capabilities, 'administration.view') ? <AdministrationPage onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'reviewer-access' && hasCapability(capabilities, 'admin.manage') ? <ReviewerAccessPage onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'system-settings' && hasCapability(capabilities, 'settings.view') ? <SystemSettingsPage onSessionExpired={onSessionExpired} /> : null}
