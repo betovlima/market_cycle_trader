@@ -11,7 +11,7 @@ const CALLBACK_MESSAGES = {
   permission_failed: 'The authorization returned trading permissions and was rejected.',
   verification_failed: 'Unable to verify the connected Alpaca account.',
   account_mismatch: 'The authorized Alpaca account does not match the current MCT Live account.',
-  trading_connected: 'Alpaca trading permission authorized. OAuth Winner execution remains disabled.',
+  trading_connected: 'Alpaca trading permission authorized. Winner OAuth follows the Live operating mode.',
   trading_permission_failed: 'Alpaca did not grant the requested trading permission.',
   trading_unavailable: 'Trading authorization is disabled on the MCT API.',
 }
@@ -65,7 +65,7 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
       const result = await apiFetch(`${API}/alpaca-oauth/verify`)
       setStatus(result)
       setMessage(result?.trading_authorized
-        ? 'Alpaca trading permission authorized. OAuth Winner execution remains disabled.'
+        ? 'Alpaca trading permission authorized. Winner OAuth follows the Live operating mode.'
         : 'Read-only Alpaca connection verified.')
       window.dispatchEvent(new Event('mct:alpaca-oauth-updated'))
     } catch (e) {
@@ -157,16 +157,20 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
       </div>
       <p>
         {status?.connected
-          ? `${tr('Alpaca connected')} · Live · ${tr('Account')} ...${status.account_id_suffix || ''} · ${tr(status.trading_authorized ? 'Trading scope authorized · Winner OAuth execution disabled' : 'Read-only')}`
+          ? `${tr('Alpaca connected')} · Live · ${tr('Account')} ...${status.account_id_suffix || ''} · ${tr(status.trading_authorized
+            ? (status.trading_enabled ? 'Trading scope authorized · Winner OAuth active' : 'Trading scope authorized · Winner OAuth inactive')
+            : 'Read-only')}`
           : status?.configured
             ? tr(isAdmin ? 'Alpaca OAuth is ready to authorize the existing Live account.' : 'Alpaca OAuth is ready to connect your Live account.')
             : tr('Alpaca OAuth setup is missing on the API service.')}
       </p>
-      <p>{tr('This connection does not enable Winner orders or replace the current Live keys.')}</p>
+      <p>{tr(status?.trading_authorized
+        ? 'Winner OAuth follows the existing Live operating mode. The primary account keeps its API keys.'
+        : 'This connection does not enable Winner orders or replace the current Live keys.')}</p>
       {winnerReadiness ? (
         <div role="status">
           <p>
-            {tr('Winner OAuth check')}: {tr(winnerReadiness.status)} · {tr('Trading authorized')}: {winnerReadiness.trading_authorized ? tr('Yes') : tr('No')} · {tr('OAuth order execution')}: {tr('Disabled')}
+            {tr('Winner OAuth check')}: {tr(winnerReadiness.status)} · {tr('Trading authorized')}: {winnerReadiness.trading_authorized ? tr('Yes') : tr('No')} · {tr('OAuth order execution')}: {tr(winnerReadiness.oauth_winner_execution_enabled ? 'Active' : 'Disabled')}
           </p>
           {winnerReadiness.shared_winner && winnerReadiness.winner_name ? (
             <p>{tr('Shared Winner')}: {winnerReadiness.winner_name} · {tr('Individual portfolio via Alpaca')}</p>
