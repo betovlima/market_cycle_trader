@@ -1,3 +1,7 @@
+## 2026-11-04 — Onboarding de Trader convidado: autorizar Alpaca e aguardar Winner (branch experimental)
+
+**Experiência:** convite verificado criado na Administração → login Google → Trader abre diretamente **Live pessoal** → clica uma vez em **Conectar e autorizar operações na Alpaca** (OAuth `trading` na primeira conexão, sem etapa read-only) → retorna ao MCT e vê dados reais da sua corretora, com texto **Aguardando próximo ciclo elegível da Winner**. A autorização não dispara operações no callback; a conta participará do scheduler Live se autorizada e durante ciclo elegível. Admin mantém painel e fluxo anteriores. Front usa só `/api/alpaca-oauth/portfolio` para contas individuais. Sem saldo próprio MCT, travas novas ou mudanças de produção; PR draft #43, docs `docs/changes/alpaca-oauth-winner-stage2.md`.
+
 ## 2026-11-04 — Front da etapa 2: carteira Alpaca por usuário + Winner global (experimental)
 
 **Branch/PR:** `feature/alpaca-oauth-winner-trading-v1` · [front PR #43](https://github.com/betovlima/market_cycle_trader/pull/43) e [API PR #90](https://github.com/betovlima/market_cycle_trader_api/pull/90), ambos draft. `main` permanece nas tags `v10.7.50` (front) e `v10.8.133` (API), sem merge/deploy desta etapa. Detalhes em `docs/changes/alpaca-oauth-winner-stage2.md`.
