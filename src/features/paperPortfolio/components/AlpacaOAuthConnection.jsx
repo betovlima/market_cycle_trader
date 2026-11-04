@@ -16,7 +16,7 @@ const CALLBACK_MESSAGES = {
   trading_unavailable: 'Trading authorization is disabled on the MCT API.',
 }
 
-export function AlpacaOAuthConnection() {
+export function AlpacaOAuthConnection({ isAdmin = true }) {
   const [status, setStatus] = useState(null)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -126,7 +126,9 @@ export function AlpacaOAuthConnection() {
         <div className="portfolio-workspace-title">
           <div>
             <h3>{tr('Alpaca OAuth connection')}</h3>
-            <p>{tr(status?.trading_authorized ? 'Current MCT administrator · Live account · Trading consent pilot' : 'Current MCT administrator · Live account · Read-only pilot')}</p>
+            <p>{tr(isAdmin
+              ? (status?.trading_authorized ? 'Current MCT administrator · Live account · Trading consent pilot' : 'Current MCT administrator · Live account · Read-only pilot')
+              : 'Your Alpaca account · Live · Individual portfolio')}</p>
           </div>
         </div>
         <div className="portfolio-workspace-actions">
@@ -157,7 +159,7 @@ export function AlpacaOAuthConnection() {
         {status?.connected
           ? `${tr('Alpaca connected')} · Live · ${tr('Account')} ...${status.account_id_suffix || ''} · ${tr(status.trading_authorized ? 'Trading scope authorized · Winner OAuth execution disabled' : 'Read-only')}`
           : status?.configured
-            ? tr('Alpaca OAuth is ready to authorize the existing Live account.')
+            ? tr(isAdmin ? 'Alpaca OAuth is ready to authorize the existing Live account.' : 'Alpaca OAuth is ready to connect your Live account.')
             : tr('Alpaca OAuth setup is missing on the API service.')}
       </p>
       <p>{tr('This connection does not enable Winner orders or replace the current Live keys.')}</p>
