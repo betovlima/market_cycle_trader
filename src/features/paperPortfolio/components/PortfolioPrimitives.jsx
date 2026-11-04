@@ -140,7 +140,7 @@ export function PortfolioMetricsStrip({ data, position, auditSummary = {} }) {
   const cumulativeTone = signedTone(winnerPerformance?.return_pct)
   const cumulativeDetail = winnerPerformance?.status === 'available'
     ? `${tr('Since')} ${winnerPerformance.start_date} · ${money(winnerPerformance.profit_loss)}${winnerPerformance.coverage === 'from_first_daily_close' ? ` · ${tr('Partial Alpaca history')}` : ''}`
-    : tr('Alpaca history not yet sufficient to calculate accumulated return')
+    : tr(winnerPerformance?.reason === 'cashflows_present' ? 'Alpaca cash movements prevent a reliable accumulated return' : 'Alpaca history not yet sufficient to calculate accumulated return')
   const returnTone = signedTone(data.total_return)
   const realizedTone = signedTone(data.realized_pnl)
   const unrealizedTone = signedTone(data.unrealized_pnl)
@@ -153,7 +153,7 @@ export function PortfolioMetricsStrip({ data, position, auditSummary = {} }) {
       <PortfolioMetric label={tr("Realized P/L")} value={money(data.realized_pnl)} tone={realizedTone} />
       <PortfolioMetric label={tr("Unrealized P/L")} value={money(data.unrealized_pnl)} tone={unrealizedTone} />
       {live
-        ? <PortfolioMetric label={tr('Accumulated Live return')} value={percent(winnerPerformance?.return_pct)}
+        ? <PortfolioMetric label={tr('Accumulated Alpaca account return')} value={percent(winnerPerformance?.return_pct)}
             detail={cumulativeDetail} tone={cumulativeTone} />
         : <PortfolioMetric label={tr("Total P/L")} value={money(data.total_pnl)} detail={percent(data.total_return)} tone={returnTone} />}
       <PortfolioMetric label={tr("Cash")} value={money(data.strategy_cash)} tone="purple" />
