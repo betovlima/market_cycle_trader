@@ -21,6 +21,10 @@ const { AlpacaPersonalPortfolio } = await vite.ssrLoadModule(
   '/src/features/paperPortfolio/AlpacaPersonalPortfolio.jsx',
 )
 
+const { CurrentPosition, PortfolioMetricsStrip } = await vite.ssrLoadModule(
+  '/src/features/paperPortfolio/components/PortfolioPrimitives.jsx',
+)
+
 const { AppHeader } = await vite.ssrLoadModule(
   '/src/features/backtest/components/AppHeader.jsx',
 )
@@ -68,6 +72,61 @@ test('invited Trader opens Live and asks for one trading consent', async () => {
   assert.ok(oauth.includes("!isAdmin ? ("))
   assert.ok(oauth.includes("alpaca-oauth/start-trading"))
   assert.ok(oauth.includes("After your Alpaca authorization, wait for the next eligible Winner trading cycle."))
+})
+
+test('Live distinguishes current holding return from historical account performance', () => {
+  const position = {
+    symbol: 'CAPR', quantity: 16.89, average_entry_price: 6.75,
+    current_price: 8.57, market_value: 144.75,
+    unrealized_pnl: 30.74, unrealized_return: 0.2696,
+  }
+  const holding = renderToString(React.createElement(CurrentPosition, { position, cash: 0.01 }))
+  assert.match(holding, /Current position return \\(unrealized\\)/)
+  assert.match(holding, /26[.,]96/)
+  assert.match(holding, /not the Winner/)
+
+  const summary = renderToString(React.createElement(PortfolioMetricsStrip, {
+    data: {
+      environment: 'live', portfolio_value: 144.76,
+      realized_pnl: null, unrealized_pnl: 30.74,
+      total_pnl: null, total_return: null, strategy_cash: 0.01,
+      winner_performance: {
+        status: 'available', return_pct: 0.4075, profit_loss: 40.75,
+        start_date: '2026-10-19', coverage: 'complete',
+      },
+    },
+    position, auditSummary: {},
+  }))
+  assert.match(summary, /Accumulated Live return/)
+  assert.match(summary, /40[.,]75/)
+  assert.doesNotMatch(summary, /Total P\\/L/)
+  assert.match(summary, /2026-10-19/)
+})
+
+test('Live cumulative return is a dash if Alpaca has no auditable baseline', () => {
+  const summary = renderToString(React.createElement(PortfolioMetricsStrip, {
+    data: {
+      environment: 'live', portfolio_value: 120,
+      unrealized_pnl: 20, realized_pnl: null,
+      strategy_cash: 0, positions: [], winner_performance: {
+        status: 'unavailable', return_pct: null, profit_loss: null,
+      },
+    },
+  }))
+  assert.match(summary, /Accumulated Live return/)
+  assert.match(summary, /Alpaca history not yet sufficient/)
+  assert.doesNotMatch(summary, /NaN|Infinity|0[.,]00%/)
+})
+
+test('Trader Live reads only Alpaca returned cumulative data, never invents balance', async () => {
+  const { readFileSync } = await import('node:fs')
+  const source = readFileSync(
+    new URL('../src/features/paperPortfolio/AlpacaPersonalPortfolio.jsx', import.meta.url), 'utf8',
+  )
+  assert.match(source, /portfolio\\.winner_performance\\?\\.return_pct/)
+  assert.match(source, /portfolio\\.winner_performance\\?\\.profit_loss/)
+  assert.match(source, /Current position return \\(unrealized\\)/)
+  assert.doesNotMatch(source, /initial_capital|localStorage|ALPACA_LIVE_API_KEY_ID/)
 })
 
 test('Trading portfolio renders its loading state with null API data', () => {
