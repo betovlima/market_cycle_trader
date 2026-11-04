@@ -842,6 +842,8 @@ export const ES_TRANSLATIONS = {
   "Current position return (unrealized)": "Rentabilidad de la posición actual (no realizada)",
   "Since the average entry price of the current position, not the Winner's total return.": "Desde el precio medio de entrada de la posición actual, no el rendimiento total de Winner.",
   "Accumulated Live return": "Rentabilidad acumulada en Live",
+  "Accumulated Alpaca account return": "Rentabilidad acumulada de la cuenta Alpaca",
+  "Alpaca cash movements prevent a reliable accumulated return": "Depósitos, retiros u otros flujos impiden calcular con seguridad la rentabilidad acumulada.",
   "Since": "Desde",
   "Partial Alpaca history": "Historial parcial de Alpaca (desde el primer cierre disponible)",
   "Alpaca history not yet sufficient to calculate accumulated return": "Historial de Alpaca insuficiente para calcular la rentabilidad acumulada.",
