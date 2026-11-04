@@ -81,7 +81,7 @@ test('Live distinguishes current holding return from historical account performa
     unrealized_pnl: 30.74, unrealized_return: 0.2696,
   }
   const holding = renderToString(React.createElement(CurrentPosition, { position, cash: 0.01 }))
-  assert.match(holding, /Current position return \\(unrealized\\)/)
+  assert.match(holding, /Current position return \(unrealized\)/)
   assert.match(holding, /26[.,]96/)
   assert.match(holding, /not the Winner/)
 
@@ -99,7 +99,7 @@ test('Live distinguishes current holding return from historical account performa
   }))
   assert.match(summary, /Accumulated Live return/)
   assert.match(summary, /40[.,]75/)
-  assert.doesNotMatch(summary, /Total P\\/L/)
+  assert.doesNotMatch(summary, /Total P\/L/)
   assert.match(summary, /2026-10-19/)
 })
 
@@ -123,9 +123,9 @@ test('Trader Live reads only Alpaca returned cumulative data, never invents bala
   const source = readFileSync(
     new URL('../src/features/paperPortfolio/AlpacaPersonalPortfolio.jsx', import.meta.url), 'utf8',
   )
-  assert.match(source, /portfolio\\.winner_performance\\?\\.return_pct/)
-  assert.match(source, /portfolio\\.winner_performance\\?\\.profit_loss/)
-  assert.match(source, /Current position return \\(unrealized\\)/)
+  assert.match(source, /portfolio\.winner_performance\?\.return_pct/)
+  assert.match(source, /portfolio\.winner_performance\?\.profit_loss/)
+  assert.match(source, /Current position return \(unrealized\)/)
   assert.doesNotMatch(source, /initial_capital|localStorage|ALPACA_LIVE_API_KEY_ID/)
 })
 
