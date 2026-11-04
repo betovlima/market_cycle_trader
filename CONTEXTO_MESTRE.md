@@ -4,7 +4,7 @@
 
 **Interface:** o painel Alpaca OAuth mostra **Autorizar permissão de negociação** somente quando o backend habilita `ALPACA_OAUTH_TRADING_CONSENT_ENABLED=1`, quando já existe uma conta vinculada e quando ainda falta o escopo `trading`. Há confirmação explícita do usuário. O callback diferencia escopo autorizado de envio de ordens: a Winner permanece com **execução OAuth desativada**, sem ordens reais. O botão **Verificar vínculo OAuth com a Winner** lê o estado da conta/estratégia/planejamento pelo endpoint read-only `/api/alpaca-oauth/winner/readiness`. Atualiza traduções PT/ES e mensagens. A leitura de Portfolio Live da etapa 1 continua ativa.
 
-**Pendências:** operação multiusuário exige reestruturação do agendador, das sessões, estados e controles por conta, e validação de permissões/compliance Alpaca antes de liberar Live. Backend, front e ordens originais na `main` permanecem intactos.
+**Winner compartilhada:** haverá uma única estratégia, modelo e parâmetros para todas as contas, com um alvo/sinal diário compartilhado depois de separar suas dependências da posição atual. Conexões OAuth, consultas Live, saldos, patrimônio e ordens serão exclusivamente da conta Alpaca do usuário. O frontend não inventa saldo nem mistura carteiras. A tela de verificação identifica a Winner global e a carteira individual. As observações antigas de patrimônio no Mongo servem apenas ao gráfico/auditoria, não ao saldo operacional. Pendentes o cálculo de sinal compartilhado, a separação da execução/ledger por conta e validação Alpaca; nenhuma nova trava operacional. Bancos local/produção são distintos; Live local parado, produção ativa. A `main` permanece intacta.
 
 ---
 
