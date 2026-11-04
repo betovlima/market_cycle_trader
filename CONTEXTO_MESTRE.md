@@ -1,3 +1,25 @@
+## 2026-11-04 — Onboarding de Trader convidado: autorizar Alpaca e aguardar Winner (branch experimental)
+
+**Experiência:** convite verificado criado na Administração → login Google → Trader abre diretamente **Live pessoal** → clica uma vez em **Conectar e autorizar operações na Alpaca** (OAuth `trading` na primeira conexão, sem etapa read-only) → retorna ao MCT e vê dados reais da sua corretora, com texto **Aguardando próximo ciclo elegível da Winner**. A autorização não dispara operações no callback; a conta participará do scheduler Live se autorizada e durante ciclo elegível. Admin mantém painel e fluxo anteriores. Front usa só `/api/alpaca-oauth/portfolio` para contas individuais. Sem saldo próprio MCT, travas novas ou mudanças de produção; PR draft #43, docs `docs/changes/alpaca-oauth-winner-stage2.md`.
+
+## 2026-11-04 — Front da etapa 2: carteira Alpaca por usuário + Winner global (experimental)
+
+**Branch/PR:** `feature/alpaca-oauth-winner-trading-v1` · [front PR #43](https://github.com/betovlima/market_cycle_trader/pull/43) e [API PR #90](https://github.com/betovlima/market_cycle_trader_api/pull/90), ambos draft. `main` permanece nas tags `v10.7.50` (front) e `v10.8.133` (API), sem merge/deploy desta etapa. Detalhes em `docs/changes/alpaca-oauth-winner-stage2.md`.
+
+**Interface:** administradores mantêm Portfolio Live original; usuários com `portfolio.view` recebem `AlpacaPersonalPortfolio.jsx`, que lê `GET /api/alpaca-oauth/portfolio` e apresenta patrimônio, caixa, poder de compra, P/L, posições e ordens da **própria Alpaca**. Não há saldos financeiros mantidos pelo MCT. A mesma Winner gera um alvo canônico D−1; cada conta o converte em ação conforme posição e caixa corretora. O painel OAuth diferencia consentimento `trading` de Live ATIVO/PARADO. A confirmação informa que autorização de trading pode habilitar operações automáticas na conta se o Live estiver ATIVO. Local e produção usam MongoDBs separados; Live local PARADO e produção ATIVA. Sem travas adicionais.
+
+---
+
+## 2026-11-03 — Winner OAuth, etapa 2 experimental | Consentimento explícito, sem ordens
+
+**Branch:** `feature/alpaca-oauth-winner-trading-v1`, PR draft [#43](https://github.com/betovlima/market_cycle_trader/pull/43), criada a partir da `main` frontend `v10.7.50`. API da mesma branch, base `v10.8.133`. **Sem novo versionamento/tag ou implantação em produção nesta fase.** Documento: `docs/changes/alpaca-oauth-winner-stage2.md`.
+
+**Interface:** o painel Alpaca OAuth mostra **Autorizar permissão de negociação** somente quando o backend habilita `ALPACA_OAUTH_TRADING_CONSENT_ENABLED=1`, quando já existe uma conta vinculada e quando ainda falta o escopo `trading`. Há confirmação explícita do usuário. O callback diferencia escopo autorizado de envio de ordens: a Winner permanece com **execução OAuth desativada**, sem ordens reais. O botão **Verificar vínculo OAuth com a Winner** lê o estado da conta/estratégia/planejamento pelo endpoint read-only `/api/alpaca-oauth/winner/readiness`. Atualiza traduções PT/ES e mensagens. A leitura de Portfolio Live da etapa 1 continua ativa.
+
+**Winner compartilhada:** haverá uma única estratégia, modelo e parâmetros para todas as contas, com um alvo/sinal diário compartilhado depois de separar suas dependências da posição atual. Conexões OAuth, consultas Live, saldos, patrimônio e ordens serão exclusivamente da conta Alpaca do usuário. O frontend não inventa saldo nem mistura carteiras. A tela de verificação identifica a Winner global e a carteira individual. As observações antigas de patrimônio no Mongo servem apenas ao gráfico/auditoria, não ao saldo operacional. Pendentes o cálculo de sinal compartilhado, a separação da execução/ledger por conta e validação Alpaca; nenhuma nova trava operacional. Bancos local/produção são distintos; Live local parado, produção ativa. A `main` permanece intacta.
+
+---
+
 ## 2026-11-03 — Front v10.7.50 | Conexão Alpaca Connect OAuth e Portfolio Live
 
 **Rastreabilidade:** origem `feature/alpaca-connect-oauth-current-user-v1`, PR #42 (https://github.com/betovlima/market_cycle_trader/pull/42), destino `main`, tag anotada `v10.7.50`. API correspondente `market_cycle_trader_api` `v10.8.133`. Publicação da tag e GitHub Release via `.github/workflows/publish-version-tag.yml` após CI verde da `main`. Descrição detalhada: `docs/releases/v10.7.50.md`.

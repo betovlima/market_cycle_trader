@@ -17,6 +17,7 @@ import { DecisionSciencePage } from './features/decisionScience/DecisionScienceP
 import { AnnualReplayPage } from './features/backtestReplay/AnnualReplayPage'
 import { LoginPage } from './features/LoginPage'
 import { PaperPortfolioDashboard } from './features/paperPortfolio/PaperPortfolioDashboard'
+import { AlpacaPersonalPortfolio } from './features/paperPortfolio/AlpacaPersonalPortfolio'
 import { AssetDiscoveryExecutionPage } from './features/assetDiscovery/AssetDiscoveryExecutionPage'
 import './reviewerAccess.css'
 
@@ -43,13 +44,18 @@ function isPermissionDeniedMessage(message) {
 
 function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefresh }) {
   const workspace = useBacktestWorkspace()
-  const [activeTab, setActiveTab] = useState(() => (new URLSearchParams(window.location.search).has('alpaca_oauth') ? 'live' : 'dashboard'))
+  // A trader entering through the invitation goes straight to their Alpaca
+  // connection. Admins keep their existing dashboard, and the OAuth callback
+  // always returns to Live without opening a trade.
+  const [activeTab, setActiveTab] = useState(() => (
+    new URLSearchParams(window.location.search).has('alpaca_oauth')
+    || session?.role === 'trader' ? 'live' : 'dashboard'
+  ))
   const [dashboardProcessingId, setDashboardProcessingId] = useState('')
   const capabilities = session?.capabilities || {}
   const allowedTabs = useMemo(
     () => Object.entries(TAB_CAPABILITIES)
-      .filter(([tab, capability]) => (tab === 'annual-replay' ? canViewAnnualReplay(capabilities) : hasCapability(capabilities, capability))
-        && (tab !== 'live' || hasCapability(capabilities, 'admin.manage')))
+      .filter(([tab, capability]) => (tab === 'annual-replay' ? canViewAnnualReplay(capabilities) : hasCapability(capabilities, capability)))
       .map(([tab]) => tab),
     [capabilities],
   )
@@ -105,7 +111,11 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefres
       {activeTab === 'backtest' && hasCapability(capabilities, 'backtest.view') ? <BacktestPage workspace={workspace} capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'annual-replay' && canViewAnnualReplay(capabilities) ? <AnnualReplayPage capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'asset-discovery' && hasCapability(capabilities, 'asset_discovery.view') ? <AssetDiscoveryExecutionPage capabilities={capabilities} onSessionExpired={onSessionExpired} /> : null}
-      {activeTab === 'live' && hasCapability(capabilities, 'portfolio.view') && hasCapability(capabilities, 'admin.manage') ? <PaperPortfolioDashboard market="live" capabilities={capabilities} /> : null}
+      {activeTab === 'live' && hasCapability(capabilities, 'portfolio.view')
+        ? (hasCapability(capabilities, 'admin.manage')
+          ? <PaperPortfolioDashboard market="live" capabilities={capabilities} />
+          : <AlpacaPersonalPortfolio />)
+        : null}
       {activeTab === 'trading' && hasCapability(capabilities, 'portfolio.view') ? <PaperPortfolioDashboard market="trading" capabilities={capabilities} /> : null}
       {activeTab === 'administration' && hasCapability(capabilities, 'administration.view') ? <AdministrationPage onSessionExpired={onSessionExpired} /> : null}
       {activeTab === 'reviewer-access' && hasCapability(capabilities, 'admin.manage') ? <ReviewerAccessPage onSessionExpired={onSessionExpired} /> : null}
