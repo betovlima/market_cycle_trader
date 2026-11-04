@@ -1,3 +1,9 @@
+## 2026-11-04 — Front v10.7.53: resultado da posição versus acumulado da conta Alpaca
+
+No Live admin e no Live individual Trader, distinguir **Rentabilidade da posição atual (não realizada)**, derivada do preço médio real do ativo na Alpaca, de **Rentabilidade acumulada da conta Alpaca**, obtida pelo backend na própria corretora para a janela histórica disponível. O acumulado **não é retorno comprovadamente exclusivo da Winner**: pode incluir operações manuais. Exibir início da base e lucro em dólares quando houver histórico comparável, bem como aviso de cobertura parcial; quando houver movimentos de caixa ou não houver base verificável, mostrar traço e motivo, nunca assumir capital inicial nem calcular `equity / cash - 1`. Nenhum saldo é gravado no MCT. API v10.8.135, branch `feature/live-account-return-alpaca-20261104`; sem mudanças no robô.
+
+---
+
 ## 2026-11-04 — Front v10.7.52: retorno da posição separado do acumulado Live
 
 Live Admin: rótulo de 26,96% de CAPR alterado para **Rentabilidade da posição atual (não realizada)**, desde seu preço médio de entrada. Indicador superior que antes mostrava `P/L Total` sem base no Live passa a mostrar **Rentabilidade acumulada no Live**, consumindo `winner_performance` da Alpaca por meio da API. Inclui retorno percentual e P/L em dólares, data inicial e indicação de histórico parcial. Sem histórico verificável, exibir `—` e mensagem, nunca supor 0%. Trader Live pessoal também mostra esse indicador, além do retorno percentual de cada posição. Esse acumulado descreve a conta enquanto acompanha a Winner e pode incluir negociações manuais; o MCT não cria nem mantém capital financeiro próprio. O front não calcula lucros somando posições ou patrimônio. Admin continua com todos os painéis; Trader somente Live. Documentação: `docs/changes/live-winner-cumulative-return-v10752.md`.
