@@ -97,7 +97,7 @@ test('Live distinguishes current holding return from historical account performa
     },
     position, auditSummary: {},
   }))
-  assert.match(summary, /Accumulated Live return/)
+  assert.match(summary, /Accumulated Alpaca account return/)
   assert.match(summary, /40[.,]75/)
   assert.doesNotMatch(summary, /Total P\/L/)
   assert.match(summary, /2026-10-19/)
@@ -113,7 +113,7 @@ test('Live cumulative return is a dash if Alpaca has no auditable baseline', () 
       },
     },
   }))
-  assert.match(summary, /Accumulated Live return/)
+  assert.match(summary, /Accumulated Alpaca account return/)
   assert.match(summary, /Alpaca history not yet sufficient/)
   assert.doesNotMatch(summary, /NaN|Infinity|0[.,]00%/)
 })

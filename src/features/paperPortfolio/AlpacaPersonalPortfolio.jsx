@@ -82,12 +82,12 @@ export function AlpacaPersonalPortfolio() {
                 <h3>{tr('Unrealized P/L')}</h3>
                 <strong>{amount(portfolio.unrealized_pnl)}</strong>
               </section>
-              <section className="portfolio-audit-card" aria-label={tr('Accumulated Live return')}>
-                <h3>{tr('Accumulated Live return')}</h3>
+              <section className="portfolio-audit-card" aria-label={tr('Accumulated Alpaca account return')}>
+                <h3>{tr('Accumulated Alpaca account return')}</h3>
                 <strong>{percent(portfolio.winner_performance?.return_pct)}</strong>
                 <small>{portfolio.winner_performance?.status === 'available'
                   ? `${tr('Since')} ${portfolio.winner_performance.start_date} · ${amount(portfolio.winner_performance.profit_loss)}`
-                  : tr('Alpaca history not yet sufficient to calculate accumulated return')}</small>
+                  : tr(portfolio.winner_performance?.reason === 'cashflows_present' ? 'Alpaca cash movements prevent a reliable accumulated return' : 'Alpaca history not yet sufficient to calculate accumulated return')}</small>
               </section>
             </div>
             <p>{tr('Accumulated Live return uses Alpaca account history and may include manually executed trades; it is not a model-only return.')}
