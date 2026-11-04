@@ -19,7 +19,9 @@ const NAV_ITEMS = [
 
 export function AppHeader({ activeTab, onTabChange, session, capabilities = {}, onLogout }) {
   const navItems = NAV_ITEMS.filter(({ id, capability, requiredCapability }) =>
-    (id === 'annual-replay' ? canViewAnnualReplay(capabilities) : capabilities?.[capability] === true)
+    // Role check remains effective even with stale/excessive session capabilities.
+    (session?.role !== 'trader' || id === 'live')
+    && (id === 'annual-replay' ? canViewAnnualReplay(capabilities) : capabilities?.[capability] === true)
     && (!requiredCapability || capabilities?.[requiredCapability] === true))
   return (
     <header className="app-header">
