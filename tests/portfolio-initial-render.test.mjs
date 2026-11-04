@@ -41,6 +41,7 @@ test('individual Live page shows an empty user-specific Alpaca portfolio', () =>
   const html = renderToString(React.createElement(AlpacaPersonalPortfolio))
   assert.match(html, /Alpaca OAuth connection/)
   assert.match(html, /My Alpaca Live portfolio/)
+  assert.match(html, /Connect and authorize Alpaca trading/)
   assert.match(html, /Connect Alpaca to view your live balance and positions/)
   assert.doesNotMatch(html, /data-portfolio-market="live"/)
 })
@@ -54,6 +55,19 @@ test('individual portfolio queries only the authenticated OAuth account endpoint
   assert.ok(!source.includes('live-market/portfolio'))
   assert.ok(!source.includes('ALPACA_LIVE_API_KEY_ID'))
   assert.ok(source.includes('setPortfolio(null)'))
+})
+
+test('invited Trader opens Live and asks for one trading consent', async () => {
+  const { readFileSync } = await import('node:fs')
+  const app = readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8')
+  const oauth = readFileSync(
+    new URL('../src/features/paperPortfolio/components/AlpacaOAuthConnection.jsx', import.meta.url), 'utf8',
+  )
+  assert.ok(app.includes("session?.role === 'trader' ? 'live' : 'dashboard'"))
+  assert.ok(oauth.includes("onClick={authorizeTrading}"))
+  assert.ok(oauth.includes("!isAdmin ? ("))
+  assert.ok(oauth.includes("alpaca-oauth/start-trading"))
+  assert.ok(oauth.includes("After your Alpaca authorization, wait for the next eligible Winner trading cycle."))
 })
 
 test('Trading portfolio renders its loading state with null API data', () => {
