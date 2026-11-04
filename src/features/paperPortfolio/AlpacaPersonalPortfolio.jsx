@@ -111,6 +111,35 @@ export function AlpacaPersonalPortfolio() {
                 </table>
               </div>
             </section>
+            <section className="portfolio-audit-card">
+              <h3>{tr('Recent Alpaca orders')}</h3>
+              <div className="table-wrap">
+                <table className="dashboard-table">
+                  <thead>
+                    <tr>
+                      <th>{tr('Symbol')}</th>
+                      <th>{tr('Side')}</th>
+                      <th>{tr('Status')}</th>
+                      <th>{tr('Filled quantity')}</th>
+                      <th>{tr('Filled value')}</th>
+                      <th>{tr('Filled at')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {portfolio.recent_orders?.length ? portfolio.recent_orders.map((order, index) => (
+                      <tr key={order.client_order_id || index}>
+                        <td>{order.symbol}</td>
+                        <td>{tr(order.side)}</td>
+                        <td>{tr(order.status)}</td>
+                        <td>{number.format(order.filled_quantity || 0)}</td>
+                        <td>{amount(order.filled_value)}</td>
+                        <td>{order.filled_at || '—'}</td>
+                      </tr>
+                    )) : <tr><td colSpan="6">{tr('No orders at Alpaca')}</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </section>
             <p>{tr('MCT does not keep an operational cash balance; Alpaca is the source of financial values.')}</p>
           </>
         )}
