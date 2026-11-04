@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { apiFetch } from '../../api/http'
 import { API } from '../../config/env'
 import { tr } from '../../i18n/runtime'
+import { percent } from '../../shared/formatters'
 import { AlpacaOAuthConnection } from './components/AlpacaOAuthConnection'
 
 const usd = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'USD' })
@@ -81,7 +82,17 @@ export function AlpacaPersonalPortfolio() {
                 <h3>{tr('Unrealized P/L')}</h3>
                 <strong>{amount(portfolio.unrealized_pnl)}</strong>
               </section>
+              <section className="portfolio-audit-card" aria-label={tr('Accumulated Live return')}>
+                <h3>{tr('Accumulated Live return')}</h3>
+                <strong>{percent(portfolio.winner_performance?.return_pct)}</strong>
+                <small>{portfolio.winner_performance?.status === 'available'
+                  ? `${tr('Since')} ${portfolio.winner_performance.start_date} · ${amount(portfolio.winner_performance.profit_loss)}`
+                  : tr('Alpaca history not yet sufficient to calculate accumulated return')}</small>
+              </section>
             </div>
+            <p>{tr('Accumulated Live return uses Alpaca account history and may include manually executed trades; it is not a model-only return.')}
+              {portfolio.winner_performance?.coverage === 'from_first_daily_close' ? ` ${tr('Partial Alpaca history')}` : ''}
+            </p>
             <section className="portfolio-audit-card">
               <h3>{tr('Current Positions')}</h3>
               <div className="table-wrap">
@@ -94,6 +105,7 @@ export function AlpacaPersonalPortfolio() {
                       <th>{tr('Current price')}</th>
                       <th>{tr('Market value')}</th>
                       <th>{tr('Unrealized P/L')}</th>
+                      <th>{tr('Current position return (unrealized)')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -105,8 +117,9 @@ export function AlpacaPersonalPortfolio() {
                         <td>{amount(p.current_price)}</td>
                         <td>{amount(p.market_value)}</td>
                         <td>{amount(p.unrealized_pnl)}</td>
+                        <td>{percent(p.unrealized_return)}</td>
                       </tr>
-                    )) : <tr><td colSpan="6">{tr('No positions at Alpaca')}</td></tr>}
+                    )) : <tr><td colSpan="7">{tr('No positions at Alpaca')}</td></tr>}
                   </tbody>
                 </table>
               </div>

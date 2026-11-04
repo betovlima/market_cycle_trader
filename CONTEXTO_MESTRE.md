@@ -1,3 +1,9 @@
+## 2026-11-04 — Front v10.7.52: retorno da posição separado do acumulado Live
+
+Live Admin: rótulo de 26,96% de CAPR alterado para **Rentabilidade da posição atual (não realizada)**, desde seu preço médio de entrada. Indicador superior que antes mostrava `P/L Total` sem base no Live passa a mostrar **Rentabilidade acumulada no Live**, consumindo `winner_performance` da Alpaca por meio da API. Inclui retorno percentual e P/L em dólares, data inicial e indicação de histórico parcial. Sem histórico verificável, exibir `—` e mensagem, nunca supor 0%. Trader Live pessoal também mostra esse indicador, além do retorno percentual de cada posição. Esse acumulado descreve a conta enquanto acompanha a Winner e pode incluir negociações manuais; o MCT não cria nem mantém capital financeiro próprio. O front não calcula lucros somando posições ou patrimônio. Admin continua com todos os painéis; Trader somente Live. Documentação: `docs/changes/live-winner-cumulative-return-v10752.md`.
+
+---
+
 ## 2026-11-04 — Front v10.7.51, Trader vê apenas Live
 
 A sessão com perfil `trader` monta **`TraderLiveApp`**, uma tela exclusiva `AlpacaPersonalPortfolio`, sem `useBacktestWorkspace`, Dashboard, Backtest, Trading Paper, Analytics, Decision Science ou administração. `AppHeader` apresenta um único item **Live** mesmo quando as capabilities da sessão são antigas. Administrador continua com o painel Live completo e todos os demais painéis, viewer/reviewer mantêm a experiência anterior. A API v10.8.134 complementa a mudança com `trader` apenas `portfolio.view` e fronteira HTTP de rotas Alpaca pessoais. OAuth, Winner global e ordens não foram alterados. Correção em PR #44, branch `fix/trader-live-only-access-20261104`; API PR #91.
