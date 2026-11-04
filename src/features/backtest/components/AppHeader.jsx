@@ -11,7 +11,7 @@ const NAV_ITEMS = [
   { id: 'annual-replay', label: 'Annual Replay', Icon: AnalyticsIcon, capability: 'annual_replay.view' },
   { id: 'asset-discovery', label: 'Asset Discovery', Icon: SearchIcon, capability: 'asset_discovery.view' },
   { id: 'live', label: 'Live', Icon: PortfolioIcon, capability: 'portfolio.view' },
-  { id: 'trading', label: 'Trading (Paper)', Icon: PortfolioIcon, capability: 'portfolio.view' },
+  { id: 'trading', label: 'Trading (Paper)', Icon: PortfolioIcon, capability: 'admin.manage' },
   { id: 'administration', label: 'Administration', Icon: DashboardIcon, capability: 'administration.view' },
   { id: 'reviewer-access', label: 'Guest Access', Icon: DashboardIcon, capability: 'admin.manage' },
   { id: 'system-settings', label: 'Strategies & Operations', Icon: SettingsIcon, capability: 'settings.view' },
@@ -19,7 +19,9 @@ const NAV_ITEMS = [
 
 export function AppHeader({ activeTab, onTabChange, session, capabilities = {}, onLogout }) {
   const navItems = NAV_ITEMS.filter(({ id, capability, requiredCapability }) =>
-    (id === 'annual-replay' ? canViewAnnualReplay(capabilities) : capabilities?.[capability] === true)
+    // Role check remains effective even with stale/excessive session capabilities.
+    (session?.role !== 'trader' || id === 'live')
+    && (id === 'annual-replay' ? canViewAnnualReplay(capabilities) : capabilities?.[capability] === true)
     && (!requiredCapability || capabilities?.[requiredCapability] === true))
   return (
     <header className="app-header">

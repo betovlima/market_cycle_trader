@@ -96,11 +96,12 @@ test('neither market shows the removed nested Portfolio tabs', () => {
   }
 })
 
-function renderNavigation(capabilities) {
+function renderNavigation(capabilities, role = 'admin') {
   return renderToString(React.createElement(
     I18nProvider, {},
     React.createElement(AppHeader, {
-      activeTab: 'trading', capabilities, session: { display_name: 'Test user' },
+      activeTab: role === 'trader' ? 'live' : 'trading',
+      capabilities, session: { role, display_name: 'Test user' },
       onTabChange: () => {}, onLogout: () => {},
     }),
   ))
@@ -113,14 +114,32 @@ test('main navigation replaces Portfolio with distinct Live and Trading tabs', (
   assert.doesNotMatch(html, /data-nav-tab="portfolio"/)
 })
 
-test('Live is available for portfolio users; legacy Live admin dashboard stays restricted', () => {
-  const trader = renderNavigation({ 'portfolio.view': true })
-  assert.match(trader, /data-nav-tab="trading"/)
-  assert.match(trader, /data-nav-tab="live"/)
+test('Trader navigation displays only Live, even with stale extra capabilities', () => {
+  const staleCapabilities = {
+    'portfolio.view': true,
+    'dashboard.view': true,
+    'backtest.view': true,
+    'decision_science.view': true,
+    'annual_replay.view': true,
+    'admin.manage': true,
+    'settings.view': true,
+  }
+  const trader = renderNavigation(staleCapabilities, 'trader')
+  assert.deepEqual(
+    [...trader.matchAll(/data-nav-tab="([^"]+)"/g)].map((match) => match[1]),
+    ['live'],
+  )
+})
 
-  const adminWithoutPortfolio = renderNavigation({ 'admin.manage': true })
-  assert.doesNotMatch(adminWithoutPortfolio, /data-nav-tab="trading"/)
-  assert.doesNotMatch(adminWithoutPortfolio, /data-nav-tab="live"/)
+test('Admin navigation retains Live, Trading and the management panels', () => {
+  const admin = renderNavigation({
+    'portfolio.view': true, 'admin.manage': true,
+    'dashboard.view': true, 'backtest.view': true,
+    'administration.view': true, 'settings.view': true,
+  })
+  for (const tab of ['live', 'trading', 'dashboard', 'backtest', 'administration', 'system-settings']) {
+    assert.match(admin, new RegExp('data-nav-tab="' + tab + '"'))
+  }
 })
 
 test('top-level routing enforces access restrictions independently of menu rendering', async () => {
@@ -129,6 +148,13 @@ test('top-level routing enforces access restrictions independently of menu rende
   assert.match(app, /activeTab === 'live' && hasCapability\(capabilities, 'portfolio.view'\)/)
   assert.match(app, /hasCapability\(capabilities, 'admin.manage'\)/)
   assert.match(app, /AlpacaPersonalPortfolio/)
-  assert.match(app, /activeTab === 'trading' && hasCapability\(capabilities, 'portfolio.view'\)/)
+  assert.match(app, /activeTab === 'trading' && hasCapability\(capabilities, 'admin.manage'\)/)
+  assert.ok(app.includes("if (session.role === 'trader')"))
+  assert.ok(app.includes('return <TraderLiveApp session={session}'))
+  const traderShell = app.split('function TraderLiveApp(')[1].split('function ProfessorReplayApp(')[0]
+  assert.ok(traderShell.includes('<AlpacaPersonalPortfolio />'))
+  assert.ok(!traderShell.includes('useBacktestWorkspace'))
+  assert.ok(!traderShell.includes('<PaperPortfolioDashboard'))
+  assert.ok(!traderShell.includes('<BacktestPage'))
   assert.doesNotMatch(app, /activeTab === 'portfolio'/)
 })
