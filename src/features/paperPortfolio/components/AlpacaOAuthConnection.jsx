@@ -149,10 +149,18 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
                 {tr('Disconnect OAuth')}
               </button>
             </>
-            : <button className="secondary-action compact" type="button"
+            : !isAdmin ? (
+              <button className="secondary-action compact" type="button"
+                onClick={authorizeTrading}
+                disabled={busy || !status?.configured || !status?.trading_consent_available}>
+                {tr('Connect and authorize Alpaca trading')}
+              </button>
+            ) : (
+              <button className="secondary-action compact" type="button"
                 onClick={connect} disabled={busy || !status?.configured}>
                 {tr('Connect with Alpaca')}
-              </button>}
+              </button>
+            )}
         </div>
       </div>
       <p>
@@ -165,8 +173,15 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
             : tr('Alpaca OAuth setup is missing on the API service.')}
       </p>
       <p>{tr(status?.trading_authorized
-        ? 'Winner OAuth follows the existing Live operating mode. The primary account keeps its API keys.'
-        : 'This connection does not enable Winner orders or replace the current Live keys.')}</p>
+        ? (isAdmin
+          ? 'Winner OAuth follows the existing Live operating mode. The primary account keeps its API keys.'
+          : 'Alpaca trading authorized. Your account will join the next eligible Winner trading cycle.')
+        : (isAdmin
+          ? 'This connection does not enable Winner orders or replace the current Live keys.'
+          : 'After your Alpaca authorization, wait for the next eligible Winner trading cycle.'))}</p>
+      {!isAdmin && status?.configured && !status?.trading_consent_available && !status?.trading_authorized ? (
+        <p role="status">{tr('Alpaca trading consent is not yet available in this MCT environment.')}</p>
+      ) : null}
       {winnerReadiness ? (
         <div role="status">
           <p>
