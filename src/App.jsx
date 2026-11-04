@@ -44,7 +44,13 @@ function isPermissionDeniedMessage(message) {
 
 function AuthenticatedApp({ session, onLogout, onSessionExpired, onSessionRefresh }) {
   const workspace = useBacktestWorkspace()
-  const [activeTab, setActiveTab] = useState(() => (new URLSearchParams(window.location.search).has('alpaca_oauth') ? 'live' : 'dashboard'))
+  // A trader entering through the invitation goes straight to their Alpaca
+  // connection. Admins keep their existing dashboard, and the OAuth callback
+  // always returns to Live without opening a trade.
+  const [activeTab, setActiveTab] = useState(() => (
+    new URLSearchParams(window.location.search).has('alpaca_oauth')
+    || session?.role === 'trader' ? 'live' : 'dashboard'
+  ))
   const [dashboardProcessingId, setDashboardProcessingId] = useState('')
   const capabilities = session?.capabilities || {}
   const allowedTabs = useMemo(
