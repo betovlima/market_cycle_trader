@@ -101,6 +101,11 @@ test('Live distinguishes current holding return from historical account performa
   assert.match(summary, /40[.,]75/)
   assert.doesNotMatch(summary, /Total P\/L/)
   assert.match(summary, /2026-10-19/)
+  const accumulatedCard = summary.split('Accumulated Alpaca account return')[1].split('>Cash<')[0]
+  assert.match(accumulatedCard, /portfolio-metric-help-button/)
+  assert.match(accumulatedCard, /portfolio-metric-help-tooltip/)
+  assert.match(accumulatedCard, /Since 2026-10-19/)
+  assert.doesNotMatch(accumulatedCard, /<small>/)
 })
 
 test('Live cumulative return is a dash if Alpaca has no auditable baseline', () => {
