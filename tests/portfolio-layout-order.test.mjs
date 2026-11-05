@@ -61,3 +61,17 @@ test('Alpaca cumulative return uses shared flow-adjusted daily display in both L
   assert.doesNotMatch(metrics, /cashflows_present/)
   assert.doesNotMatch(personal, /cashflows_present/)
 })
+
+test('Accumulated Alpaca return shows compact info tooltip without stretching metrics', () => {
+  const metricsSource = readFileSync(
+    new URL('../src/features/paperPortfolio/components/PortfolioPrimitives.jsx', import.meta.url),
+    'utf8',
+  )
+  assert.match(metricsSource, /hint=\{cumulativeDetail\}/)
+  assert.doesNotMatch(metricsSource, /detail=\{cumulativeDetail\}/)
+  assert.match(metricsSource, /portfolio-metric-help-button/)
+  assert.match(metricsSource, /portfolio-metric-help-tooltip/)
+  assert.match(layoutStyles, /\.portfolio-workspace-metrics-audit\s*\{[^}]*overflow:\s*visible/s)
+  assert.match(layoutStyles, /\.portfolio-metric-help-tooltip\s*\{[^}]*bottom:\s*calc\(100% \+ 7px\)/s)
+  assert.match(layoutStyles, /\.portfolio-metric-help:focus-within \.portfolio-metric-help-tooltip/)
+})

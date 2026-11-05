@@ -124,10 +124,19 @@ export function LiveSessionStrip({ connection, marketClock, robot, now, refreshi
   )
 }
 
-export function PortfolioMetric({ label, value, detail, tone = '' }) {
+export function PortfolioMetric({ label, value, detail, hint, tone = '' }) {
   return (
     <div className={`portfolio-workspace-metric ${tone}`}>
-      <span>{tr(label)}</span>
+      <span className="portfolio-metric-heading">
+        <span className="portfolio-metric-heading-label">{tr(label)}</span>
+        {hint ? (
+          <span className="portfolio-metric-help">
+            <button type="button" className="portfolio-metric-help-button"
+              aria-label={tr(hint)}>i</button>
+            <span className="portfolio-metric-help-tooltip" role="tooltip">{tr(hint)}</span>
+          </span>
+        ) : null}
+      </span>
       <strong>{value}</strong>
       {detail ? <small>{tr(detail)}</small> : null}
     </div>
@@ -153,7 +162,7 @@ export function PortfolioMetricsStrip({ data, position, auditSummary = {} }) {
       <PortfolioMetric label={tr("Unrealized P/L")} value={money(data.unrealized_pnl)} tone={unrealizedTone} />
       {live
         ? <PortfolioMetric label={tr('Accumulated Alpaca account return')} value={percent(winnerPerformance?.return_pct)}
-            detail={cumulativeDetail} tone={cumulativeTone} />
+            hint={cumulativeDetail} tone={cumulativeTone} />
         : <PortfolioMetric label={tr("Total P/L")} value={money(data.total_pnl)} detail={percent(data.total_return)} tone={returnTone} />}
       <PortfolioMetric label={tr("Cash")} value={money(data.strategy_cash)} tone="purple" />
       <PortfolioMetric label={tr("Position")} value={position ? position.symbol : livePositionCount > 0 ? `${livePositionCount} ${tr('positions')}` : tr('Cash')} detail={position ? `${number(position.quantity, 4)} ${tr('shares')}` : livePositionCount > 0 ? tr('Multiple Live positions') : tr('No open position.')} tone="gold" />
