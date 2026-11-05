@@ -9173,7 +9173,10 @@ a { color: inherit; }
   border-radius: 50%;
   background: rgba(74, 123, 165, .14);
   color: #bdd6ee;
-  font: 700 .65rem/1 inherit;
+  font-family: inherit;
+  font-size: .65rem;
+  font-weight: 700;
+  line-height: 1;
   cursor: help;
 }
 .portfolio-metric-help-button:focus-visible {
