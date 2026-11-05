@@ -22,6 +22,12 @@ import { AlpacaOAuthConnection } from './components/AlpacaOAuthConnection'
 // account positions. Every financial number comes from this user's OAuth
 // /alpaca-oauth/portfolio response.
 export function personalLiveDecision(portfolio, readiness) {
+  // Cross-check the broker holding from the portfolio snapshot with the
+  // independent OAuth readiness before presenting a decision as current.
+  const holdings = Array.isArray(portfolio?.positions) ? portfolio.positions : []
+  const actualAsset = holdings.length === 0 ? 'CASH'
+    : holdings.length === 1 ? String(holdings[0]?.symbol || '').toUpperCase() : null
+  if (!actualAsset || readiness?.current_asset !== actualAsset) return null
   if (!portfolio || !readiness
       || !readiness.shared_winner
       || readiness.shared_signal_prepared !== true
