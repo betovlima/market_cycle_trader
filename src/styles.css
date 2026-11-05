@@ -9158,7 +9158,8 @@ a { color: inherit; }
   overflow-wrap: anywhere;
 }
 .portfolio-metric-help {
-  position: relative;
+  /* Anchor the hint to the metric card, not the tiny icon. */
+  position: static;
   display: inline-flex;
   flex: 0 0 auto;
   z-index: 1;
@@ -9184,9 +9185,12 @@ a { color: inherit; }
   outline-offset: 2px;
 }
 .portfolio-metric-help-tooltip {
+  /* Open below the full metric row: never collide with the Live header,
+     brokerage connection notices, or the percentage being explained. */
   position: absolute;
-  right: -4px;
-  bottom: calc(100% + 7px);
+  right: 8px;
+  top: calc(100% + 8px);
+  bottom: auto;
   width: min(275px, calc(100vw - 32px));
   padding: 9px 11px;
   border: 1px solid rgba(111, 164, 211, .5);
