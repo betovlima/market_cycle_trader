@@ -21,7 +21,6 @@ import { WinnerOperationMonitor } from './components/WinnerOperationMonitor'
 import { LiveWinnerEvents } from './components/LiveWinnerEvents'
 import { AlpacaOAuthConnection } from './components/AlpacaOAuthConnection'
 import { LiveWorkflowMonitor } from './components/LiveWorkflowMonitor'
-import { LiveDailyRecalculation } from './components/LiveDailyRecalculation'
 
 
 // Date inputs refer to US market decision dates, not the browser's locale.
@@ -649,8 +648,6 @@ function PortfolioMarketView({ market }) {
           />}
 
           {portfolioPositionDecision}
-
-          {live ? <LiveDailyRecalculation /> : null}
 
           <PositionExcursionPanel excursion={audit?.position_excursion} observer={robot} />
 
