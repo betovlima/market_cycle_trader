@@ -153,13 +153,17 @@ export function LiveTraderControl() {
           <small>Plano: {state?.active_run?.execution_session || "—"} · {state?.active_run?.action || "—"} · {state?.active_run?.target_asset || "—"} · {state?.active_run?.status || "sem plano"}</small>
         </div>
         <div className="trader-manual-recovery-actions">
-          <button type="button" className="manual-execute" onClick={executeLiveWinnerNow}
-            disabled={!canExecuteNow || executing || busy}
-            title={canExecuteNow
-              ? "Executar ordem REAL apenas para o plano Winner Live persistido e elegível"
-              : "Requer sinal D−1 validado, ainda não executado, e modo Trader Live ativo"}>
-            {executing ? "Executando na Alpaca…" : "Executar plano Live preparado"}
-          </button>
+          {canExecuteNow ? (
+            <button type="button" className="manual-execute" onClick={executeLiveWinnerNow}
+              disabled={executing || busy}
+              title="Executar ordem REAL apenas para o plano Winner Live persistido e elegível">
+              {executing ? "Executando na Alpaca…" : "Executar plano Live preparado"}
+            </button>
+          ) : (
+            <small className="live-daily-ineligible-note">
+              Nenhum plano operacional D−1 elegível para execução real nesta sessão. A reanálise do pregão atual permanece disponível acima, sem enviar ordens.
+            </small>
+          )}
         </div>
       </div>
       <div className="trader-manual-recovery" aria-label="Reconciliação manual da Alpaca Live">
