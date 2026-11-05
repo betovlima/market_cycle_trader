@@ -4,6 +4,7 @@ import { ActivityIcon } from '../../../shared/components/Icons'
 import { money, number, percent, shortDateTime } from '../../../shared/formatters'
 import { scheduleValue } from '../portfolioUtils'
 import { liveSessionModel } from '../liveSessionModel'
+import { accountReturnDetail } from '../accountReturnDisplay'
 
 export function TradingSessionStrip({ connection, marketClock, robot, now, refreshing, nextRefreshAt }) {
   const firstCheckPending = refreshing && !connection.checkedAt
@@ -138,9 +139,7 @@ export function PortfolioMetricsStrip({ data, position, auditSummary = {} }) {
   const live = data?.environment === 'live'
   const winnerPerformance = live ? data?.winner_performance : null
   const cumulativeTone = signedTone(winnerPerformance?.return_pct)
-  const cumulativeDetail = winnerPerformance?.status === 'available'
-    ? `${tr('Since')} ${winnerPerformance.start_date} · ${money(winnerPerformance.profit_loss)}${winnerPerformance.coverage === 'from_first_daily_close' ? ` · ${tr('Partial Alpaca history')}` : ''}`
-    : tr(winnerPerformance?.reason === 'cashflows_present' ? 'Alpaca cash movements prevent a reliable accumulated return' : 'Alpaca history not yet sufficient to calculate accumulated return')
+  const cumulativeDetail = accountReturnDetail(winnerPerformance, money)
   const returnTone = signedTone(data.total_return)
   const realizedTone = signedTone(data.realized_pnl)
   const unrealizedTone = signedTone(data.unrealized_pnl)

@@ -3,6 +3,7 @@ import { apiFetch } from '../../api/http'
 import { API } from '../../config/env'
 import { tr } from '../../i18n/runtime'
 import { percent } from '../../shared/formatters'
+import { accountReturnDetail } from './accountReturnDisplay'
 import { AlpacaOAuthConnection } from './components/AlpacaOAuthConnection'
 
 const usd = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'USD' })
@@ -85,9 +86,7 @@ export function AlpacaPersonalPortfolio() {
               <section className="portfolio-audit-card" aria-label={tr('Accumulated Alpaca account return')}>
                 <h3>{tr('Accumulated Alpaca account return')}</h3>
                 <strong>{percent(portfolio.winner_performance?.return_pct)}</strong>
-                <small>{portfolio.winner_performance?.status === 'available'
-                  ? `${tr('Since')} ${portfolio.winner_performance.start_date} · ${amount(portfolio.winner_performance.profit_loss)}`
-                  : tr(portfolio.winner_performance?.reason === 'cashflows_present' ? 'Alpaca cash movements prevent a reliable accumulated return' : 'Alpaca history not yet sufficient to calculate accumulated return')}</small>
+                <small>{accountReturnDetail(portfolio.winner_performance, amount)}</small>
               </section>
             </div>
             <p>{tr('Accumulated Live return uses Alpaca account history and may include manually executed trades; it is not a model-only return.')}
