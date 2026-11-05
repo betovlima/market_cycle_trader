@@ -42,3 +42,22 @@ test('Live statuses use a dedicated responsive grid without affecting Trading', 
   assert.match(layoutStyles, /@container\s*\(max-width:\s*630px\)\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/)
   assert.match(layoutStyles, /@container\s*\(max-width:\s*340px\)\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)/)
 })
+
+test('Alpaca cumulative return uses shared flow-adjusted daily display in both Live views', () => {
+  const shared = readFileSync(
+    new URL('../src/features/paperPortfolio/accountReturnDisplay.js', import.meta.url), 'utf8',
+  )
+  const metrics = readFileSync(
+    new URL('../src/features/paperPortfolio/components/PortfolioPrimitives.jsx', import.meta.url), 'utf8',
+  )
+  const personal = readFileSync(
+    new URL('../src/features/paperPortfolio/AlpacaPersonalPortfolio.jsx', import.meta.url), 'utf8',
+  )
+  assert.match(shared, /Daily return estimate, adjusted for external transfers/)
+  assert.match(shared, /cashflow_type_unverified/)
+  assert.match(shared, /as_of_date/)
+  assert.match(metrics, /accountReturnDetail\(winnerPerformance, money\)/)
+  assert.match(personal, /accountReturnDetail\(portfolio\.winner_performance, amount\)/)
+  assert.doesNotMatch(metrics, /cashflows_present/)
+  assert.doesNotMatch(personal, /cashflows_present/)
+})
