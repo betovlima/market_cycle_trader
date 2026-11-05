@@ -3,7 +3,6 @@ import { apiFetch } from '../../api/http'
 import { API } from '../../config/env'
 import { tr } from '../../i18n/runtime'
 import { LiveReconciliation } from '../paperPortfolio/components/LiveReconciliation'
-import { LiveDailyRecalculation } from '../paperPortfolio/components/LiveDailyRecalculation'
 import { LiveIntradayRecovery } from './LiveIntradayRecovery'
 
 const MODES = [
@@ -137,9 +136,9 @@ export function LiveTraderControl() {
           ))}
         </div>
       </div>
-      {/* The daily D-1 request belongs to Strategy and Operation, not the
-          operational Live portfolio. It never submits broker orders. */}
-      <LiveDailyRecalculation />
+      {/* Manual contingency is a current-session advisory analysis. Daily D-1
+          preparation already runs automatically after the close; there is no
+          reason to make the operator wait for that process here. */}
       <LiveIntradayRecovery />
       {/* Manual contingency is a distinct real-money action. It can only
           execute the existing persisted current-session Live plan after all
