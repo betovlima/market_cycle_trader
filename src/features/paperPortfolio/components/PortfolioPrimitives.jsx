@@ -76,8 +76,14 @@ export function TradingSessionStrip({ connection, marketClock, robot, now, refre
 }
 
 /** Matching Trading's read-only status ribbon, sourced exclusively from Live APIs. */
-export function LiveSessionStrip({ connection, marketClock, robot, now, refreshing, nextRefreshAt }) {
+export function LiveSessionStrip({ connection, marketClock, robot, oauthStatus = null, now, refreshing, nextRefreshAt }) {
   const state = liveSessionModel({ connection, marketClock, robot, nextRefreshAt })
+  // The Trader's robot chip reflects only *this account's* OAuth consent
+  // and effective participation, not the admin's broker or execution ledger.
+  const scopedTrading = oauthStatus && typeof oauthStatus.trading_authorized === 'boolean'
+  const scopedActive = oauthStatus?.trading_authorized === true && oauthStatus?.trading_enabled === true
+  const robotLabel = scopedTrading ? tr(scopedActive ? 'Active' : 'Stopped') : tr(state.robotLabel)
+  const robotTone = scopedTrading ? (scopedActive ? 'ready' : 'closed') : state.robotTone
   const connectionStatus = refreshing && !connection?.checkedAt ? 'checking' : state.connectionStatus
   const checkedLabel = connection?.checkedAt
     ? tr('Broker {time}', { time: connection.checkedAt.toLocaleTimeString(getIntlLocale()) })
@@ -107,7 +113,7 @@ export function LiveSessionStrip({ connection, marketClock, robot, now, refreshi
           <span className={`session-status-chip ${state.connectionReady && connectionStatus !== 'checking' ? 'ready' : connectionStatus === 'checking' ? 'checking' : 'unavailable'}`}>
             <span className="connection-dot" />{tr('Alpaca')}{' '}{tr(state.connectionReady && connectionStatus !== 'checking' ? 'Connected' : connectionStatus === 'checking' ? 'Checking' : 'Unavailable')}
           </span>
-          <span className={`session-status-chip ${state.robotTone}`}><span className="connection-dot" />{tr('Robot')}{' '}{tr(state.robotLabel)}</span>
+          <span className={`session-status-chip ${robotTone}`}><span className="connection-dot" />{tr('Robot')}{' '}{robotLabel}</span>
           <span className={`session-status-chip ${state.marketTone}`}><span className="connection-dot" />{tr(state.marketLabel)}</span>
           {robot ? <span className={`session-status-chip ${robot.real_orders_armed ? 'risk' : 'checking'}`}><span className="connection-dot" />{tr(robot.real_orders_armed ? 'Real orders authorized' : 'Real orders disabled')}</span> : null}
         </div>
