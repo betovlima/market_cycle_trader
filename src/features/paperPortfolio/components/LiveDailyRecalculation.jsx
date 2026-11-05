@@ -81,12 +81,18 @@ export function LiveDailyRecalculation() {
         {error ? <small role="alert" className="inline-error">{error}</small> : null}
       </div>
       <div className="trader-manual-recovery-actions">
-        <button type="button"
-          disabled={!state?.can_request || busy}
-          title={tr(STATE_TEXT[state?.status] || 'Daily Winner status is temporarily unavailable.')}
-          onClick={request}>
-          {tr(busy ? 'Requesting…' : 'Recalculate Winner using daily history')}
-        </button>
+        {state?.can_request ? (
+          <button type="button"
+            disabled={busy}
+            title={tr(STATE_TEXT[state?.status] || 'Daily Winner status is temporarily unavailable.')}
+            onClick={request}>
+            {tr(busy ? 'Requesting…' : 'Recalculate Winner using daily history')}
+          </button>
+        ) : (
+          <small className="live-daily-ineligible-note">
+            Preparação D−1 indisponível agora. Para analisar o pregão atual sem enviar ordens, use “Reanalisar Winner agora” abaixo.
+          </small>
+        )}
       </div>
     </section>
   )

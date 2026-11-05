@@ -4,6 +4,7 @@ import { API } from '../../config/env'
 import { tr } from '../../i18n/runtime'
 import { LiveReconciliation } from '../paperPortfolio/components/LiveReconciliation'
 import { LiveDailyRecalculation } from '../paperPortfolio/components/LiveDailyRecalculation'
+import { LiveIntradayRecovery } from './LiveIntradayRecovery'
 
 const MODES = [
   ['active', 'Start'],
@@ -139,25 +140,30 @@ export function LiveTraderControl() {
       {/* The daily D-1 request belongs to Strategy and Operation, not the
           operational Live portfolio. It never submits broker orders. */}
       <LiveDailyRecalculation />
+      <LiveIntradayRecovery />
       {/* Manual contingency is a distinct real-money action. It can only
           execute the existing persisted current-session Live plan after all
           independent backend safeguards and explicit operator confirmation. */}
       <div className="trader-manual-recovery" aria-label="Contingência da sessão atual na Alpaca Live">
         <div className="trader-manual-recovery-copy">
           <span className="panel-kicker">RECUPERAÇÃO MANUAL · LIVE</span>
-          <strong>Contingência da sessão atual</strong>
-          <small>Confirme o sinal Winner diário D−1 já preparado e, se ainda for elegível, execute explicitamente o plano na Alpaca Live durante o pregão regular.</small>
-          <small>Reanálise com o movimento intradiário de hoje não está habilitada no Live. Ela pertence ao fluxo Paper e não pode substituir o sinal operacional sem uma validação específica.</small>
+          <strong>Executar plano operacional Live já validado</strong>
+          <small>Execução real somente do sinal operacional D−1 já preparado, ainda não executado, com confirmação explícita e validações da Alpaca.</small>
+          <small>A reanálise intradiária acima produz uma recomendação independente para comparação. Ela não substitui automaticamente este plano nem permite outra operação no mesmo pregão.</small>
           <small>Plano: {state?.active_run?.execution_session || "—"} · {state?.active_run?.action || "—"} · {state?.active_run?.target_asset || "—"} · {state?.active_run?.status || "sem plano"}</small>
         </div>
         <div className="trader-manual-recovery-actions">
-          <button type="button" className="manual-execute" onClick={executeLiveWinnerNow}
-            disabled={!canExecuteNow || executing || busy}
-            title={canExecuteNow
-              ? "Executar ordem REAL apenas para o plano Winner Live persistido e elegível"
-              : "Requer sinal D−1 validado, ainda não executado, e modo Trader Live ativo"}>
-            {executing ? "Executando na Alpaca…" : "Executar plano Live preparado"}
-          </button>
+          {canExecuteNow ? (
+            <button type="button" className="manual-execute" onClick={executeLiveWinnerNow}
+              disabled={executing || busy}
+              title="Executar ordem REAL apenas para o plano Winner Live persistido e elegível">
+              {executing ? "Executando na Alpaca…" : "Executar plano Live preparado"}
+            </button>
+          ) : (
+            <small className="live-daily-ineligible-note">
+              Nenhum plano operacional D−1 elegível para execução real nesta sessão. A reanálise do pregão atual permanece disponível acima, sem enviar ordens.
+            </small>
+          )}
         </div>
       </div>
       <div className="trader-manual-recovery" aria-label="Reconciliação manual da Alpaca Live">
