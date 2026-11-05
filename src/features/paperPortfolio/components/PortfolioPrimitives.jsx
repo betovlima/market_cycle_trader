@@ -132,7 +132,7 @@ export function PortfolioMetric({ label, value, detail, hint, tone = '' }) {
         {hint ? (
           <span className="portfolio-metric-help">
             <button type="button" className="portfolio-metric-help-button"
-              aria-label={tr('Calculation details')} title={tr('Calculation details')}>i</button>
+              aria-label={tr(hint)}>i</button>
             <span className="portfolio-metric-help-tooltip" role="tooltip">{tr(hint)}</span>
           </span>
         ) : null}
