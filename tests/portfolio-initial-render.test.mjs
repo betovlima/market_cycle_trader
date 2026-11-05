@@ -292,7 +292,7 @@ test('Strategy and Operation contains separate daily preparation and manual Live
   assert.match(html, /Reanalisar Winner agora/)
   assert.match(html, /Executar plano operacional Live já validado/)
   assert.match(html, /RECUPERAÇÃO MANUAL · LIVE/)
-  assert.match(html, /Executar plano Live preparado/)
+  assert.match(html, /Nenhum plano operacional D−1 elegível/)
   assert.match(html, /Recalcula a recomendação usando os candles diários completos/)
   assert.doesNotMatch(html, /Reanálise com o movimento intradiário de hoje não está habilitada no Live/)
   assert.doesNotMatch(html, /Executar plano Paper|Reanalyze Winner now/)
