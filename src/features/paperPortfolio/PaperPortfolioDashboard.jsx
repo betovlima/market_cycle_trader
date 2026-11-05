@@ -416,7 +416,7 @@ export function OperationAuditTable({ operations, onDecision, market = 'trading'
                 <td>{order.filled_value == null ? '—' : money(order.filled_value)}</td>
                 <td className={Number(order.realized_pnl) >= 0 ? 'positive' : 'negative'}>{order.realized_pnl == null ? '—' : money(order.realized_pnl)}</td>
                 <td>{executionOriginLabel(order.execution_origin)}</td>
-                <td>{order.decision_audit ? <button type="button" className="portfolio-decision-button" onClick={() => onDecision(order.decision_audit)}>{tr('View decision')}</button> : '—'}</td>
+                <td>{order.decision_audit && onDecision ? <button type="button" className="portfolio-decision-button" onClick={() => onDecision(order.decision_audit)}>{tr('View decision')}</button> : '—'}</td>
               </tr>
             )) : <tr><td colSpan="10" className="empty-cell">{tr(market === 'live' ? 'No Live broker orders are available yet.' : 'No paper orders have been submitted yet.')}</td></tr>}
           </tbody>
