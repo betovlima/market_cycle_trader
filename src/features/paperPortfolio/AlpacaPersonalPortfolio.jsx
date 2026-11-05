@@ -14,7 +14,6 @@ import {
   OperationAuditTable,
   PortfolioEvolutionChart,
 } from './PaperPortfolioDashboard'
-import { accountReturnDetail } from './accountReturnDisplay'
 import { AlpacaOAuthConnection } from './components/AlpacaOAuthConnection'
 
 // The Trader uses the same read-only Live presentation as Admin, but NEVER the
