@@ -9472,3 +9472,122 @@ a { color: inherit; }
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
+/* Current-session Live contingency: real backend stages, no synthetic %
+   bar or ETA. The spinner is shown ONLY while status=running. */
+.live-intraday-recovery {
+  align-items: start;
+  border-color: rgba(69, 135, 203, .35);
+}
+.live-intraday-recovery .trader-manual-recovery-copy {
+  gap: 8px;
+}
+.live-intraday-progress {
+  margin: 4px 0;
+  padding: 12px;
+  border: 1px solid rgba(95, 143, 186, .27);
+  border-radius: 10px;
+  background: rgba(9, 32, 55, .64);
+}
+.live-intraday-progress.is-running {
+  border-color: rgba(85, 162, 234, .57);
+}
+.live-intraday-progress.is-completed {
+  border-color: rgba(53, 201, 143, .45);
+}
+.live-intraday-progress.is-error {
+  border-color: rgba(239, 107, 115, .47);
+}
+.live-intraday-progress-heading {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.live-intraday-progress-heading > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.live-intraday-progress-heading strong {
+  color: #e8f5ff;
+  font-size: .82rem;
+}
+.live-intraday-progress-heading small {
+  color: #afc7db;
+  font-size: .7rem;
+}
+.live-intraday-progress-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 27px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: rgba(88, 148, 200, .15);
+  border: 1px solid rgba(123, 183, 233, .38);
+  color: #97caff;
+  font-size: 1rem;
+  line-height: 1;
+}
+.live-intraday-progress.is-completed .live-intraday-progress-icon {
+  color: #60e1ab;
+}
+.live-intraday-progress-icon.is-spinning {
+  animation: live-intraday-spin 1.1s linear infinite;
+}
+@keyframes live-intraday-spin {
+  to { transform: rotate(360deg); }
+}
+.live-intraday-progress-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  padding: 12px 0 0;
+  margin: 0;
+  list-style: none;
+}
+.live-intraday-progress-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 0;
+  color: #7993ab;
+  font-size: .64rem;
+  line-height: 1.45;
+}
+.live-intraday-progress-steps li.is-completed {
+  color: #68d5a5;
+}
+.live-intraday-progress-steps li.is-current {
+  color: #c8eaff;
+  font-weight: 700;
+}
+.live-intraday-step-symbol {
+  display: grid;
+  flex: 0 0 19px;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: .6rem;
+}
+.live-intraday-recovery .trader-manual-recovery-actions button {
+  white-space: normal;
+}
+@media (max-width: 1050px) {
+  .live-intraday-progress-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 11px;
+  }
+}
+@media (max-width: 580px) {
+  .live-intraday-progress-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-intraday-progress-icon.is-spinning { animation: none; }
+}
