@@ -288,7 +288,7 @@ test('Trader Live decision requires same OAuth account and real holding', () => 
 test('Strategy and Operation exposes the current-session Live contingency, not a closed-market D−1 button', () => {
   const html = renderToString(React.createElement(LiveTraderControl))
   assert.match(html, /Trader operation · Live/)
-  assert.match(html, /Recalculate Winner using daily history/)
+  assert.match(html, /Recalcular Winner usando histórico diário/)
   assert.match(html, /Recalcular Winner agora/)
   assert.match(html, /Executar plano operacional Live já validado/)
   assert.match(html, /RECUPERAÇÃO MANUAL · LIVE/)
