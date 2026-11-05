@@ -289,11 +289,13 @@ test('Strategy and Operation contains separate daily preparation and manual Live
   const html = renderToString(React.createElement(LiveTraderControl))
   assert.match(html, /Trader operation · Live/)
   assert.match(html, /Recalculate Winner using daily history/)
-  assert.match(html, /Contingência da sessão atual/)
+  assert.match(html, /Reanalisar Winner agora/)
+  assert.match(html, /Executar plano operacional Live já validado/)
   assert.match(html, /RECUPERAÇÃO MANUAL · LIVE/)
   assert.match(html, /Executar plano Live preparado/)
-  assert.match(html, /Reanálise com o movimento intradiário de hoje não está habilitada no Live/)
+  assert.match(html, /Recalcula a recomendação usando os candles diários completos/)
+  assert.doesNotMatch(html, /Reanálise com o movimento intradiário de hoje não está habilitada no Live/)
   assert.doesNotMatch(html, /Executar plano Paper|Reanalyze Winner now/)
-  // Both actions start disabled until API status and eligible D-1 plans arrive.
+  // The interface distinguishes an intraday calculation from existing D-1 execution.
   assert.match(html, /Checking daily signal availability|Verificando disponibilidade/)
 })
