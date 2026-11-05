@@ -9444,3 +9444,50 @@ a { color: inherit; }
 
 /* v10.7.25: isolated Live and Paper portfolio workspaces */
 .portfolio-live-safety-note { margin:10px 0; border:1px solid rgba(118,147,170,.36); border-radius:8px; padding:12px; font-size:.78rem; color:var(--muted); }
+
+
+/* The manual Live daily signal action is administrative and separate from
+   brokerage execution. It never changes the eight-metric header geometry. */
+.live-daily-recalculation {
+  margin: 12px 14px 0;
+  display: grid;
+  gap: 9px;
+}
+.live-daily-recalculation .portfolio-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.live-daily-recalculation .portfolio-section-heading > div {
+  min-width: 0;
+  flex: 1 1 270px;
+}
+.live-daily-recalculation .portfolio-section-heading small {
+  display: block;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-top: 4px;
+}
+.live-daily-recalculation .secondary-action {
+  flex: 0 1 auto;
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+}
+.live-daily-recalculation-state {
+  display: flex;
+  gap: 5px 15px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  color: var(--text);
+  font-size: .75rem;
+}
+.live-daily-recalculation-state small,
+.live-daily-recalculation-note {
+  color: var(--muted);
+  font-size: .71rem;
+  line-height: 1.5;
+}
+.live-daily-recalculation-note { margin: 0; }
