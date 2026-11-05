@@ -124,7 +124,7 @@ test('Trader Live reads only Alpaca returned cumulative data, never invents bala
     new URL('../src/features/paperPortfolio/AlpacaPersonalPortfolio.jsx', import.meta.url), 'utf8',
   )
   assert.match(source, /portfolio\.winner_performance\?\.return_pct/)
-  assert.ok(source.includes('portfolio.winner_performance.profit_loss'))
+  assert.ok(source.includes('accountReturnDetail(portfolio.winner_performance, amount)'))
   assert.match(source, /Current position return \(unrealized\)/)
   assert.doesNotMatch(source, /initial_capital|localStorage|ALPACA_LIVE_API_KEY_ID/)
 })
