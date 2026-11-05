@@ -1,161 +1,233 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiFetch } from '../../api/http'
 import { API } from '../../config/env'
-import { tr } from '../../i18n/runtime'
-import { percent } from '../../shared/formatters'
+import { getIntlLocale, tr } from '../../i18n/runtime'
+import { PortfolioIcon } from '../../shared/components/Icons'
+import { shortDateTime } from '../../shared/formatters'
+import { POLL_MS } from './portfolioConfig'
+import { CurrentPosition, LiveSessionStrip, PortfolioMetricsStrip } from './components/PortfolioPrimitives'
+import {
+  AssetPnlChart,
+  CandidateRanking,
+  DecisionOfDay,
+  LiveMultiplePositions,
+  OperationAuditTable,
+  PortfolioEvolutionChart,
+} from './PaperPortfolioDashboard'
 import { accountReturnDetail } from './accountReturnDisplay'
 import { AlpacaOAuthConnection } from './components/AlpacaOAuthConnection'
 
-const usd = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'USD' })
-const number = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 8 })
+// The Trader uses the same read-only Live presentation as Admin, but NEVER the
+// admin-only /live-market endpoints, capital ledger, control, audit or shared
+// account positions. Every financial number comes from this user's OAuth
+// /alpaca-oauth/portfolio response.
+export function personalLiveDecision(portfolio, readiness) {
+  if (!portfolio || !readiness
+      || !readiness.shared_winner
+      || readiness.shared_signal_prepared !== true
+      || readiness.winner_signal_prepared !== true
+      || !portfolio.account_id_suffix
+      || readiness.account_id_suffix !== portfolio.account_id_suffix
+      || !readiness.current_asset
+      || !readiness.shared_target_asset) return null
 
-function amount(value) {
-  return value == null || !Number.isFinite(Number(value)) ? '—' : usd.format(Number(value))
+  return {
+    current_asset: readiness.current_asset,
+    target_asset: readiness.shared_target_asset,
+    raw_best_asset: null, // Not exposed by the account-scoped OAuth readiness.
+    status: 'signal_prepared',
+    execution_session: readiness.execution_session || null,
+    selection_reason: null,
+    execution_origin: null, // Never attribute the shared signal to a user's fill.
+    decision_date: readiness.shared_decision_date || null,
+  }
+}
+
+export function personalLiveSummary(portfolio) {
+  if (!portfolio) return null
+  return {
+    ...portfolio,
+    environment: 'live',
+    realized_pnl: null, // A realized P/L cannot be inferred from the latest 100 orders.
+    total_pnl: null,
+    total_return: null,
+  }
+}
+
+function PersonalLivePanel({ portfolio, oauthStatus, readiness, refreshing, lastUpdated, now, nextRefreshAt, reload }) {
+  const positions = Array.isArray(portfolio.positions) ? portfolio.positions : []
+  const position = positions.length === 1 ? positions[0] : null
+  const summary = personalLiveSummary(portfolio)
+  const decision = personalLiveDecision(portfolio, readiness)
+  const connection = { status: 'ready', checkedAt: lastUpdated }
+  // Only the account-scoped OAuth state controls the Trader indicator.
+  // Neither the canonical account's Live state nor its order ledger is read.
+  const robot = {
+    control_mode: 'unknown',
+    monitoring_enabled: true,
+    real_orders_armed: Boolean(oauthStatus?.trading_authorized && oauthStatus?.trading_enabled),
+    next_execution_session: readiness?.account_id_suffix === portfolio.account_id_suffix
+      ? readiness?.execution_session || null : null,
+  }
+  const pnlByAsset = positions.map((p) => ({
+    symbol: p.symbol,
+    realized_pnl: null,
+    unrealized_pnl: p.unrealized_pnl,
+  }))
+  const orders = Array.isArray(portfolio.recent_orders) ? portfolio.recent_orders : []
+
+  return (
+    <section className="data-panel portfolio-workspace-panel">
+      <header className="portfolio-workspace-header">
+        <div className="portfolio-workspace-title">
+          <div className="page-title-icon"><PortfolioIcon size={18} /></div>
+          <div><h2>{tr('Live')}</h2></div>
+        </div>
+        <div className="portfolio-workspace-actions">
+          <span>{tr('Account')} ...{portfolio.account_id_suffix}</span>
+          <span>{tr('Broker access')}: {tr('Alpaca OAuth (read-only)')}</span>
+          <span>{lastUpdated
+            ? tr('Updated {time}', { time: lastUpdated.toLocaleTimeString(getIntlLocale()) })
+            : shortDateTime(portfolio.recorded_at)}</span>
+          <button type="button" className="secondary-action portfolio-refresh-button compact"
+            disabled={refreshing} onClick={reload}>
+            {refreshing ? <span className="portfolio-button-spinner" aria-hidden="true" /> : null}
+            {tr(refreshing ? 'Refreshing…' : 'Refresh')}
+          </button>
+        </div>
+      </header>
+
+      <PortfolioMetricsStrip data={summary} position={position} auditSummary={{}} />
+
+      <LiveSessionStrip
+        connection={connection}
+        marketClock={portfolio.market_clock}
+        robot={robot}
+        oauthStatus={oauthStatus}
+        now={now}
+        refreshing={refreshing}
+        nextRefreshAt={nextRefreshAt}
+      />
+
+      <div className="portfolio-audit-top-grid">
+        {positions.length > 1
+          ? <LiveMultiplePositions positions={positions} />
+          : <CurrentPosition position={position} cash={portfolio.strategy_cash} />}
+        {/* Readiness is a verified shared Winner target for this exact OAuth
+            account. Admin audit dialogs are never mounted for Traders. */}
+        <DecisionOfDay decision={decision} market="live" />
+      </div>
+
+      <div className="portfolio-audit-charts-grid">
+        <PortfolioEvolutionChart history={portfolio.history} />
+        <AssetPnlChart rows={pnlByAsset} />
+      </div>
+
+      <CandidateRanking decision={null} />
+      <OperationAuditTable operations={orders} market="live" />
+    </section>
+  )
 }
 
 export function AlpacaPersonalPortfolio() {
   const [portfolio, setPortfolio] = useState(null)
+  const [oauthStatus, setOauthStatus] = useState(null)
+  const [readiness, setReadiness] = useState(null)
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState(null)
+  const [nextRefreshAt, setNextRefreshAt] = useState(null)
+  const [clockNow, setClockNow] = useState(() => Date.now())
+  const requestSequence = useRef(0)
 
   const reload = useCallback(async () => {
+    const request = ++requestSequence.current
     setLoading(true)
     setMessage('')
+    // Fail closed on a revoked account, changed identity or partial API error.
+    // Never show financial data cached from a previous OAuth connection.
     try {
-      const data = await apiFetch(`${API}/alpaca-oauth/portfolio`)
+      const [data, status] = await Promise.all([
+        apiFetch(`${API}/alpaca-oauth/portfolio`),
+        apiFetch(`${API}/alpaca-oauth/status`),
+      ])
+      if (request !== requestSequence.current) return
+      if (status?.connected !== true || !data?.account_id_suffix ||
+          status.account_id_suffix !== data.account_id_suffix) {
+        throw new Error('Alpaca OAuth account could not be verified. Reconnect your account.')
+      }
+      // The shared Winner signal is optional. Absence or failure must not
+      // fabricate an account decision, nor block a valid broker portfolio.
+      let nextReadiness = null
+      if (status.trading_authorized === true) {
+        try {
+          nextReadiness = await apiFetch(`${API}/alpaca-oauth/winner/readiness`)
+        } catch {
+          nextReadiness = null
+        }
+      }
+      if (request !== requestSequence.current) return
       setPortfolio(data)
+      setOauthStatus(status)
+      setReadiness(
+        nextReadiness?.account_id_suffix === data.account_id_suffix ? nextReadiness : null
+      )
+      setLastUpdated(new Date())
+      setNextRefreshAt(Date.now() + POLL_MS)
     } catch (error) {
-      // Never display the previous user's balances after a failed request,
-      // a revoked grant or a changed login session.
+      if (request !== requestSequence.current) return
       setPortfolio(null)
+      setOauthStatus(null)
+      setReadiness(null)
+      setLastUpdated(null)
+      setNextRefreshAt(null)
       if (error?.status !== 404) setMessage(error?.message || String(error))
     } finally {
-      setLoading(false)
+      if (request === requestSequence.current) setLoading(false)
     }
   }, [])
 
   useEffect(() => {
     reload()
-    window.addEventListener('mct:alpaca-oauth-updated', reload)
-    return () => window.removeEventListener('mct:alpaca-oauth-updated', reload)
+    const onOauthChange = () => {
+      ++requestSequence.current
+      setPortfolio(null)
+      setReadiness(null)
+      setOauthStatus(null)
+      reload()
+    }
+    window.addEventListener('mct:alpaca-oauth-updated', onOauthChange)
+    const poll = window.setInterval(reload, POLL_MS)
+    const clock = window.setInterval(() => setClockNow(Date.now()), 1000)
+    return () => {
+      ++requestSequence.current
+      window.removeEventListener('mct:alpaca-oauth-updated', onOauthChange)
+      window.clearInterval(poll)
+      window.clearInterval(clock)
+    }
   }, [reload])
 
   return (
     <section className="page-stack portfolio-page" aria-label={tr('My Alpaca Live portfolio')}>
       <AlpacaOAuthConnection isAdmin={false} />
-      <section className="data-panel portfolio-workspace-panel">
-        <div className="portfolio-workspace-header">
-          <div className="portfolio-workspace-title">
-            <div>
-              <h2>{tr('My Alpaca Live portfolio')}</h2>
-              <p>{tr('Balances and positions are fetched from your own Alpaca account.')}</p>
-            </div>
-          </div>
-          <div className="portfolio-workspace-actions">
-            <button type="button" className="secondary-action compact" onClick={reload} disabled={loading}>
-              {tr('Refresh Alpaca balances')}
-            </button>
-          </div>
-        </div>
-        {message ? <p role="alert" className="global-error">{message}</p> : null}
-        {!portfolio ? (
-          <p>{tr(loading ? 'Loading Alpaca portfolio…' : 'Connect Alpaca to view your live balance and positions.')}</p>
+      <div className="portfolio-single-workspace" aria-busy={loading} data-personal-live="true">
+        {message ? <div role="alert" className="inline-error"><strong>{tr('Portfolio unavailable')}</strong><span>{tr(message)}</span></div> : null}
+        {portfolio ? (
+          <PersonalLivePanel portfolio={portfolio} oauthStatus={oauthStatus}
+            readiness={readiness} refreshing={loading} lastUpdated={lastUpdated}
+            now={clockNow} nextRefreshAt={nextRefreshAt} reload={reload} />
+        ) : !message ? (
+          <section className="data-panel portfolio-locked portfolio-tab-loader" role="status">
+            <div className="portfolio-tab-loader-visual"><span className="loading-ring" aria-hidden="true" /></div>
+            <h2>{tr('My Alpaca Live portfolio')}</h2>
+            <p>{tr(loading
+              ? 'Loading Alpaca portfolio…'
+              : 'Connect Alpaca to view your live balance and positions.')}</p>
+          </section>
         ) : (
-          <>
-            <p>
-              {tr('Account')} ...{portfolio.account_id_suffix} · {tr('Broker access')}: {tr('Alpaca OAuth (read-only)')}
-              {' · '}{tr('Recorded at')}: {portfolio.recorded_at}
-            </p>
-            <div className="portfolio-audit-top-grid">
-              <section className="portfolio-audit-card">
-                <h3>{tr('Portfolio value')}</h3>
-                <strong>{amount(portfolio.portfolio_value)}</strong>
-              </section>
-              <section className="portfolio-audit-card">
-                <h3>{tr('Cash')}</h3>
-                <strong>{amount(portfolio.strategy_cash)}</strong>
-              </section>
-              <section className="portfolio-audit-card">
-                <h3>{tr('Buying power')}</h3>
-                <strong>{amount(portfolio.buying_power)}</strong>
-              </section>
-              <section className="portfolio-audit-card">
-                <h3>{tr('Unrealized P/L')}</h3>
-                <strong>{amount(portfolio.unrealized_pnl)}</strong>
-              </section>
-              <section className="portfolio-audit-card" aria-label={tr('Accumulated Alpaca account return')}>
-                <h3>{tr('Accumulated Alpaca account return')}</h3>
-                <strong>{percent(portfolio.winner_performance?.return_pct)}</strong>
-                <small>{accountReturnDetail(portfolio.winner_performance, amount)}</small>
-              </section>
-            </div>
-            <p>{tr('Accumulated Live return uses Alpaca account history and may include manually executed trades; it is not a model-only return.')}
-              {portfolio.winner_performance?.coverage === 'from_first_daily_close' ? ` ${tr('Partial Alpaca history')}` : ''}
-            </p>
-            <section className="portfolio-audit-card">
-              <h3>{tr('Current Positions')}</h3>
-              <div className="table-wrap">
-                <table className="dashboard-table">
-                  <thead>
-                    <tr>
-                      <th>{tr('Symbol')}</th>
-                      <th>{tr('Quantity')}</th>
-                      <th>{tr('Average entry price')}</th>
-                      <th>{tr('Current price')}</th>
-                      <th>{tr('Market value')}</th>
-                      <th>{tr('Unrealized P/L')}</th>
-                      <th>{tr('Current position return (unrealized)')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {portfolio.positions?.length ? portfolio.positions.map(p => (
-                      <tr key={p.symbol}>
-                        <td>{p.symbol}</td>
-                        <td>{number.format(p.quantity)}</td>
-                        <td>{amount(p.average_entry_price)}</td>
-                        <td>{amount(p.current_price)}</td>
-                        <td>{amount(p.market_value)}</td>
-                        <td>{amount(p.unrealized_pnl)}</td>
-                        <td>{percent(p.unrealized_return)}</td>
-                      </tr>
-                    )) : <tr><td colSpan="7">{tr('No positions at Alpaca')}</td></tr>}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-            <section className="portfolio-audit-card">
-              <h3>{tr('Recent Alpaca orders')}</h3>
-              <div className="table-wrap">
-                <table className="dashboard-table">
-                  <thead>
-                    <tr>
-                      <th>{tr('Symbol')}</th>
-                      <th>{tr('Side')}</th>
-                      <th>{tr('Status')}</th>
-                      <th>{tr('Filled quantity')}</th>
-                      <th>{tr('Filled value')}</th>
-                      <th>{tr('Filled at')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {portfolio.recent_orders?.length ? portfolio.recent_orders.map((order, index) => (
-                      <tr key={order.client_order_id || index}>
-                        <td>{order.symbol}</td>
-                        <td>{tr(order.side)}</td>
-                        <td>{tr(order.status)}</td>
-                        <td>{number.format(order.filled_quantity || 0)}</td>
-                        <td>{amount(order.filled_value)}</td>
-                        <td>{order.filled_at || '—'}</td>
-                      </tr>
-                    )) : <tr><td colSpan="6">{tr('No orders at Alpaca')}</td></tr>}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-            <p>{tr('MCT does not keep an operational cash balance; Alpaca is the source of financial values.')}</p>
-          </>
+          <section className="data-panel portfolio-locked"><p>{tr('Portfolio unavailable')}</p></section>
         )}
-      </section>
+      </div>
     </section>
   )
 }
