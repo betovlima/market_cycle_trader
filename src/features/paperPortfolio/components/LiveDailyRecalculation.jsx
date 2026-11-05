@@ -65,27 +65,29 @@ export function LiveDailyRecalculation() {
   }, [busy, refresh, state?.can_request])
 
   return (
-    <section className="portfolio-audit-card live-daily-recalculation" aria-label={tr('Daily Winner recalculation')}>
-      <div className="portfolio-section-heading compact">
-        <div>
-          <span className="panel-kicker">{tr('Winner · Live')}</span>
-          <h2>{tr('Recalculate Winner using daily history')}</h2>
-          <small>{tr('Uses only completed XNYS daily bars. No intraday retraining or replacement of an executed decision.')}</small>
-        </div>
-        <button type="button" className="secondary-action compact"
+    <section className="trader-manual-recovery live-daily-recalculation"
+      aria-label={tr('Daily Winner recalculation')}>
+      <div className="trader-manual-recovery-copy">
+        <span className="panel-kicker">{tr('Winner · Live')}</span>
+        <strong>{tr('Recalculate Winner using daily history')}</strong>
+        <small>{tr('Uses only completed XNYS daily bars. No intraday retraining or replacement of an executed decision.')}</small>
+        <small className="live-daily-recalculation-state" role="status" aria-live="polite">
+          {tr(STATE_TEXT[state?.status] || 'Checking daily signal availability…')}
+          {' · '}{tr('Decision date')}: {state?.decision_date || '—'}
+          {' · '}{tr('Next execution session')}: {state?.execution_session || '—'}
+        </small>
+        <small>{tr('No order is sent by this action. If Live remains active, a prepared signal may be traded automatically during the next regular session.')}</small>
+        {notice ? <small role="status" className="global-inline-message">{notice}</small> : null}
+        {error ? <small role="alert" className="inline-error">{error}</small> : null}
+      </div>
+      <div className="trader-manual-recovery-actions">
+        <button type="button"
           disabled={!state?.can_request || busy}
           title={tr(STATE_TEXT[state?.status] || 'Daily Winner status is temporarily unavailable.')}
           onClick={request}>
           {tr(busy ? 'Requesting…' : 'Recalculate Winner using daily history')}
         </button>
       </div>
-      <div className="live-daily-recalculation-state" role="status" aria-live="polite">
-        <span>{tr(STATE_TEXT[state?.status] || 'Checking daily signal availability…')}</span>
-        <small>{tr('Decision date')}: {state?.decision_date || '—'} · {tr('Next execution session')}: {state?.execution_session || '—'}</small>
-      </div>
-      <p className="live-daily-recalculation-note">{tr('No order is sent by this action. If Live remains active, a prepared signal may be traded automatically during the next regular session.')}</p>
-      {notice ? <p role="status" className="global-inline-message">{notice}</p> : null}
-      {error ? <p role="alert" className="inline-error">{error}</p> : null}
     </section>
   )
 }

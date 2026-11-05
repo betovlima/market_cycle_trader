@@ -89,7 +89,24 @@ test('Daily Winner recalculation is Admin Live only, never Paper or Trader OAuth
     new URL('../src/features/paperPortfolio/AlpacaPersonalPortfolio.jsx', import.meta.url), 'utf8',
   )
   const app = readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8')
-  assert.match(source, /\{live \? <LiveDailyRecalculation \/> : null\}/)
+  const liveControl = readFileSync(
+    new URL('../src/features/liveTrader/LiveTraderControl.jsx', import.meta.url), 'utf8',
+  )
+  const settings = readFileSync(
+    new URL('../src/features/SystemSettingsPage.jsx', import.meta.url), 'utf8',
+  )
+  assert.doesNotMatch(source, /<LiveDailyRecalculation/)
+  assert.match(settings, /<LiveTraderControl \/>/)
+  assert.equal((liveControl.match(/<LiveDailyRecalculation \/>/g) || []).length, 1)
+  assert.ok(liveControl.indexOf('<LiveDailyRecalculation />') > liveControl.indexOf('settings-trader-grid'))
+  assert.ok(liveControl.indexOf('RECUPERAÇÃO MANUAL · LIVE') > liveControl.indexOf('<LiveDailyRecalculation />'))
+  assert.match(liveControl, /Contingência da sessão atual/)
+  assert.match(liveControl, /Executar plano Live preparado/)
+  assert.match(liveControl, /\/live-execution\/winner\/execute/)
+  assert.match(liveControl, /window\.confirm/)
+  assert.match(liveControl, /current\.active_run\.execution_session/)
+  assert.match(liveControl, /recalibrated_no_orders/)
+  assert.match(liveControl, /Reanálise com o movimento intradiário de hoje não está habilitada no Live/)
   assert.match(ctrl, /\/live-market\/winner\/daily-recalculation/)
   assert.match(ctrl, /'REQUEST_DAILY_SIGNAL_NO_ORDERS'/)
   assert.match(ctrl, /if \(!state\?\.can_request \|\| busy\) return/)
@@ -98,5 +115,7 @@ test('Daily Winner recalculation is Admin Live only, never Paper or Trader OAuth
   assert.doesNotMatch(ctrl, /\/winner\/execute|submit_order|\/manual-recovery\/execute/)
   assert.doesNotMatch(trader, /LiveDailyRecalculation|\/live-market\//)
   assert.match(app, /hasCapability\(capabilities, 'admin.manage'\)/)
-  assert.ok(workspace.indexOf('<LiveDailyRecalculation') > workspace.indexOf('{portfolioPositionDecision}'))
+  assert.match(layoutStyles, /\.settings-trader-section \.trader-manual-recovery\.live-daily-recalculation/)
+  assert.doesNotMatch(ctrl, /\/api\/admin\/trader-control\/manual-recovery/)
+  assert.doesNotMatch(liveControl, /\/admin\/trader-control\/manual-recovery\/prepare/)
 })
