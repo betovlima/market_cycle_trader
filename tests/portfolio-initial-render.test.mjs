@@ -246,7 +246,7 @@ test('Trader Live uses Admin cards with only its own zero-balance OAuth portfoli
     'Accumulated Alpaca account return', 'Cash', 'Position',
     'Distance to peak', 'Max drawdown', 'Live Session',
     'Current Position', 'Decision of the day', 'Operations',
-  ]) assert.match(html, new RegExp(label.replace(/[.*+?^$\{\}()|[\]\\]/g, '\\$&')))
+  ]) assert.ok(html.includes(label), 'Trader missing shared Live field: ' + label)
   assert.match(html, /portfolio-workspace-metrics-audit/)
   assert.match(html, /portfolio-audit-top-grid/)
   assert.match(html, /Alpaca OAuth \(read-only\)/)
