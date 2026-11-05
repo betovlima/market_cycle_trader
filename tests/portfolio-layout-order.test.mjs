@@ -80,3 +80,23 @@ test('Accumulated Alpaca return shows compact info tooltip without stretching me
   assert.doesNotMatch(layoutStyles, /\.portfolio-metric-help-tooltip\s*\{[^}]*bottom:\s*calc\(100%/s)
   assert.match(layoutStyles, /\.portfolio-metric-help:focus-within \.portfolio-metric-help-tooltip/)
 })
+
+test('Daily Winner recalculation is Admin Live only, never Paper or Trader OAuth', () => {
+  const ctrl = readFileSync(
+    new URL('../src/features/paperPortfolio/components/LiveDailyRecalculation.jsx', import.meta.url), 'utf8',
+  )
+  const trader = readFileSync(
+    new URL('../src/features/paperPortfolio/AlpacaPersonalPortfolio.jsx', import.meta.url), 'utf8',
+  )
+  const app = readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8')
+  assert.match(source, /\{live \? <LiveDailyRecalculation \/> : null\}/)
+  assert.match(ctrl, /\/live-market\/winner\/daily-recalculation/)
+  assert.match(ctrl, /'REQUEST_DAILY_SIGNAL_NO_ORDERS'/)
+  assert.match(ctrl, /if \(!state\?\.can_request \|\| busy\) return/)
+  assert.match(ctrl, /window\.confirm/)
+  assert.match(ctrl, /No order is sent by this action/)
+  assert.doesNotMatch(ctrl, /\/winner\/execute|submit_order|\/manual-recovery\/execute/)
+  assert.doesNotMatch(trader, /LiveDailyRecalculation|\/live-market\//)
+  assert.match(app, /hasCapability\(capabilities, 'admin.manage'\)/)
+  assert.ok(workspace.indexOf('<LiveDailyRecalculation') > workspace.indexOf('{portfolioPositionDecision}'))
+})
