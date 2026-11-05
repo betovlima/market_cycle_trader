@@ -1,97 +1,147 @@
 import { useCallback, useEffect, useState } from 'react'
 import { apiFetch } from '../../api/http'
 import { API } from '../../config/env'
-import { tr } from '../../i18n/runtime'
+import { LIVE_INTRADAY_STEPS, liveIntradayProgressModel } from './liveIntradayProgressModel'
 
 const ENDPOINT = `${API}/live-market/winner/manual-current-session`
-
-const STATES = {
-  idle: 'Reanálise da sessão atual disponível enquanto a bolsa estiver aberta.',
-  running: 'Recalculando Winner com histórico diário e pregão atual. Nenhuma ordem será enviada.',
-  prepared: 'Nova recomendação calculada para a sessão atual. Resultado somente para análise.',
-  failed: 'Não foi possível concluir a reanálise. Nenhuma ordem foi enviada.',
-  executed: 'A sessão já foi executada. Uma nova análise não provoca outra operação.',
-}
 
 export function LiveIntradayRecovery() {
   const [result, setResult] = useState(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [lastChecked, setLastChecked] = useState(null)
 
   const refresh = useCallback(async () => {
     try {
       const data = await apiFetch(`${ENDPOINT}/status`, { cache: 'no-store' })
       setResult(data)
-      setMessage('')
+      setLastChecked(new Date())
+      setError('')
     } catch {
-      setResult(null)
-      setMessage('Não foi possível verificar a conexão Live e a disponibilidade da análise.')
+      setError('Não foi possível consultar o andamento da contingência Live.')
     }
   }, [])
 
   useEffect(() => {
     refresh()
-    const interval = window.setInterval(refresh, 10000)
+    // Poll more frequently only while the backend confirms a running job.
+    const interval = window.setInterval(refresh, result?.status === 'running' ? 4000 : 15000)
     return () => window.clearInterval(interval)
-  }, [refresh])
+  }, [refresh, result?.status])
 
   const analyze = useCallback(async () => {
     if (busy || !result?.can_analyze) return
-    if (!window.confirm('Reanalisar a Winner usando o histórico diário concluído e o movimento de hoje? O resultado não envia ordens nem substitui a decisão já executada.')) return
+    if (!window.confirm(
+      'Recalcular a Winner com histórico diário concluído e o movimento do pregão atual? A análise não envia ordens nem substitui decisões executadas.',
+    )) return
     setBusy(true)
     setMessage('')
+    setError('')
     try {
       const outcome = await apiFetch(`${ENDPOINT}/analyze`, {
         method: 'POST',
         body: { confirm: 'ANALYZE_LIVE_CURRENT_SESSION_NO_ORDERS' },
       })
       setResult(outcome)
-      setMessage('Reanálise solicitada. O resultado aparecerá aqui após o processamento.')
+      setLastChecked(new Date())
+      setMessage('Solicitação recebida. Acompanhe abaixo as etapas informadas pelo servidor.')
+      await refresh()
     } catch {
-      setMessage('Não foi possível iniciar a reanálise Live. Verifique a sessão e a conexão Alpaca.')
+      setError('A reanálise não foi iniciada. Confira a conexão e o estado do pregão.')
+      await refresh()
     } finally {
       setBusy(false)
     }
-  }, [busy, result?.can_analyze])
+  }, [busy, refresh, result?.can_analyze])
+
+  const progress = liveIntradayProgressModel(result, error)
+  const isRunning = result?.status === 'running'
+  const hasStarted = isRunning || result?.status === 'prepared' || result?.status === 'failed'
 
   return (
-    <div className="trader-manual-recovery" aria-label="Reanálise da Winner Live na sessão atual">
+    <section className="trader-manual-recovery live-intraday-recovery"
+      aria-label="Recalcular Winner usando histórico diário para contingência Live">
       <div className="trader-manual-recovery-copy">
-        <span className="panel-kicker">RECUPERAÇÃO MANUAL · LIVE</span>
-        <strong>Reanalisar Winner agora · sessão atual</strong>
-        <small>Recalcula a recomendação usando os candles diários completos e o movimento do pregão atual, sem treinar com o candle incompleto.</small>
-        <small>{STATES[result?.status] || (result?.can_analyze
-          ? STATES.idle
-          : 'O mercado regular precisa estar aberto para utilizar o movimento do pregão atual.')}</small>
+        <span className="panel-kicker">WINNER · LIVE · CONTINGÊNCIA</span>
+        <strong>Recalcular Winner usando histórico diário</strong>
         <small>
-          Pregão: {result?.session || '—'} · Estado: {result?.status || '—'}
-          {result?.phase ? ` · Fase: ${result.phase}` : ''}
+          Usa os candles diários concluídos até o último pregão e o movimento disponível de hoje
+          para avaliar a sessão atual. Não precisa aguardar o fechamento da NYSE.
         </small>
+
+        <div className={`live-intraday-progress is-${progress.kind}`}
+          role="status" aria-live="polite" aria-atomic="false">
+          <div className="live-intraday-progress-heading">
+            <span className={`live-intraday-progress-icon ${progress.spinning ? 'is-spinning' : ''}`}
+              aria-hidden="true">{progress.spinning ? '◌' : progress.kind === 'completed' ? '✓' : '●'}</span>
+            <div>
+              <strong>{progress.headline}</strong>
+              <small>{progress.description}</small>
+            </div>
+          </div>
+          {hasStarted ? (
+            <ol className="live-intraday-progress-steps" aria-label="Etapas reais do cálculo da Winner">
+              {LIVE_INTRADAY_STEPS.map((step, index) => {
+                const complete = progress.kind === 'completed' || (isRunning && index < progress.stage)
+                const active = isRunning && index === progress.stage
+                return (
+                  <li key={step.id}
+                    className={complete ? 'is-completed' : active ? 'is-current' : 'is-pending'}
+                    aria-current={active ? 'step' : undefined}>
+                    <span className="live-intraday-step-symbol" aria-hidden="true">
+                      {complete ? '✓' : index + 1}
+                    </span>
+                    <span>{step.label}</span>
+                  </li>
+                )
+              })}
+            </ol>
+          ) : null}
+        </div>
+
+        <small>
+          Pregão: {result?.session || '—'}
+          {' · '}Estado: {result?.status === 'running' ? 'Em processamento' : result?.status === 'prepared' ? 'Concluído' : result?.status === 'failed' ? 'Falha' : 'Aguardando'}
+          {lastChecked ? ` · Última consulta: ${lastChecked.toLocaleTimeString('pt-BR')}` : ''}
+        </small>
+        {result?.started_at && isRunning ? <small>Iniciado em: {new Date(result.started_at).toLocaleTimeString('pt-BR')}</small> : null}
+
         {result?.status === 'prepared' ? (
           <>
             <small>
-              Posição: {result.current_asset || '—'} · Recomendação: {result.target_asset || '—'} · Ação: {result.action || '—'}
+              Posição: {result.current_asset || '—'}
+              {' · '}Recomendação: {result.target_asset || '—'}
+              {' · '}Ação: {result.action || '—'}
             </small>
             <small>
               Decisão original: {result.original_signal_target || '—'}
               {' · '}Histórico até: {result.historical_cutoff || '—'}
               {' · '}Fonte: {String(result.live_feed || '—').toUpperCase()}
-              {' · '}Atraso: {result.intraday_data_delay_minutes ?? '—'} min
+              {' · '}Atraso dos dados: {result.intraday_data_delay_minutes ?? '—'} min
             </small>
-            <small>Esta reanálise é independente da decisão operacional D−1. Não autoriza uma segunda rotação nem libera uma ordem real por conta própria.</small>
           </>
         ) : null}
-        {result?.status === 'failed' ? <small role="alert">Falha de análise: {result.failure_type || 'indisponível'}.</small> : null}
-        {message ? <small role="status">{message}</small> : null}
+        {result?.status === 'failed' ? (
+          <small role="alert">A análise falhou na etapa {result.phase || 'não identificada'}.
+            {result.failure_type ? ` Tipo: ${result.failure_type}.` : ''} Nenhuma ordem foi enviada.</small>
+        ) : null}
+        <small>
+          Esta reanálise não altera o sinal automático nem envia ordens.
+          Uma execução real exige validação e confirmação separadas.
+        </small>
+        {message ? <small className="global-inline-message">{message}</small> : null}
+        {error ? <small role="alert" className="inline-error">{error}</small> : null}
       </div>
       <div className="trader-manual-recovery-actions">
-        <button type="button" onClick={analyze} disabled={busy || !result?.can_analyze}
+        <button type="button" onClick={analyze}
+          disabled={busy || !result?.can_analyze || isRunning}
           title={result?.can_analyze
-            ? 'Calcular recomendação para o pregão atual, sem enviar ordens'
-            : 'Requer mercado regular aberto e ausência de outra análise em andamento'}>
-          {busy ? 'Solicitando…' : result?.status === 'running' ? 'Reanálise em andamento' : 'Reanalisar Winner agora'}
+            ? 'Calcular a Winner para o pregão atual, sem ordens'
+            : 'Aguarda conexão e pregão regular aberto ou o fim da análise atual'}>
+          {busy ? 'Solicitando…' : isRunning ? 'Analisando…' : 'Recalcular Winner agora'}
         </button>
       </div>
-    </div>
+    </section>
   )
 }
