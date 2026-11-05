@@ -25,6 +25,10 @@ const { CurrentPosition, PortfolioMetricsStrip } = await vite.ssrLoadModule(
   '/src/features/paperPortfolio/components/PortfolioPrimitives.jsx',
 )
 
+const { LiveTraderControl } = await vite.ssrLoadModule(
+  '/src/features/liveTrader/LiveTraderControl.jsx',
+)
+
 const { AppHeader } = await vite.ssrLoadModule(
   '/src/features/backtest/components/AppHeader.jsx',
 )
@@ -279,4 +283,17 @@ test('Trader Live decision requires same OAuth account and real holding', () => 
   assert.equal(financial.realized_pnl, null)
   assert.equal(financial.total_pnl, null)
   assert.equal(financial.total_return, null)
+})
+
+test('Strategy and Operation contains separate daily preparation and manual Live contingency', () => {
+  const html = renderToString(React.createElement(LiveTraderControl))
+  assert.match(html, /Trader operation · Live/)
+  assert.match(html, /Recalculate Winner using daily history/)
+  assert.match(html, /Contingência da sessão atual/)
+  assert.match(html, /RECUPERAÇÃO MANUAL · LIVE/)
+  assert.match(html, /Executar plano Live preparado/)
+  assert.match(html, /Reanálise com o movimento intradiário de hoje não está habilitada no Live/)
+  assert.doesNotMatch(html, /Executar plano Paper|Reanalyze Winner now/)
+  // Both actions start disabled until API status and eligible D-1 plans arrive.
+  assert.match(html, /Checking daily signal availability|Verificando disponibilidade/)
 })
