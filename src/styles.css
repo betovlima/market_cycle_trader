@@ -2420,6 +2420,50 @@ a { color: inherit; }
   padding: 4px 7px;
   font-size: .57rem;
 }
+
+/* Live has four status indicators. Give them their own responsive row so
+   the title never squeezes the order-authorization status onto an orphan line. */
+.portfolio-session-strip[data-session-market="live"] .portfolio-session-main {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  container-type: inline-size;
+}
+.portfolio-session-strip[data-session-market="live"] .portfolio-session-statuses {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  width: 100%;
+  gap: 8px;
+}
+.portfolio-session-strip[data-session-market="live"] .portfolio-session-statuses .session-status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 30px;
+  padding: 5px 7px;
+  font-size: .62rem;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+}
+.portfolio-session-strip[data-session-market="live"] .portfolio-session-statuses .connection-dot {
+  flex: 0 0 6px;
+}
+@container (max-width: 630px) {
+  .portfolio-session-strip[data-session-market="live"] .portfolio-session-statuses {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container (max-width: 340px) {
+  .portfolio-session-strip[data-session-market="live"] .portfolio-session-statuses {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .portfolio-session-schedule {
   min-width: 0;
   display: grid;

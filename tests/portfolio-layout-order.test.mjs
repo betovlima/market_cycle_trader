@@ -33,3 +33,12 @@ test('Live-only and Trading-only session strips preserve separate data flows', (
   assert.match(source, /\{live \? <LiveWorkflowMonitor/)
   assert.match(source, /\{live \? <LiveWinnerEvents/)
 })
+
+const layoutStyles = readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8')
+
+test('Live statuses use a dedicated responsive grid without affecting Trading', () => {
+  assert.match(layoutStyles, /\.portfolio-session-strip\[data-session-market="live"\] \.portfolio-session-main\s*\{[^}]*flex-direction:\s*column/s)
+  assert.match(layoutStyles, /\.portfolio-session-strip\[data-session-market="live"\] \.portfolio-session-statuses\s*\{[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/s)
+  assert.match(layoutStyles, /@container\s*\(max-width:\s*630px\)\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/)
+  assert.match(layoutStyles, /@container\s*\(max-width:\s*340px\)\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)/)
+})
