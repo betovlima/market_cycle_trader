@@ -169,7 +169,7 @@ function DecisionAuditDialog({ audit, onClose }) {
   )
 }
 
-function DecisionOfDay({ decision, onOpen, market = 'trading' }) {
+export function DecisionOfDay({ decision, onOpen, market = 'trading' }) {
   if (!decision) {
     return (
       <section className="portfolio-audit-card portfolio-decision-today">
@@ -185,7 +185,7 @@ function DecisionOfDay({ decision, onOpen, market = 'trading' }) {
     <section className="portfolio-audit-card portfolio-decision-today">
       <div className="portfolio-section-heading compact portfolio-audit-heading">
         <div><span className="panel-kicker">{tr('Decision')}</span><h2>{tr('Decision of the day')}</h2></div>
-        <button type="button" className="portfolio-decision-button" onClick={() => onOpen(decision)}>{tr('Full audit')}</button>
+        {onOpen ? <button type="button" className="portfolio-decision-button" onClick={() => onOpen(decision)}>{tr('Full audit')}</button> : null}
       </div>
       <div className="portfolio-decision-route">
         <div><span>{tr('Current')}</span><strong>{decision.current_asset || 'CASH'}</strong><small>{number(decision.current_utility, 6)}</small></div>
@@ -214,7 +214,7 @@ function DecisionOfDay({ decision, onOpen, market = 'trading' }) {
   )
 }
 
-function PortfolioEvolutionChart({ history }) {
+export function PortfolioEvolutionChart({ history }) {
   const points = useMemo(() => (Array.isArray(history) ? history : []).map((item) => ({
     ...item,
     recorded_at_label: shortDateTime(item.recorded_at),
@@ -307,7 +307,7 @@ function PositionExcursionPanel({ excursion, observer }) {
   )
 }
 
-function LiveMultiplePositions({ positions = [] }) {
+export function LiveMultiplePositions({ positions = [] }) {
   return (
     <section className="portfolio-audit-card">
       <div className="portfolio-section-heading compact"><div><span className="panel-kicker">{tr('Live')}</span><h2>{tr('Current Positions')}</h2></div></div>
@@ -322,7 +322,7 @@ function LiveMultiplePositions({ positions = [] }) {
   )
 }
 
-function AssetPnlChart({ rows }) {
+export function AssetPnlChart({ rows }) {
   const data = useMemo(() => (Array.isArray(rows) ? rows : []).slice(0, 12), [rows])
   return (
     <section className="portfolio-audit-card portfolio-chart-card">
@@ -347,7 +347,7 @@ function AssetPnlChart({ rows }) {
   )
 }
 
-function CandidateRanking({ decision }) {
+export function CandidateRanking({ decision }) {
   const candidates = Array.isArray(decision?.candidates) ? decision.candidates : []
   return (
     <section className="portfolio-candidates-section">
@@ -389,7 +389,7 @@ function CandidateRanking({ decision }) {
   )
 }
 
-function OperationAuditTable({ operations, onDecision, market = 'trading' }) {
+export function OperationAuditTable({ operations, onDecision, market = 'trading' }) {
   const rows = Array.isArray(operations) ? operations : []
   return (
     <section className="portfolio-orders-section">
@@ -416,7 +416,7 @@ function OperationAuditTable({ operations, onDecision, market = 'trading' }) {
                 <td>{order.filled_value == null ? '—' : money(order.filled_value)}</td>
                 <td className={Number(order.realized_pnl) >= 0 ? 'positive' : 'negative'}>{order.realized_pnl == null ? '—' : money(order.realized_pnl)}</td>
                 <td>{executionOriginLabel(order.execution_origin)}</td>
-                <td>{order.decision_audit ? <button type="button" className="portfolio-decision-button" onClick={() => onDecision(order.decision_audit)}>{tr('View decision')}</button> : '—'}</td>
+                <td>{order.decision_audit && onDecision ? <button type="button" className="portfolio-decision-button" onClick={() => onDecision(order.decision_audit)}>{tr('View decision')}</button> : '—'}</td>
               </tr>
             )) : <tr><td colSpan="10" className="empty-cell">{tr(market === 'live' ? 'No Live broker orders are available yet.' : 'No paper orders have been submitted yet.')}</td></tr>}
           </tbody>

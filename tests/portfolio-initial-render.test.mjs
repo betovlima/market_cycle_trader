@@ -17,7 +17,7 @@ const { PaperPortfolioDashboard } = await vite.ssrLoadModule(
   '/src/features/paperPortfolio/PaperPortfolioDashboard.jsx',
 )
 
-const { AlpacaPersonalPortfolio } = await vite.ssrLoadModule(
+const { AlpacaPersonalPortfolio, PersonalLivePanel, personalLiveDecision, personalLiveSummary } = await vite.ssrLoadModule(
   '/src/features/paperPortfolio/AlpacaPersonalPortfolio.jsx',
 )
 
@@ -128,9 +128,11 @@ test('Trader Live reads only Alpaca returned cumulative data, never invents bala
   const source = readFileSync(
     new URL('../src/features/paperPortfolio/AlpacaPersonalPortfolio.jsx', import.meta.url), 'utf8',
   )
-  assert.match(source, /portfolio\.winner_performance\?\.return_pct/)
-  assert.ok(source.includes('accountReturnDetail(portfolio.winner_performance, amount)'))
-  assert.match(source, /Current position return \(unrealized\)/)
+  assert.match(source, /<PortfolioMetricsStrip data=\{summary\}/)
+  assert.match(source, /<CurrentPosition position=\{position\}/)
+  assert.match(source, /<LiveSessionStrip/)
+  assert.match(source, /<DecisionOfDay decision=\{decision\}/)
+  assert.match(source, /<OperationAuditTable operations=\{orders\}/)
   assert.doesNotMatch(source, /initial_capital|localStorage|ALPACA_LIVE_API_KEY_ID/)
 })
 
@@ -221,4 +223,60 @@ test('top-level routing enforces access restrictions independently of menu rende
   assert.ok(!traderShell.includes('<PaperPortfolioDashboard'))
   assert.ok(!traderShell.includes('<BacktestPage'))
   assert.doesNotMatch(app, /activeTab === 'portfolio'/)
+})
+
+test('Trader Live uses Admin cards with only its own zero-balance OAuth portfolio', () => {
+  const personal = {
+    environment: 'live', account_id_suffix: '285e6c',
+    portfolio_value: 0, strategy_cash: 0, buying_power: 0,
+    unrealized_pnl: 0, positions: [], recent_orders: [],
+    winner_performance: { status: 'unavailable', return_pct: null, profit_loss: null },
+    market_clock: { is_open: true, next_close: '2026-11-05T21:00:00Z' },
+  }
+  const html = renderToString(React.createElement(PersonalLivePanel, {
+    portfolio: personal,
+    oauthStatus: { trading_authorized: false, trading_enabled: false },
+    readiness: null, refreshing: false,
+    lastUpdated: new Date('2026-11-05T15:00:00Z'),
+    now: Date.parse('2026-11-05T15:00:00Z'),
+    nextRefreshAt: null, reload: () => {},
+  }))
+  for (const label of [
+    'Portfolio Value', 'Realized P/L', 'Unrealized P/L',
+    'Accumulated Alpaca account return', 'Cash', 'Position',
+    'Distance to peak', 'Max drawdown', 'Live Session',
+    'Current Position', 'Decision of the day', 'Operations',
+  ]) assert.ok(html.includes(label), 'Trader missing shared Live field: ' + label)
+  assert.match(html, /portfolio-workspace-metrics-audit/)
+  assert.match(html, /portfolio-audit-top-grid/)
+  assert.match(html, /Alpaca OAuth \(read-only\)/)
+  assert.doesNotMatch(html, /CAPR|145[.,]98|Full audit|Export audit/)
+  assert.doesNotMatch(html, /NaN|Infinity/)
+})
+
+test('Trader Live decision requires same OAuth account and real holding', () => {
+  const portfolio = {
+    account_id_suffix: '285e6c', positions: [
+      { symbol: 'CAPR', quantity: 3, average_entry_price: 5, market_value: 18 },
+    ],
+  }
+  const readiness = {
+    account_id_suffix: '285e6c',
+    shared_winner: true, shared_signal_prepared: true, winner_signal_prepared: true,
+    current_asset: 'CAPR', shared_target_asset: 'AMZN',
+    execution_session: '2026-11-05', shared_decision_date: '2026-11-04',
+  }
+  const own = personalLiveDecision(portfolio, readiness)
+  assert.equal(own.current_asset, 'CAPR')
+  assert.equal(own.target_asset, 'AMZN')
+  assert.equal(own.raw_best_asset, null)
+  assert.equal(own.execution_origin, null)
+  assert.equal(personalLiveDecision(portfolio, { ...readiness, account_id_suffix: 'OTHER' }), null)
+  assert.equal(personalLiveDecision(portfolio, { ...readiness, current_asset: 'CASH' }), null)
+  assert.equal(personalLiveDecision(portfolio, { ...readiness, shared_signal_prepared: false }), null)
+  assert.equal(personalLiveDecision({ ...portfolio, positions: [] }, readiness), null)
+  const financial = personalLiveSummary({ ...portfolio, portfolio_value: 145.98 })
+  assert.equal(financial.realized_pnl, null)
+  assert.equal(financial.total_pnl, null)
+  assert.equal(financial.total_return, null)
 })
