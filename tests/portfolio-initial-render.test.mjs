@@ -285,17 +285,18 @@ test('Trader Live decision requires same OAuth account and real holding', () => 
   assert.equal(financial.total_return, null)
 })
 
-test('Strategy and Operation contains separate daily preparation and manual Live contingency', () => {
+test('Strategy and Operation exposes the current-session Live contingency, not a closed-market D−1 button', () => {
   const html = renderToString(React.createElement(LiveTraderControl))
   assert.match(html, /Trader operation · Live/)
-  assert.match(html, /Recalculate Winner using daily history/)
-  assert.match(html, /Reanalisar Winner agora/)
+  assert.match(html, /Recalcular Winner usando histórico diário/)
+  assert.match(html, /Recalcular Winner agora/)
   assert.match(html, /Executar plano operacional Live já validado/)
   assert.match(html, /RECUPERAÇÃO MANUAL · LIVE/)
   assert.match(html, /Nenhum plano operacional D−1 elegível/)
-  assert.match(html, /Recalcula a recomendação usando os candles diários completos/)
+  assert.match(html, /Usa os candles diários concluídos até o último pregão/)
   assert.doesNotMatch(html, /Reanálise com o movimento intradiário de hoje não está habilitada no Live/)
   assert.doesNotMatch(html, /Executar plano Paper|Reanalyze Winner now/)
   // The interface distinguishes an intraday calculation from existing D-1 execution.
-  assert.match(html, /Checking daily signal availability|Verificando disponibilidade/)
+  assert.match(html, /Consultando estado da contingência/)
+  assert.doesNotMatch(html, /Preparação D−1 indisponível agora|Mercado aberto\. O recálculo diário fica disponível após o fechamento/)
 })
