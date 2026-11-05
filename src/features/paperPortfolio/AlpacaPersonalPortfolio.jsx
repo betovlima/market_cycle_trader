@@ -54,7 +54,7 @@ export function personalLiveSummary(portfolio) {
   }
 }
 
-function PersonalLivePanel({ portfolio, oauthStatus, readiness, refreshing, lastUpdated, now, nextRefreshAt, reload }) {
+export function PersonalLivePanel({ portfolio, oauthStatus, readiness, refreshing, lastUpdated, now, nextRefreshAt, reload }) {
   const positions = Array.isArray(portfolio.positions) ? portfolio.positions : []
   const position = positions.length === 1 ? positions[0] : null
   const summary = personalLiveSummary(portfolio)
