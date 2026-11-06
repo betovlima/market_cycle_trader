@@ -41,12 +41,14 @@ export function liveIntradayProgressModel(result, error = '') {
   }
   if (result.status === 'idle' && result.can_analyze) return {
     kind: 'ready', stage: -1, spinning: false,
-    headline: 'Contingência disponível agora',
-    description: 'Mercado aberto. O recálculo pode começar sem aguardar o fechamento da NYSE.',
+    headline: 'Análise disponível agora',
+    description: result.market_open
+      ? 'Pregão aberto: histórico diário concluído mais movimento da sessão atual.'
+      : 'Fora do pregão: último histórico diário completo, sem dados intradiários.',
   }
   return {
     kind: 'waiting', stage: -1, spinning: false,
     headline: 'Sem processamento intradiário em andamento',
-    description: 'A reanálise da sessão atual requer um pregão regular aberto.',
+    description: 'Análise temporariamente ocupada ou conta/horário da Alpaca indisponíveis.',
   }
 }

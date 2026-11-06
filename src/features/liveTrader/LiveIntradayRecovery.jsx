@@ -33,7 +33,9 @@ export function LiveIntradayRecovery() {
   const analyze = useCallback(async () => {
     if (busy || !result?.can_analyze) return
     if (!window.confirm(
-      'Recalcular a Winner com histórico diário concluído e o movimento do pregão atual? A análise não envia ordens nem substitui decisões executadas.',
+      result?.market_open
+        ? 'Reanalisar a Winner com histórico diário concluído e o movimento do pregão atual? Não envia ordens.'
+        : 'Reanalisar a Winner com o último histórico diário completo? Não utiliza candles intradiários e não envia ordens.',
     )) return
     setBusy(true)
     setMessage('')
@@ -45,10 +47,10 @@ export function LiveIntradayRecovery() {
       })
       setResult(outcome)
       setLastChecked(new Date())
-      setMessage('Solicitação recebida. Acompanhe abaixo as etapas informadas pelo servidor.')
+      setMessage('Nova análise iniciada. Acompanhe abaixo o andamento informado pelo servidor.')
       await refresh()
     } catch {
-      setError('A reanálise não foi iniciada. Confira a conexão e o estado do pregão.')
+      setError('A análise não foi iniciada. Verifique a conexão com a Alpaca e tente novamente.')
       await refresh()
     } finally {
       setBusy(false)
@@ -58,16 +60,22 @@ export function LiveIntradayRecovery() {
   const progress = liveIntradayProgressModel(result, error)
   const isRunning = result?.status === 'running'
   const hasStarted = isRunning || result?.status === 'prepared' || result?.status === 'failed'
+  const isDailyOnly = result?.analysis_mode === 'completed_daily_only'
+    || (!result?.analysis_mode && result?.market_open === false)
+  const visibleSteps = isDailyOnly
+    ? LIVE_INTRADAY_STEPS.filter(step => step.id !== 'collecting_current_session')
+    : LIVE_INTRADAY_STEPS
 
   return (
     <section className="trader-manual-recovery live-intraday-recovery"
-      aria-label="Recalcular Winner usando histórico diário para contingência Live">
+      aria-label="Recalcular Winner usando histórico diário, mesmo fora do pregão">
       <div className="trader-manual-recovery-copy">
         <span className="panel-kicker">WINNER · LIVE · CONTINGÊNCIA</span>
         <strong>Recalcular Winner usando histórico diário</strong>
         <small>
-          Usa os candles diários concluídos até o último pregão e o movimento disponível de hoje
-          para avaliar a sessão atual. Não precisa aguardar o fechamento da NYSE.
+          Reanálise manual, sem ordens. Durante o pregão, inclui o movimento disponível
+          da sessão atual. Fora do pregão, usa somente os candles diários completos
+          disponíveis. Pode ser repetida após a conclusão.
         </small>
 
         <div className={`live-intraday-progress is-${progress.kind}`}
@@ -82,7 +90,8 @@ export function LiveIntradayRecovery() {
           </div>
           {hasStarted ? (
             <ol className="live-intraday-progress-steps" aria-label="Etapas reais do cálculo da Winner">
-              {LIVE_INTRADAY_STEPS.map((step, index) => {
+              {visibleSteps.map((step) => {
+                const index = LIVE_INTRADAY_STEPS.findIndex(item => item.id === step.id)
                 const complete = progress.kind === 'completed' || (isRunning && index < progress.stage)
                 const active = isRunning && index === progress.stage
                 return (
@@ -101,7 +110,7 @@ export function LiveIntradayRecovery() {
         </div>
 
         <small>
-          Pregão: {result?.session || '—'}
+          Data de referência: {result?.session || '—'}
           {' · '}Estado: {result?.status === 'running' ? 'Em processamento' : result?.status === 'prepared' ? 'Concluído' : result?.status === 'failed' ? 'Falha' : 'Aguardando'}
           {lastChecked ? ` · Última consulta: ${lastChecked.toLocaleTimeString('pt-BR')}` : ''}
         </small>
@@ -117,8 +126,11 @@ export function LiveIntradayRecovery() {
             <small>
               Decisão original: {result.original_signal_target || '—'}
               {' · '}Histórico até: {result.historical_cutoff || '—'}
+              {' · '}Dados: {result.analysis_mode === 'completed_daily_only' ? 'Fechamento diário completo' : 'Movimento intradiário'}
               {' · '}Fonte: {String(result.live_feed || '—').toUpperCase()}
-              {' · '}Atraso dos dados: {result.intraday_data_delay_minutes ?? '—'} min
+              {result.analysis_mode !== 'completed_daily_only'
+                ? ` · Atraso dos dados: ${result.intraday_data_delay_minutes ?? '—'} min`
+                : ''}
             </small>
           </>
         ) : null}
@@ -137,8 +149,8 @@ export function LiveIntradayRecovery() {
         <button type="button" onClick={analyze}
           disabled={busy || !result?.can_analyze || isRunning}
           title={result?.can_analyze
-            ? 'Calcular a Winner para o pregão atual, sem ordens'
-            : 'Aguarda conexão e pregão regular aberto ou o fim da análise atual'}>
+            ? 'Calcular novamente, com ou sem pregão aberto, sem enviar ordens'
+            : 'Aguardando atualização da conexão ou conclusão da análise em andamento'}>
           {busy ? 'Solicitando…' : isRunning ? 'Analisando…' : 'Recalcular Winner agora'}
         </button>
       </div>

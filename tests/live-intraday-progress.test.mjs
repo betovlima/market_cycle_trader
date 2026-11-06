@@ -7,11 +7,23 @@ import {
 
 test('regular market open enables analysis without a post-close wait', () => {
   const state = liveIntradayProgressModel({
-    status: 'idle', can_analyze: true, session: '2026-11-05',
+    status: 'idle', can_analyze: true, session: '2026-11-05', market_open: true,
   })
   assert.equal(state.kind, 'ready')
   assert.equal(state.spinning, false)
-  assert.match(state.description, /sem aguardar o fechamento/)
+  assert.match(state.description, /Pregão aberto/)
+})
+
+test('completed daily analysis remains available outside NYSE trading hours', () => {
+  for (const marketOpen of [false]) {
+    const state = liveIntradayProgressModel({
+      status: 'idle', can_analyze: true, market_open: marketOpen,
+      method: 'latest_safe_completed_daily',
+    })
+    assert.equal(state.kind, 'ready')
+    assert.match(state.description, /último histórico diário completo/)
+    assert.equal(state.spinning, false)
+  }
 })
 
 test('unknown, closed and failed states never pretend to be processing', () => {
