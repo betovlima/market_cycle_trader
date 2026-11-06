@@ -293,7 +293,7 @@ test('Strategy and Operation exposes the current-session Live contingency, not a
   assert.match(html, /Executar plano operacional Live já validado/)
   assert.match(html, /RECUPERAÇÃO MANUAL · LIVE/)
   assert.match(html, /Nenhum plano operacional D−1 elegível/)
-  assert.match(html, /Usa os candles diários concluídos até o último pregão/)
+  assert.match(html, /Fora do pregão, usa somente os candles diários completos/)
   assert.doesNotMatch(html, /Reanálise com o movimento intradiário de hoje não está habilitada no Live/)
   assert.doesNotMatch(html, /Executar plano Paper|Reanalyze Winner now/)
   // The interface distinguishes an intraday calculation from existing D-1 execution.
