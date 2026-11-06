@@ -30,6 +30,20 @@ test('Dashboard labels the selected Winner universe without silently switching m
   assert.doesNotMatch(source, /77 ativos|U77_REQUESTED_ASSETS/)
 })
 
+test('Live broker options are managed in the admin interface, not through env flags', () => {
+  const code = readFileSync(new URL(
+    '../src/features/paperPortfolio/components/LiveBrokerSettings.jsx', import.meta.url,
+  ), 'utf8')
+  assert.match(code, /live-market\/broker\/settings/)
+  assert.match(code, /BIND_VERIFIED_OAUTH_NO_ORDERS/)
+  assert.match(code, /ENABLE_LIVE_REAL_ORDERS/)
+  assert.match(code, /DISABLE_LIVE_REAL_ORDERS/)
+  assert.match(code, /settings\.revision/)
+  assert.match(code, /window\.confirm/)
+  assert.match(code, /Bloquear novas ordens/)
+  assert.doesNotMatch(code, /MCT_CANONICAL_LIVE_|localStorage|submit_order/)
+})
+
 test('Live OAuth restores broker and shared Winner readiness on every tab entry', () => {
   const code = readFileSync(new URL(
     '../src/features/paperPortfolio/components/AlpacaOAuthConnection.jsx', import.meta.url,
