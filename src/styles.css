@@ -2229,6 +2229,17 @@ a { color: inherit; }
 .portfolio-single-workspace {
   gap: 0;
 }
+.live-broker-settings {
+  margin: 14px 16px 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color, rgba(130, 165, 210, 0.25));
+  border-radius: 10px;
+  background: rgba(52, 89, 136, 0.08);
+}
+.live-broker-settings h4 { margin: 0 0 8px; font-size: 0.94rem; }
+.live-broker-settings p { margin: 6px 0 10px; font-size: 0.87rem; }
+.live-broker-settings .portfolio-workspace-actions { justify-content: flex-start; margin-top: 8px; }
+
 .portfolio-workspace-panel {
   min-width: 0;
   padding: 0;
