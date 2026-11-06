@@ -16,6 +16,23 @@ const CALLBACK_MESSAGES = {
   trading_unavailable: 'Trading authorization is disabled on the MCT API.',
 }
 
+const CANONICAL_DIAGNOSTIC_MESSAGES = {
+  CANONICAL_ACCOUNT_ID_MISSING: 'Falta configurar o ID da conta principal (ALPACA_LIVE_ACCOUNT_ID ou ALPACA_OAUTH_EXPECTED_ACCOUNT_ID).',
+  CANONICAL_ACCOUNT_ID_CONFLICT: 'Os dois IDs configurados para a conta principal não são iguais.',
+  OAUTH_ENCRYPTION_KEY_MISSING: 'A chave para ler o vínculo OAuth não está configurada neste backend.',
+  OAUTH_ADMIN_GRANT_UNAVAILABLE: 'O login OAuth de administrador selecionado não corresponde ao vínculo da conta principal.',
+  OAUTH_ADMIN_GRANT_MISSING: 'Não foi encontrado um vínculo OAuth de administrador autorizado para a conta principal.',
+  OAUTH_ADMIN_GRANT_AMBIGUOUS: 'Existe mais de um vínculo OAuth de administrador para esta conta. É necessário escolher o vínculo correto.',
+  OAUTH_OWNER_BINDING_INVALID: 'A identidade do vínculo OAuth salvo não passou na verificação.',
+  OAUTH_TOKEN_UNREADABLE: 'Não foi possível ler o token OAuth criptografado.',
+  OAUTH_BROKER_VERIFICATION_FAILED: 'A Alpaca não confirmou a autorização OAuth para esta conta.',
+  OAUTH_ACCOUNT_MISMATCH: 'A conta retornada pela Alpaca não corresponde à conta principal configurada.',
+  OAUTH_BROKER_POSITIONS_UNAVAILABLE: 'A consulta OAuth de posições falhou.',
+  OAUTH_BROKER_ORDERS_UNAVAILABLE: 'A consulta OAuth de ordens falhou.',
+  OAUTH_BROKER_CLOCK_UNAVAILABLE: 'A consulta OAuth do relógio de mercado falhou.',
+  OAUTH_CANONICAL_VERIFICATION_FAILED: 'Não foi possível concluir a verificação OAuth da conta principal.',
+}
+
 export function AlpacaOAuthConnection({ isAdmin = true }) {
   const [status, setStatus] = useState(null)
   const [message, setMessage] = useState('')
@@ -23,6 +40,7 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
   const [busy, setBusy] = useState(false)
   const [winnerReadiness, setWinnerReadiness] = useState(null)
   const [statusLoading, setStatusLoading] = useState(true)
+  const [canonicalDiagnostic, setCanonicalDiagnostic] = useState(null)
 
   const refresh = useCallback(async () => {
     const next = await apiFetch(`${API}/alpaca-oauth/status`, { cache: 'no-store' })
@@ -116,6 +134,7 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
       await apiFetch(`${API}/alpaca-oauth/disconnect`, { method: 'POST' })
       await refresh()
       setWinnerReadiness(null)
+      setCanonicalDiagnostic(null)
       window.dispatchEvent(new Event('mct:alpaca-oauth-updated'))
       setMessage('The OAuth token was removed from the MCT. You can also revoke the app in Alpaca.')
     } catch (e) {
@@ -137,6 +156,19 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
       window.location.assign(result.authorization_url)
     } catch (e) {
       setError(e.message)
+      setBusy(false)
+    }
+  }
+
+  async function diagnoseCanonicalOAuth() {
+    setBusy(true)
+    setError('')
+    setCanonicalDiagnostic(null)
+    try {
+      setCanonicalDiagnostic(await apiFetch(`${API}/live-market/oauth-diagnostic`, { cache: 'no-store' }))
+    } catch {
+      setError('Não foi possível consultar o diagnóstico seguro do OAuth Live.')
+    } finally {
       setBusy(false)
     }
   }
@@ -178,6 +210,12 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
               <button className="secondary-action compact" type="button" onClick={checkWinnerReadiness} disabled={busy}>
                 {tr('Check Winner OAuth readiness')}
               </button>
+              {isAdmin && status?.canonical_live_auth_mode === 'oauth' ? (
+                <button className="secondary-action compact" type="button"
+                  onClick={diagnoseCanonicalOAuth} disabled={busy}>
+                  Diagnosticar Live OAuth
+                </button>
+              ) : null}
               <button className="secondary-action compact" type="button" onClick={disconnect} disabled={busy}>
                 {tr('Disconnect OAuth')}
               </button>
@@ -228,6 +266,16 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
             <p>{tr('Shared Winner')}: {winnerReadiness.winner_name} · {tr('Individual portfolio via Alpaca')}</p>
           ) : null}
         </div>
+      ) : null}
+      {canonicalDiagnostic ? (
+        <p role="status">
+          Diagnóstico OAuth da conta principal: {canonicalDiagnostic.status === 'ready'
+            ? 'Conta autenticada; consultas de posições, ordens e horário disponíveis.'
+            : CANONICAL_DIAGNOSTIC_MESSAGES[canonicalDiagnostic.failure_code]
+              || 'Conexão principal não disponível para a consulta.'}
+          {' · '}Ordens reais: {canonicalDiagnostic.orders_enabled ? 'habilitadas no ambiente' : 'bloqueadas no ambiente'}
+          {canonicalDiagnostic.failure_code ? ` · Código: ${canonicalDiagnostic.failure_code}` : ''}
+        </p>
       ) : null}
       {message ? <p role="status">{tr(message)}</p> : null}
       {error ? <p role="alert" className="global-error">{tr(error)}</p> : null}
