@@ -210,7 +210,7 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
       <p>{tr(status?.trading_authorized
         ? (isAdmin
           ? (status?.canonical_live_auth_mode === 'oauth'
-            ? 'Conta principal: leitura e execução da Winner via OAuth. Sem fallback para API Keys. O modo Live continua controlando as ordens.'
+            ? 'Conta principal: conexão e execução da Winner configuradas para OAuth, sem fallback para API Keys. Ordens reais exigem habilitação explícita neste ambiente e o modo Live ativo.'
             : 'Winner OAuth follows the existing Live operating mode. The primary account keeps its API keys.')
           : 'Alpaca trading authorized. Your account will join the next eligible Winner trading cycle.')
         : (isAdmin
