@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { tr } from '../../../i18n/runtime'
 import { apiFetch } from '../../../api/http'
 import { API } from '../../../config/env'
+import { LiveBrokerSettings } from './LiveBrokerSettings'
 
 const CALLBACK_MESSAGES = {
   connected: 'Alpaca OAuth connected and verified in read-only mode.',
@@ -16,16 +17,54 @@ const CALLBACK_MESSAGES = {
   trading_unavailable: 'Trading authorization is disabled on the MCT API.',
 }
 
+const CANONICAL_DIAGNOSTIC_MESSAGES = {
+  CANONICAL_ACCOUNT_ID_MISSING: 'Nenhuma conta OAuth foi vinculada à Winner na configuração Live.',
+  CANONICAL_ACCOUNT_ID_CONFLICT: 'A conta selecionada não corresponde ao vínculo autorizado.',
+  OAUTH_ENCRYPTION_KEY_MISSING: 'A chave para ler o vínculo OAuth não está configurada neste backend.',
+  OAUTH_ADMIN_GRANT_UNAVAILABLE: 'O login OAuth de administrador selecionado não corresponde ao vínculo da conta principal.',
+  OAUTH_ADMIN_GRANT_MISSING: 'Nenhuma autorização OAuth de administrador foi vinculada à conta principal.',
+  OAUTH_CURRENT_ADMIN_GRANT_MISSING: 'Seu login de administrador não possui um vínculo OAuth salvo neste banco de dados.',
+  OAUTH_ADMIN_SUBJECT_SELECTION_MISMATCH: 'O vínculo selecionado para o robô pertence a outro administrador. Vincule novamente sua conta pela configuração Live.',
+  OAUTH_CURRENT_ADMIN_ENVIRONMENT_MISMATCH: 'O vínculo OAuth do administrador não foi registrado para o ambiente Live.',
+  OAUTH_CURRENT_ADMIN_ACCOUNT_MISMATCH: 'O vínculo OAuth do administrador corresponde a outra conta da Alpaca. Confira a conta selecionada na configuração Live.',
+  OAUTH_CURRENT_ADMIN_SAVED_ROLE_MISMATCH: 'O vínculo foi salvo com outro perfil. Autorize novamente a conta com acesso de administrador.',
+  OAUTH_CURRENT_ADMIN_TRADING_GRANT_MISSING: 'O vínculo OAuth do administrador não tem escopo completo de negociação. Reautorize a negociação.',
+  OAUTH_GRANT_SELECTION_UNAVAILABLE: 'O vínculo da conta principal não foi localizado. Refaça a associação na configuração Live.',
+
+  OAUTH_ADMIN_GRANT_AMBIGUOUS: 'Existe mais de um vínculo OAuth de administrador para esta conta. É necessário escolher o vínculo correto.',
+  OAUTH_CANONICAL_OWNER_NOT_SELECTED: 'Vincule sua conta OAuth à Winner nas configurações Live.',
+  OAUTH_OWNER_BINDING_INVALID: 'A identidade do vínculo OAuth salvo não passou na verificação.',
+  OAUTH_TOKEN_UNREADABLE: 'Não foi possível ler o token OAuth criptografado.',
+  OAUTH_BROKER_VERIFICATION_FAILED: 'A Alpaca não confirmou a autorização OAuth para esta conta.',
+  OAUTH_ACCOUNT_MISMATCH: 'A conta retornada pela Alpaca não corresponde à conta principal configurada.',
+  OAUTH_BROKER_POSITIONS_UNAVAILABLE: 'A consulta OAuth de posições falhou.',
+  OAUTH_BROKER_ORDERS_UNAVAILABLE: 'A consulta OAuth de ordens falhou.',
+  OAUTH_BROKER_CLOCK_UNAVAILABLE: 'A consulta OAuth do relógio de mercado falhou.',
+  OAUTH_CANONICAL_VERIFICATION_FAILED: 'Não foi possível concluir a verificação OAuth da conta principal.',
+}
+
 export function AlpacaOAuthConnection({ isAdmin = true }) {
   const [status, setStatus] = useState(null)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [winnerReadiness, setWinnerReadiness] = useState(null)
+  const [statusLoading, setStatusLoading] = useState(true)
+  const [canonicalDiagnostic, setCanonicalDiagnostic] = useState(null)
 
   const refresh = useCallback(async () => {
-    const next = await apiFetch(`${API}/alpaca-oauth/status`)
+    const next = await apiFetch(`${API}/alpaca-oauth/status`, { cache: 'no-store' })
     setStatus(next)
+    if (next?.connected && next?.trading_authorized) {
+      try {
+        setWinnerReadiness(await apiFetch(`${API}/alpaca-oauth/winner/readiness`, { cache: 'no-store' }))
+      } catch {
+        setWinnerReadiness(null)
+      }
+    } else {
+      setWinnerReadiness(null)
+    }
+    return next
   }, [])
 
   useEffect(() => {
@@ -37,9 +76,24 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
       url.searchParams.delete('alpaca_oauth')
       window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`)
     }
-    apiFetch(`${API}/alpaca-oauth/status`)
-      .then((next) => { if (active) setStatus(next) })
+    apiFetch(`${API}/alpaca-oauth/status`, { cache: 'no-store' })
+      .then(async (next) => {
+        if (!active) return
+        setStatus(next)
+        setError('')
+        if (next?.connected && next?.trading_authorized) {
+          try {
+            const ready = await apiFetch(`${API}/alpaca-oauth/winner/readiness`, { cache: 'no-store' })
+            if (active) setWinnerReadiness(ready)
+          } catch {
+            if (active) setWinnerReadiness(null)
+          }
+        } else {
+          setWinnerReadiness(null)
+        }
+      })
       .catch(() => { if (active) setError('Unable to read the Alpaca OAuth connection status.') })
+      .finally(() => { if (active) setStatusLoading(false) })
     return () => { active = false }
   }, [])
 
@@ -64,6 +118,13 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
     try {
       const result = await apiFetch(`${API}/alpaca-oauth/verify`)
       setStatus(result)
+      if (result?.connected && result?.trading_authorized) {
+        try {
+          setWinnerReadiness(await apiFetch(`${API}/alpaca-oauth/winner/readiness`))
+        } catch {
+          setWinnerReadiness(null)
+        }
+      }
       setMessage(result?.trading_authorized
         ? 'Alpaca trading permission authorized. Winner OAuth follows the Live operating mode.'
         : 'Read-only Alpaca connection verified.')
@@ -83,6 +144,7 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
       await apiFetch(`${API}/alpaca-oauth/disconnect`, { method: 'POST' })
       await refresh()
       setWinnerReadiness(null)
+      setCanonicalDiagnostic(null)
       window.dispatchEvent(new Event('mct:alpaca-oauth-updated'))
       setMessage('The OAuth token was removed from the MCT. You can also revoke the app in Alpaca.')
     } catch (e) {
@@ -93,7 +155,7 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
   }
 
   async function authorizeTrading() {
-    if (!window.confirm(tr('Authorize Alpaca trading? When MCT Live is ACTIVE, the shared Winner can trade through this account. The primary account keeps its current API keys.'))) return
+    if (!window.confirm(tr('Autorizar acesso OAuth de negociação na Alpaca? Vincular essa autorização à Winner e permitir ordens são decisões separadas na configuração Live.'))) return
     setBusy(true)
     setError('')
     try {
@@ -104,6 +166,19 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
       window.location.assign(result.authorization_url)
     } catch (e) {
       setError(e.message)
+      setBusy(false)
+    }
+  }
+
+  async function diagnoseCanonicalOAuth() {
+    setBusy(true)
+    setError('')
+    setCanonicalDiagnostic(null)
+    try {
+      setCanonicalDiagnostic(await apiFetch(`${API}/live-market/oauth-diagnostic`, { cache: 'no-store' }))
+    } catch {
+      setError('Não foi possível consultar o diagnóstico seguro do OAuth Live.')
+    } finally {
       setBusy(false)
     }
   }
@@ -145,6 +220,12 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
               <button className="secondary-action compact" type="button" onClick={checkWinnerReadiness} disabled={busy}>
                 {tr('Check Winner OAuth readiness')}
               </button>
+              {isAdmin && status?.canonical_live_auth_mode === 'oauth' ? (
+                <button className="secondary-action compact" type="button"
+                  onClick={diagnoseCanonicalOAuth} disabled={busy}>
+                  Diagnosticar Live OAuth
+                </button>
+              ) : null}
               <button className="secondary-action compact" type="button" onClick={disconnect} disabled={busy}>
                 {tr('Disconnect OAuth')}
               </button>
@@ -163,8 +244,10 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
             )}
         </div>
       </div>
-      <p>
-        {status?.connected
+      <p role="status">
+        {statusLoading
+          ? tr('Verificando conexão OAuth com a Alpaca…')
+          : status?.connected
           ? `${tr('Alpaca connected')} · Live · ${tr('Account')} ...${status.account_id_suffix || ''} · ${tr(status.trading_authorized
             ? (status.trading_enabled ? 'Trading scope authorized · Winner OAuth active' : 'Trading scope authorized · Winner OAuth inactive')
             : 'Read-only')}`
@@ -174,13 +257,21 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
       </p>
       <p>{tr(status?.trading_authorized
         ? (isAdmin
-          ? 'Winner OAuth follows the existing Live operating mode. The primary account keeps its API keys.'
+          ? (status?.canonical_live_auth_mode === 'oauth'
+            ? 'Conta principal vinculada ao OAuth, sem fallback para API Keys. A autorização de ordens reais é controlada na configuração Live abaixo.'
+            : 'Winner OAuth follows the existing Live operating mode. The primary account keeps its API keys.')
           : 'Alpaca trading authorized. Your account will join the next eligible Winner trading cycle.')
         : (isAdmin
           ? 'This connection does not enable Winner orders or replace the current Live keys.'
           : 'After your Alpaca authorization, wait for the next eligible Winner trading cycle.'))}</p>
       {!isAdmin && status?.configured && !status?.trading_consent_available && !status?.trading_authorized ? (
         <p role="status">{tr('Alpaca trading consent is not yet available in this MCT environment.')}</p>
+      ) : null}
+      {isAdmin ? (
+        <LiveBrokerSettings
+          oauthConnected={Boolean(status?.connected && status?.trading_authorized)}
+          onUpdated={refresh}
+        />
       ) : null}
       {winnerReadiness ? (
         <div role="status">
@@ -191,6 +282,16 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
             <p>{tr('Shared Winner')}: {winnerReadiness.winner_name} · {tr('Individual portfolio via Alpaca')}</p>
           ) : null}
         </div>
+      ) : null}
+      {canonicalDiagnostic ? (
+        <p role="status">
+          Diagnóstico OAuth da conta principal: {canonicalDiagnostic.status === 'ready'
+            ? 'Conta autenticada; consultas de posições, ordens e horário disponíveis.'
+            : CANONICAL_DIAGNOSTIC_MESSAGES[canonicalDiagnostic.failure_code]
+              || 'Conexão principal não disponível para a consulta.'}
+          {' · '}Ordens reais: {canonicalDiagnostic.orders_enabled ? 'habilitadas no ambiente' : 'bloqueadas no ambiente'}
+          {canonicalDiagnostic.failure_code ? ` · Código: ${canonicalDiagnostic.failure_code}` : ''}
+        </p>
       ) : null}
       {message ? <p role="status">{tr(message)}</p> : null}
       {error ? <p role="alert" className="global-error">{tr(error)}</p> : null}

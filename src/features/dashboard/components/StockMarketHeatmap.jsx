@@ -116,6 +116,13 @@ export function StockMarketHeatmap() {
             Variação dos fechamentos diários completos da Alpaca, por ativo da Winner.
             Não representa a pontuação nem a recomendação do LightGBM.
           </p>
+          {payload?.strategy_sequence ? (
+            <p role="status">
+              Universo da Winner selecionada neste ambiente: Strategy #{payload.strategy_sequence}
+              {' · '}{payload.total_assets} ativos. O mapa acompanha a configuração da
+              estratégia atual, que pode ser diferente da Winner de produção.
+            </p>
+          ) : null}
         </div>
         <div className="dashboard-stock-heatmap-controls">
           <div className="dashboard-stock-heatmap-switch" role="group" aria-label="Intervalo da variação">
