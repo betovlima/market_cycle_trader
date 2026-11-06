@@ -9591,3 +9591,183 @@ a { color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .live-intraday-progress-icon.is-spinning { animation: none; }
 }
+
+
+/* Winner registered-stock heatmap. Daily completed closes, equal-sized tiles:
+   do not imply unsupported market-cap weights or intraday prices. */
+.dashboard-stock-heatmap {
+  margin-top: 14px;
+  padding: 17px;
+  border: 1px solid rgba(81, 131, 183, .32);
+  border-radius: 12px;
+  background: rgba(5, 20, 36, .63);
+}
+.dashboard-stock-heatmap-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+.dashboard-stock-heatmap-header h2 {
+  margin: 5px 0;
+  font-size: 1.12rem;
+  color: #eaf5ff;
+}
+.dashboard-stock-heatmap-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: .72rem;
+  line-height: 1.5;
+  max-width: 650px;
+}
+.dashboard-stock-heatmap-controls {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.dashboard-stock-heatmap-switch {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid rgba(94, 136, 180, .39);
+  border-radius: 8px;
+}
+.dashboard-stock-heatmap-switch button {
+  padding: 8px 10px;
+  background: rgba(11, 36, 60, .9);
+  border: 0;
+  border-right: 1px solid rgba(94, 136, 180, .29);
+  color: #a9bed4;
+  font-size: .68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.dashboard-stock-heatmap-switch button:last-child { border-right: 0; }
+.dashboard-stock-heatmap-switch button.is-active {
+  background: rgba(37, 101, 178, .48);
+  color: #eaf5ff;
+}
+.dashboard-stock-heatmap-order {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.dashboard-stock-heatmap-order span { font-size: .58rem; color: var(--muted); }
+.dashboard-stock-heatmap-order select,
+.dashboard-stock-heatmap-refresh {
+  min-height: 33px;
+  border: 1px solid rgba(94, 136, 180, .39);
+  border-radius: 8px;
+  padding: 0 9px;
+  background: rgba(11, 36, 60, .9);
+  color: #dcefff;
+  font-size: .68rem;
+}
+.dashboard-stock-heatmap-refresh {
+  cursor: pointer;
+  font-weight: 700;
+}
+.dashboard-stock-heatmap-refresh:disabled { opacity: .55; cursor: not-allowed; }
+.dashboard-stock-heatmap-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px 15px;
+  margin: 15px 0 11px;
+  color: #b4c8dc;
+  font-size: .69rem;
+}
+.dashboard-stock-heatmap-summary span:first-child { font-weight: 800; color: #e9f5ff; }
+.dashboard-stock-heatmap-summary .heatmap-summary-gain { color: #70e2b0; }
+.dashboard-stock-heatmap-summary .heatmap-summary-loss { color: #ff9b9e; }
+.dashboard-stock-heatmap-summary .heatmap-summary-date { margin-left: auto; }
+.dashboard-stock-heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(106px, 1fr));
+  gap: 5px;
+  width: 100%;
+}
+.dashboard-stock-heatmap-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 83px;
+  padding: 8px 5px;
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 6px;
+  color: #f0fff9;
+  text-align: center;
+  background: #203445;
+}
+.dashboard-stock-heatmap-cell strong { font-size: .82rem; letter-spacing: .02em; }
+.dashboard-stock-heatmap-change {
+  font-size: .9rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.dashboard-stock-heatmap-cell small { font-size: .64rem; opacity: .88; }
+.dashboard-stock-heatmap-cell.tone-gain-1,
+.dashboard-stock-heatmap-legend .tone-gain-1 { background: #1a6b54; }
+.dashboard-stock-heatmap-cell.tone-gain-2,
+.dashboard-stock-heatmap-legend .tone-gain-2 { background: #137d50; }
+.dashboard-stock-heatmap-cell.tone-gain-3,
+.dashboard-stock-heatmap-legend .tone-gain-3 { background: #10954a; }
+.dashboard-stock-heatmap-cell.tone-gain-4,
+.dashboard-stock-heatmap-legend .tone-gain-4 { background: #0eae4f; }
+.dashboard-stock-heatmap-cell.tone-loss-1,
+.dashboard-stock-heatmap-legend .tone-loss-1 { background: #74393f; }
+.dashboard-stock-heatmap-cell.tone-loss-2,
+.dashboard-stock-heatmap-legend .tone-loss-2 { background: #8c333c; }
+.dashboard-stock-heatmap-cell.tone-loss-3,
+.dashboard-stock-heatmap-legend .tone-loss-3 { background: #ab2934; }
+.dashboard-stock-heatmap-cell.tone-loss-4,
+.dashboard-stock-heatmap-legend .tone-loss-4 { background: #c61c30; }
+.dashboard-stock-heatmap-cell.tone-neutral,
+.dashboard-stock-heatmap-legend .tone-neutral { background: #294051; }
+.dashboard-stock-heatmap-cell.tone-missing { background: #263444; color: #9cacc0; border-style: dashed; }
+.dashboard-stock-heatmap-cell:hover { filter: brightness(1.14); border-color: rgba(255,255,255,.46); }
+.dashboard-stock-heatmap-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 115px;
+  gap: 10px;
+  color: var(--muted);
+  font-size: .75rem;
+}
+.dashboard-stock-heatmap-error {
+  color: #f3b5b8;
+  font-size: .74rem;
+}
+.dashboard-stock-heatmap-footer {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 13px;
+  color: #a9bed4;
+  font-size: .68rem;
+}
+.dashboard-stock-heatmap-legend { display: flex; gap: 3px; }
+.dashboard-stock-heatmap-legend span {
+  display: block;
+  height: 11px;
+  width: 18px;
+  border-radius: 2px;
+}
+.dashboard-stock-heatmap-footer small {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: .65rem;
+}
+@media (max-width: 690px) {
+  .dashboard-stock-heatmap { padding: 12px; }
+  .dashboard-stock-heatmap-header { flex-direction: column; }
+  .dashboard-stock-heatmap-summary .heatmap-summary-date { margin-left: 0; flex-basis: 100%; }
+  .dashboard-stock-heatmap-grid { grid-template-columns: repeat(auto-fill, minmax(89px, 1fr)); }
+  .dashboard-stock-heatmap-cell { min-height: 73px; }
+}

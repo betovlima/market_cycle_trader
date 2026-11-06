@@ -7,8 +7,7 @@ import { money, percent, relativeTime, shortDateTime } from '../../shared/format
 import { DASHBOARD_HINTS } from './dashboardConfig'
 import { DashboardMetric, MarketUpdateMetric } from './components/DashboardPrimitives'
 import { DashboardBacktestAnalyticsSection } from './components/DashboardBacktestAnalyticsSection'
-import { RotationQualityPerformanceSection } from './components/RotationQualityPerformanceSection'
-import { ResearchTreePanel } from './components/ResearchTreePanel'
+import { StockMarketHeatmap } from './components/StockMarketHeatmap'
 
 export function DashboardPage({ workspace, capabilities = {}, onOpenBacktest, initialProcessingId = "" }) {
   const { dashboard, loadingDashboard, running, restoringExecution, startingBacktest, startDisabled, runBacktest } = workspace
@@ -16,8 +15,6 @@ export function DashboardPage({ workspace, capabilities = {}, onOpenBacktest, in
   const last = dashboard?.last_backtest
   const recentBacktests = useMemo(() => dashboard?.recent_backtests || [], [dashboard])
   const canRunBacktest = hasCapability(capabilities, 'backtest.start')
-  const canViewBacktest = hasCapability(capabilities, 'backtest.view')
-  const canViewTemporal = hasCapability(capabilities, 'temporal_intelligence.view')
 
   async function startBacktest() {
     const created = await runBacktest()
@@ -45,9 +42,7 @@ export function DashboardPage({ workspace, capabilities = {}, onOpenBacktest, in
           <MarketUpdateMetric />
         </div>
 
-        {canViewBacktest ? <ResearchTreePanel refreshKey={dashboard?.selected_strategy_research_name || ''} /> : null}
-
-        {canViewTemporal ? <RotationQualityPerformanceSection /> : null}
+        <StockMarketHeatmap />
 
         <DashboardBacktestAnalyticsSection fallbackJobs={recentBacktests} initialProcessingId={initialProcessingId} />
       </section>
