@@ -60,6 +60,11 @@ export function LiveIntradayRecovery() {
   const progress = liveIntradayProgressModel(result, error)
   const isRunning = result?.status === 'running'
   const hasStarted = isRunning || result?.status === 'prepared' || result?.status === 'failed'
+  const isDailyOnly = result?.analysis_mode === 'completed_daily_only'
+    || (!result?.analysis_mode && result?.market_open === false)
+  const visibleSteps = isDailyOnly
+    ? LIVE_INTRADAY_STEPS.filter(step => step.id !== 'collecting_current_session')
+    : LIVE_INTRADAY_STEPS
 
   return (
     <section className="trader-manual-recovery live-intraday-recovery"
@@ -85,7 +90,8 @@ export function LiveIntradayRecovery() {
           </div>
           {hasStarted ? (
             <ol className="live-intraday-progress-steps" aria-label="Etapas reais do cálculo da Winner">
-              {LIVE_INTRADAY_STEPS.map((step, index) => {
+              {visibleSteps.map((step) => {
+                const index = LIVE_INTRADAY_STEPS.findIndex(item => item.id === step.id)
                 const complete = progress.kind === 'completed' || (isRunning && index < progress.stage)
                 const active = isRunning && index === progress.stage
                 return (
