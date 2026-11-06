@@ -29,6 +29,6 @@ test('Live OAuth restores broker and shared Winner readiness on every tab entry'
   assert.match(code, /alpaca-oauth\/winner\/readiness/)
   assert.match(code, /setWinnerReadiness\(ready\)/)
   assert.match(code, /canonical_live_auth_mode === 'oauth'/)
-  assert.match(code, /Sem fallback para API Keys/)
+  assert.match(code, /sem fallback para API Keys/)
   assert.doesNotMatch(code, /submit_order|place_order|create_live_execution_client/)
 })
