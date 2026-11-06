@@ -22,10 +22,21 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [winnerReadiness, setWinnerReadiness] = useState(null)
+  const [statusLoading, setStatusLoading] = useState(true)
 
   const refresh = useCallback(async () => {
-    const next = await apiFetch(`${API}/alpaca-oauth/status`)
+    const next = await apiFetch(`${API}/alpaca-oauth/status`, { cache: 'no-store' })
     setStatus(next)
+    if (next?.connected && next?.trading_authorized) {
+      try {
+        setWinnerReadiness(await apiFetch(`${API}/alpaca-oauth/winner/readiness`, { cache: 'no-store' }))
+      } catch {
+        setWinnerReadiness(null)
+      }
+    } else {
+      setWinnerReadiness(null)
+    }
+    return next
   }, [])
 
   useEffect(() => {
@@ -37,9 +48,24 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
       url.searchParams.delete('alpaca_oauth')
       window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`)
     }
-    apiFetch(`${API}/alpaca-oauth/status`)
-      .then((next) => { if (active) setStatus(next) })
+    apiFetch(`${API}/alpaca-oauth/status`, { cache: 'no-store' })
+      .then(async (next) => {
+        if (!active) return
+        setStatus(next)
+        setError('')
+        if (next?.connected && next?.trading_authorized) {
+          try {
+            const ready = await apiFetch(`${API}/alpaca-oauth/winner/readiness`, { cache: 'no-store' })
+            if (active) setWinnerReadiness(ready)
+          } catch {
+            if (active) setWinnerReadiness(null)
+          }
+        } else {
+          setWinnerReadiness(null)
+        }
+      })
       .catch(() => { if (active) setError('Unable to read the Alpaca OAuth connection status.') })
+      .finally(() => { if (active) setStatusLoading(false) })
     return () => { active = false }
   }, [])
 
@@ -64,6 +90,13 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
     try {
       const result = await apiFetch(`${API}/alpaca-oauth/verify`)
       setStatus(result)
+      if (result?.connected && result?.trading_authorized) {
+        try {
+          setWinnerReadiness(await apiFetch(`${API}/alpaca-oauth/winner/readiness`))
+        } catch {
+          setWinnerReadiness(null)
+        }
+      }
       setMessage(result?.trading_authorized
         ? 'Alpaca trading permission authorized. Winner OAuth follows the Live operating mode.'
         : 'Read-only Alpaca connection verified.')
@@ -163,8 +196,10 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
             )}
         </div>
       </div>
-      <p>
-        {status?.connected
+      <p role="status">
+        {statusLoading
+          ? tr('Verificando conexão OAuth com a Alpaca…')
+          : status?.connected
           ? `${tr('Alpaca connected')} · Live · ${tr('Account')} ...${status.account_id_suffix || ''} · ${tr(status.trading_authorized
             ? (status.trading_enabled ? 'Trading scope authorized · Winner OAuth active' : 'Trading scope authorized · Winner OAuth inactive')
             : 'Read-only')}`
@@ -174,7 +209,9 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
       </p>
       <p>{tr(status?.trading_authorized
         ? (isAdmin
-          ? 'Winner OAuth follows the existing Live operating mode. The primary account keeps its API keys.'
+          ? (status?.canonical_live_auth_mode === 'oauth'
+            ? 'Conta principal: leitura e execução da Winner via OAuth. Sem fallback para API Keys. O modo Live continua controlando as ordens.'
+            : 'Winner OAuth follows the existing Live operating mode. The primary account keeps its API keys.')
           : 'Alpaca trading authorized. Your account will join the next eligible Winner trading cycle.')
         : (isAdmin
           ? 'This connection does not enable Winner orders or replace the current Live keys.'
