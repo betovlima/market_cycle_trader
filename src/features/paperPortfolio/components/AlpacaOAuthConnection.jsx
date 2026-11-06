@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { tr } from '../../../i18n/runtime'
 import { apiFetch } from '../../../api/http'
 import { API } from '../../../config/env'
+import { LiveBrokerSettings } from './LiveBrokerSettings'
 
 const CALLBACK_MESSAGES = {
   connected: 'Alpaca OAuth connected and verified in read-only mode.',
@@ -17,20 +18,21 @@ const CALLBACK_MESSAGES = {
 }
 
 const CANONICAL_DIAGNOSTIC_MESSAGES = {
-  CANONICAL_ACCOUNT_ID_MISSING: 'Falta configurar o ID da conta principal (ALPACA_LIVE_ACCOUNT_ID ou ALPACA_OAUTH_EXPECTED_ACCOUNT_ID).',
-  CANONICAL_ACCOUNT_ID_CONFLICT: 'Os dois IDs configurados para a conta principal não são iguais.',
+  CANONICAL_ACCOUNT_ID_MISSING: 'Nenhuma conta OAuth foi vinculada à Winner na configuração Live.',
+  CANONICAL_ACCOUNT_ID_CONFLICT: 'A conta selecionada não corresponde ao vínculo autorizado.',
   OAUTH_ENCRYPTION_KEY_MISSING: 'A chave para ler o vínculo OAuth não está configurada neste backend.',
   OAUTH_ADMIN_GRANT_UNAVAILABLE: 'O login OAuth de administrador selecionado não corresponde ao vínculo da conta principal.',
-  OAUTH_ADMIN_GRANT_MISSING: 'Não foi encontrado um vínculo OAuth de administrador autorizado para a conta principal.',
+  OAUTH_ADMIN_GRANT_MISSING: 'Nenhuma autorização OAuth de administrador foi vinculada à conta principal.',
   OAUTH_CURRENT_ADMIN_GRANT_MISSING: 'Seu login de administrador não possui um vínculo OAuth salvo neste banco de dados.',
-  OAUTH_ADMIN_SUBJECT_SELECTION_MISMATCH: 'O login selecionado em MCT_CANONICAL_LIVE_OAUTH_SUBJECT não corresponde ao administrador desta sessão.',
+  OAUTH_ADMIN_SUBJECT_SELECTION_MISMATCH: 'O vínculo selecionado para o robô pertence a outro administrador. Vincule novamente sua conta pela configuração Live.',
   OAUTH_CURRENT_ADMIN_ENVIRONMENT_MISMATCH: 'O vínculo OAuth do administrador não foi registrado para o ambiente Live.',
-  OAUTH_CURRENT_ADMIN_ACCOUNT_MISMATCH: 'O vínculo OAuth do administrador corresponde a outra conta da Alpaca. Confira os IDs configurados no dev.',
-  OAUTH_CURRENT_ADMIN_SAVED_ROLE_MISMATCH: 'O vínculo OAuth foi salvo com um perfil diferente de administrador. É necessária uma nova autorização como administrador.',
+  OAUTH_CURRENT_ADMIN_ACCOUNT_MISMATCH: 'O vínculo OAuth do administrador corresponde a outra conta da Alpaca. Confira a conta selecionada na configuração Live.',
+  OAUTH_CURRENT_ADMIN_SAVED_ROLE_MISMATCH: 'O vínculo foi salvo com outro perfil. Autorize novamente a conta com acesso de administrador.',
   OAUTH_CURRENT_ADMIN_TRADING_GRANT_MISSING: 'O vínculo OAuth do administrador não tem escopo completo de negociação. Reautorize a negociação.',
-  OAUTH_GRANT_SELECTION_UNAVAILABLE: 'O vínculo do administrador tem os dados esperados, mas a seleção da conta principal não conseguiu localizá-lo.',
+  OAUTH_GRANT_SELECTION_UNAVAILABLE: 'O vínculo da conta principal não foi localizado. Refaça a associação na configuração Live.',
 
   OAUTH_ADMIN_GRANT_AMBIGUOUS: 'Existe mais de um vínculo OAuth de administrador para esta conta. É necessário escolher o vínculo correto.',
+  OAUTH_CANONICAL_OWNER_NOT_SELECTED: 'Vincule sua conta OAuth à Winner nas configurações Live.',
   OAUTH_OWNER_BINDING_INVALID: 'A identidade do vínculo OAuth salvo não passou na verificação.',
   OAUTH_TOKEN_UNREADABLE: 'Não foi possível ler o token OAuth criptografado.',
   OAUTH_BROKER_VERIFICATION_FAILED: 'A Alpaca não confirmou a autorização OAuth para esta conta.',
@@ -153,7 +155,7 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
   }
 
   async function authorizeTrading() {
-    if (!window.confirm(tr('Authorize Alpaca trading? When MCT Live is ACTIVE, the shared Winner can trade through this account. The primary account keeps its current API keys.'))) return
+    if (!window.confirm(tr('Autorizar acesso OAuth de negociação na Alpaca? Vincular essa autorização à Winner e permitir ordens são decisões separadas na configuração Live.'))) return
     setBusy(true)
     setError('')
     try {
@@ -256,7 +258,7 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
       <p>{tr(status?.trading_authorized
         ? (isAdmin
           ? (status?.canonical_live_auth_mode === 'oauth'
-            ? 'Conta principal: conexão e execução da Winner configuradas para OAuth, sem fallback para API Keys. Ordens reais exigem habilitação explícita neste ambiente e o modo Live ativo.'
+            ? 'Conta principal vinculada ao OAuth, sem fallback para API Keys. A autorização de ordens reais é controlada na configuração Live abaixo.'
             : 'Winner OAuth follows the existing Live operating mode. The primary account keeps its API keys.')
           : 'Alpaca trading authorized. Your account will join the next eligible Winner trading cycle.')
         : (isAdmin
@@ -264,6 +266,12 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
           : 'After your Alpaca authorization, wait for the next eligible Winner trading cycle.'))}</p>
       {!isAdmin && status?.configured && !status?.trading_consent_available && !status?.trading_authorized ? (
         <p role="status">{tr('Alpaca trading consent is not yet available in this MCT environment.')}</p>
+      ) : null}
+      {isAdmin ? (
+        <LiveBrokerSettings
+          oauthConnected={Boolean(status?.connected && status?.trading_authorized)}
+          onUpdated={refresh}
+        />
       ) : null}
       {winnerReadiness ? (
         <div role="status">
