@@ -14,7 +14,7 @@ export function changeForHorizon(item, horizon) {
 }
 
 export function heatmapTone(value) {
-  if (value == null) return 'missing'
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 'missing'
   if (Math.abs(value) < 0.005) return 'neutral'
   const direction = value > 0 ? 'gain' : 'loss'
   const magnitude = Math.abs(value)
