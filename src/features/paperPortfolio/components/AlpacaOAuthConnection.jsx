@@ -55,7 +55,7 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
   const refresh = useCallback(async () => {
     const next = await apiFetch(`${API}/alpaca-oauth/status`, { cache: 'no-store' })
     setStatus(next)
-    if (next?.connected && next?.trading_authorized) {
+    if (isAdmin && next?.connected && next?.trading_authorized) {
       try {
         setWinnerReadiness(await apiFetch(`${API}/alpaca-oauth/winner/readiness`, { cache: 'no-store' }))
       } catch {
@@ -65,14 +65,15 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
       setWinnerReadiness(null)
     }
     return next
-  }, [])
+  }, [isAdmin])
 
   useEffect(() => {
     let active = true
     const url = new URL(window.location.href)
     const result = url.searchParams.get('alpaca_oauth')
     if (result) {
-      if (CALLBACK_MESSAGES[result]) setMessage(CALLBACK_MESSAGES[result])
+      if (CALLBACK_MESSAGES[result]) setMessage(!isAdmin && result === 'trading_connected'
+        ? 'Sua conta Alpaca foi conectada e autorizada.' : CALLBACK_MESSAGES[result])
       url.searchParams.delete('alpaca_oauth')
       window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`)
     }
@@ -81,7 +82,7 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
         if (!active) return
         setStatus(next)
         setError('')
-        if (next?.connected && next?.trading_authorized) {
+        if (isAdmin && next?.connected && next?.trading_authorized) {
           try {
             const ready = await apiFetch(`${API}/alpaca-oauth/winner/readiness`, { cache: 'no-store' })
             if (active) setWinnerReadiness(ready)
@@ -95,7 +96,7 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
       .catch(() => { if (active) setError('Unable to read the Alpaca OAuth connection status.') })
       .finally(() => { if (active) setStatusLoading(false) })
     return () => { active = false }
-  }, [])
+  }, [isAdmin])
 
   async function connect() {
     setBusy(true)
@@ -118,7 +119,7 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
     try {
       const result = await apiFetch(`${API}/alpaca-oauth/verify`)
       setStatus(result)
-      if (result?.connected && result?.trading_authorized) {
+      if (isAdmin && result?.connected && result?.trading_authorized) {
         try {
           setWinnerReadiness(await apiFetch(`${API}/alpaca-oauth/winner/readiness`))
         } catch {
@@ -126,7 +127,8 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
         }
       }
       setMessage(result?.trading_authorized
-        ? 'Alpaca trading permission authorized. Winner OAuth follows the Live operating mode.'
+        ? (isAdmin ? 'Alpaca trading permission authorized. Winner OAuth follows the Live operating mode.'
+          : 'Conexão e permissão da sua conta Alpaca verificadas.')
         : 'Read-only Alpaca connection verified.')
       window.dispatchEvent(new Event('mct:alpaca-oauth-updated'))
     } catch (e) {
@@ -155,7 +157,9 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
   }
 
   async function authorizeTrading() {
-    if (!window.confirm(tr('Autorizar acesso OAuth de negociação na Alpaca? Vincular essa autorização à Winner e permitir ordens são decisões separadas na configuração Live.'))) return
+    if (!window.confirm(isAdmin
+      ? 'Autorizar acesso OAuth de negociação na Alpaca? Vincular à Winner e autorizar ordens são decisões separadas.'
+      : 'Autorizar acesso de negociação à sua conta Alpaca? O aplicativo só poderá operar quando as condições da Winner permitirem.')) return
     setBusy(true)
     setError('')
     try {
@@ -217,9 +221,11 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
                   {tr('Authorize trading permission')}
                 </button>
               ) : null}
-              <button className="secondary-action compact" type="button" onClick={checkWinnerReadiness} disabled={busy}>
-                {tr('Check Winner OAuth readiness')}
-              </button>
+              {isAdmin ? (
+                <button className="secondary-action compact" type="button" onClick={checkWinnerReadiness} disabled={busy}>
+                  {tr('Check Winner OAuth readiness')}
+                </button>
+              ) : null}
               {isAdmin && status?.canonical_live_auth_mode === 'oauth' ? (
                 <button className="secondary-action compact" type="button"
                   onClick={diagnoseCanonicalOAuth} disabled={busy}>
@@ -248,9 +254,11 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
         {statusLoading
           ? tr('Verificando conexão OAuth com a Alpaca…')
           : status?.connected
-          ? `${tr('Alpaca connected')} · Live · ${tr('Account')} ...${status.account_id_suffix || ''} · ${tr(status.trading_authorized
-            ? (status.trading_enabled ? 'Trading scope authorized · Winner OAuth active' : 'Trading scope authorized · Winner OAuth inactive')
-            : 'Read-only')}`
+          ? `${tr('Alpaca connected')} · Live · ${tr('Account')} ...${status.account_id_suffix || ''} · ${tr(isAdmin
+            ? (status.trading_authorized
+              ? (status.trading_enabled ? 'Trading scope authorized · Winner OAuth active' : 'Trading scope authorized · Winner OAuth inactive')
+              : 'Read-only')
+            : (status.trading_authorized ? 'Negociação autorizada' : 'Somente leitura'))}`
           : status?.configured
             ? tr(isAdmin ? 'Alpaca OAuth is ready to authorize the existing Live account.' : 'Alpaca OAuth is ready to connect your Live account.')
             : tr('Alpaca OAuth setup is missing on the API service.')}
@@ -260,10 +268,10 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
           ? (status?.canonical_live_auth_mode === 'oauth'
             ? 'Conta principal vinculada ao OAuth, sem fallback para API Keys. A autorização de ordens reais é controlada na configuração Live abaixo.'
             : 'Winner OAuth follows the existing Live operating mode. The primary account keeps its API keys.')
-          : 'Alpaca trading authorized. Your account will join the next eligible Winner trading cycle.')
+          : 'Sua conta Alpaca está autorizada para operações elegíveis.')
         : (isAdmin
           ? 'This connection does not enable Winner orders or replace the current Live keys.'
-          : 'After your Alpaca authorization, wait for the next eligible Winner trading cycle.'))}</p>
+          : 'Conecte sua conta Alpaca para acompanhar suas posições e ordens.'))}</p>
       {!isAdmin && status?.configured && !status?.trading_consent_available && !status?.trading_authorized ? (
         <p role="status">{tr('Alpaca trading consent is not yet available in this MCT environment.')}</p>
       ) : null}
@@ -273,7 +281,7 @@ export function AlpacaOAuthConnection({ isAdmin = true }) {
           onUpdated={refresh}
         />
       ) : null}
-      {winnerReadiness ? (
+      {isAdmin && winnerReadiness ? (
         <div role="status">
           <p>
             {tr('Winner OAuth check')}: {tr(winnerReadiness.status)} · {tr('Trading authorized')}: {winnerReadiness.trading_authorized ? tr('Yes') : tr('No')} · {tr('OAuth order execution')}: {tr(winnerReadiness.oauth_winner_execution_enabled ? 'Active' : 'Disabled')}
