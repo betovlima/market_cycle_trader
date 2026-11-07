@@ -8,49 +8,8 @@ import { POLL_MS } from './portfolioConfig'
 import { CurrentPosition, PortfolioMetric } from './components/PortfolioPrimitives'
 import { AlpacaOAuthConnection } from './components/AlpacaOAuthConnection'
 
-// The Trader uses the same read-only Live presentation as Admin, but NEVER the
-// admin-only /live-market endpoints, capital ledger, control, audit or shared
-// account positions. Every financial number comes from this user's OAuth
-// /alpaca-oauth/portfolio response.
-export function personalLiveDecision(portfolio, readiness) {
-  // Cross-check the broker holding from the portfolio snapshot with the
-  // independent OAuth readiness before presenting a decision as current.
-  const holdings = Array.isArray(portfolio?.positions) ? portfolio.positions : []
-  const actualAsset = holdings.length === 0 ? 'CASH'
-    : holdings.length === 1 ? String(holdings[0]?.symbol || '').toUpperCase() : null
-  if (!actualAsset || readiness?.current_asset !== actualAsset) return null
-  if (!portfolio || !readiness
-      || !readiness.shared_winner
-      || readiness.shared_signal_prepared !== true
-      || readiness.winner_signal_prepared !== true
-      || !portfolio.account_id_suffix
-      || readiness.account_id_suffix !== portfolio.account_id_suffix
-      || !readiness.current_asset
-      || !readiness.shared_target_asset) return null
-
-  return {
-    current_asset: readiness.current_asset,
-    target_asset: readiness.shared_target_asset,
-    raw_best_asset: null, // Not exposed by the account-scoped OAuth readiness.
-    status: 'signal_prepared',
-    execution_session: readiness.execution_session || null,
-    selection_reason: null,
-    execution_origin: null, // Never attribute the shared signal to a user's fill.
-    decision_date: readiness.shared_decision_date || null,
-  }
-}
-
-export function personalLiveSummary(portfolio) {
-  if (!portfolio) return null
-  return {
-    ...portfolio,
-    environment: 'live',
-    realized_pnl: null, // A realized P/L cannot be inferred from the latest 100 orders.
-    total_pnl: null,
-    total_return: null,
-  }
-}
-
+// Each Trader sees only the authenticated Alpaca OAuth account. Shared
+// Winner rankings, execution controls and technical telemetry are absent.
 export function PersonalLivePanel({ portfolio, refreshing, lastUpdated, reload }) {
   const positions = Array.isArray(portfolio.positions) ? portfolio.positions : []
   const position = positions.length === 1 ? positions[0] : null
