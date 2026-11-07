@@ -17,7 +17,7 @@ const { PaperPortfolioDashboard } = await vite.ssrLoadModule(
   '/src/features/paperPortfolio/PaperPortfolioDashboard.jsx',
 )
 
-const { AlpacaPersonalPortfolio, PersonalLivePanel, personalLiveDecision, personalLiveSummary } = await vite.ssrLoadModule(
+const { AlpacaPersonalPortfolio, PersonalLivePanel } = await vite.ssrLoadModule(
   '/src/features/paperPortfolio/AlpacaPersonalPortfolio.jsx',
 )
 
@@ -75,7 +75,7 @@ test('invited Trader opens Live and asks for one trading consent', async () => {
   assert.ok(oauth.includes("onClick={authorizeTrading}"))
   assert.ok(oauth.includes("!isAdmin ? ("))
   assert.ok(oauth.includes("alpaca-oauth/start-trading"))
-  assert.ok(oauth.includes("After your Alpaca authorization, wait for the next eligible Winner trading cycle."))
+  assert.ok(oauth.includes('Conecte sua conta Alpaca para acompanhar suas posições e ordens.'))
 })
 
 test('Live distinguishes current holding return from historical account performance', () => {
@@ -132,11 +132,11 @@ test('Trader Live reads only Alpaca returned cumulative data, never invents bala
   const source = readFileSync(
     new URL('../src/features/paperPortfolio/AlpacaPersonalPortfolio.jsx', import.meta.url), 'utf8',
   )
-  assert.match(source, /<PortfolioMetricsStrip data=\{summary\}/)
+  assert.match(source, /<PortfolioMetric label="Valor da carteira"/)
   assert.match(source, /<CurrentPosition position=\{position\}/)
-  assert.match(source, /<LiveSessionStrip/)
-  assert.match(source, /<DecisionOfDay decision=\{decision\}/)
-  assert.match(source, /<OperationAuditTable operations=\{orders\}/)
+  assert.match(source, /Minhas ordens na Alpaca/)
+  assert.doesNotMatch(source, /<LiveSessionStrip|<DecisionOfDay|<CandidateRanking|<LiveWorkflowMonitor|<LiveWinnerEvents/)
+  assert.doesNotMatch(source, /alpaca-oauth\/winner\/readiness/)
   assert.doesNotMatch(source, /initial_capital|localStorage|ALPACA_LIVE_API_KEY_ID/)
 })
 
@@ -229,60 +229,48 @@ test('top-level routing enforces access restrictions independently of menu rende
   assert.doesNotMatch(app, /activeTab === 'portfolio'/)
 })
 
-test('Trader Live uses Admin cards with only its own zero-balance OAuth portfolio', () => {
+test('Trader Live renders only its own positions, percentages and compact orders', () => {
   const personal = {
     environment: 'live', account_id_suffix: '285e6c',
-    portfolio_value: 0, strategy_cash: 0, buying_power: 0,
-    unrealized_pnl: 0, positions: [], recent_orders: [],
-    winner_performance: { status: 'unavailable', return_pct: null, profit_loss: null },
-    market_clock: { is_open: true, next_close: '2026-11-05T21:00:00Z' },
+    portfolio_value: 145.98, strategy_cash: 0,
+    unrealized_pnl: 30.74,
+    positions: [{
+      symbol: 'CAPR', quantity: 3, average_entry_price: 5.00,
+      current_price: 6.00, market_value: 18.00,
+      unrealized_return: 0.20,
+    }],
+    recent_orders: [{
+      created_at: '2026-11-05T15:00:00Z', symbol: 'CAPR',
+      side: 'buy', status: 'filled', filled_quantity: 3,
+      filled_average_price: 5,
+    }],
+    market_clock: { is_open: true },
   }
   const html = renderToString(React.createElement(PersonalLivePanel, {
-    portfolio: personal,
-    oauthStatus: { trading_authorized: false, trading_enabled: false },
-    readiness: null, refreshing: false,
-    lastUpdated: new Date('2026-11-05T15:00:00Z'),
-    now: Date.parse('2026-11-05T15:00:00Z'),
-    nextRefreshAt: null, reload: () => {},
+    portfolio: personal, refreshing: false,
+    lastUpdated: new Date('2026-11-05T15:00:00Z'), reload: () => {},
   }))
-  for (const label of [
-    'Portfolio Value', 'Realized P/L', 'Unrealized P/L',
-    'Accumulated Alpaca account return', 'Cash', 'Position',
-    'Distance to peak', 'Max drawdown', 'Live Session',
-    'Current Position', 'Decision of the day', 'Operations',
-  ]) assert.ok(html.includes(label), 'Trader missing shared Live field: ' + label)
-  assert.match(html, /portfolio-workspace-metrics-audit/)
-  assert.match(html, /portfolio-audit-top-grid/)
-  assert.match(html, /Alpaca OAuth \(read-only\)/)
-  assert.doesNotMatch(html, /CAPR|145[.,]98|Full audit|Export audit/)
+  for (const label of ['Valor da carteira', 'Disponível em caixa', 'Resultado não realizado',
+    'Current Position', 'Minhas ordens na Alpaca', 'CAPR', 'Preço médio']) {
+    assert.ok(html.includes(label), 'Trader missing account field: ' + label)
+  }
+  assert.match(html, /portfolio-workspace-metrics/)
+  assert.match(html, /20[.,]00%/)
+  assert.doesNotMatch(html, /Rotation options|Candidates presented today|Decision of the day/)
+  assert.doesNotMatch(html, /Monitor do fluxo Live|Tentativas de processamento|Diagnóstico operacional|Logs da Winner/)
+  assert.doesNotMatch(html, /Realized P\/L|Max drawdown|Distance to peak|Post-close calibration|Export audit/)
   assert.doesNotMatch(html, /NaN|Infinity/)
 })
 
-test('Trader Live decision requires same OAuth account and real holding', () => {
-  const portfolio = {
-    account_id_suffix: '285e6c', positions: [
-      { symbol: 'CAPR', quantity: 3, average_entry_price: 5, market_value: 18 },
-    ],
-  }
-  const readiness = {
-    account_id_suffix: '285e6c',
-    shared_winner: true, shared_signal_prepared: true, winner_signal_prepared: true,
-    current_asset: 'CAPR', shared_target_asset: 'AMZN',
-    execution_session: '2026-11-05', shared_decision_date: '2026-11-04',
-  }
-  const own = personalLiveDecision(portfolio, readiness)
-  assert.equal(own.current_asset, 'CAPR')
-  assert.equal(own.target_asset, 'AMZN')
-  assert.equal(own.raw_best_asset, null)
-  assert.equal(own.execution_origin, null)
-  assert.equal(personalLiveDecision(portfolio, { ...readiness, account_id_suffix: 'OTHER' }), null)
-  assert.equal(personalLiveDecision(portfolio, { ...readiness, current_asset: 'CASH' }), null)
-  assert.equal(personalLiveDecision(portfolio, { ...readiness, shared_signal_prepared: false }), null)
-  assert.equal(personalLiveDecision({ ...portfolio, positions: [] }, readiness), null)
-  const financial = personalLiveSummary({ ...portfolio, portfolio_value: 145.98 })
-  assert.equal(financial.realized_pnl, null)
-  assert.equal(financial.total_pnl, null)
-  assert.equal(financial.total_return, null)
+test('Trader UI does not request or expose shared Winner rotation readiness', async () => {
+  const { readFileSync } = await import('node:fs')
+  const personal = readFileSync(new URL('../src/features/paperPortfolio/AlpacaPersonalPortfolio.jsx', import.meta.url), 'utf8')
+  const oauth = readFileSync(new URL('../src/features/paperPortfolio/components/AlpacaOAuthConnection.jsx', import.meta.url), 'utf8')
+  assert.doesNotMatch(personal, /alpaca-oauth\/winner\/readiness|shared_target_asset|personalLiveDecision/)
+  assert.match(oauth, /isAdmin && next\?\.connected && next\?\.trading_authorized/)
+  assert.match(oauth, /isAdmin && winnerReadiness/)
+  assert.match(personal, /alpaca-oauth\/portfolio/)
+  assert.doesNotMatch(personal, /live-market\/portfolio|ALPACA_LIVE_API_KEY_ID/)
 })
 
 test('Strategy and Operation exposes the current-session Live contingency, not a closed-market D−1 button', () => {

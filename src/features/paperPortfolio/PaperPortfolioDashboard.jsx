@@ -18,9 +18,7 @@ import { money, number, percent, shortDateTime } from '../../shared/formatters'
 import { POLL_MS, ROBOT_POLL_MS } from './portfolioConfig'
 import { CurrentPosition, PortfolioMetricsStrip, TradingSessionStrip, LiveSessionStrip } from './components/PortfolioPrimitives'
 import { WinnerOperationMonitor } from './components/WinnerOperationMonitor'
-import { LiveWinnerEvents } from './components/LiveWinnerEvents'
 import { AlpacaOAuthConnection } from './components/AlpacaOAuthConnection'
-import { LiveWorkflowMonitor } from './components/LiveWorkflowMonitor'
 
 
 // Date inputs refer to US market decision dates, not the browser's locale.
@@ -656,19 +654,13 @@ function PortfolioMarketView({ market }) {
             <AssetPnlChart rows={audit?.pnl_by_asset} />
           </div>
 
-          <CandidateRanking decision={latestDecision} />
+          {!live ? <CandidateRanking decision={latestDecision} /> : null}
 
           
-          <OperationAuditTable operations={operations} market={market} onDecision={setSelectedDecision} />
+          {!live ? <OperationAuditTable operations={operations} market={market} onDecision={setSelectedDecision} /> : null}
 
-          {live ? <LiveWorkflowMonitor
-            executionSession={robot?.active_run?.execution_session || robot?.latest_run?.execution_session}
-          /> : null}
-
-          {live ? <LiveWinnerEvents
-            executionSession={robot?.active_run?.execution_session || robot?.latest_run?.execution_session}
-            winnerStatus={robot?.active_run?.status || robot?.latest_run?.status}
-          /> : null}
+          {/* Live telemetry, attempts, diagnostics and Winner logs remain collected
+              by the API but are not rendered in the Live account workspace. */}
         </section>
       )}
       <DecisionAuditDialog audit={selectedDecision} onClose={() => setSelectedDecision(null)} />
